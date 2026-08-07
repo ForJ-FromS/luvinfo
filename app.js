@@ -26,6 +26,9 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const uid = () => Math.random().toString(36).slice(2, 9);
 
+// 현재 배포 경로 기준 (프로젝트 페이지 /레포명/ 지원)
+const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
+
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false };
 
 function toast(m) {
@@ -91,7 +94,7 @@ async function route() {
     // 랜딩
     if (st.myHandle) {
       $('#landing-my').style.display = 'block';
-      $('#btn-myhome').onclick = () => { location.href = location.origin + '/?h=' + st.myHandle; };
+      $('#btn-myhome').onclick = () => { location.href = BASE + '?h=' + st.myHandle; };
     }
     $('#landing').classList.add('show');
     $('#btn-start').onclick = login;
@@ -137,7 +140,7 @@ async function login() {
     const r = await signInWithPopup(auth, new GoogleAuthProvider());
     const ud = await getDoc(doc(db, 'tusers', r.user.uid));
     if (!ud.exists()) openClaim(r.user);
-    else location.href = location.origin + '/?h=' + ud.data().handle;
+    else location.href = BASE + '?h=' + ud.data().handle;
   } catch (e) {
     console.log('[성향글] login err', e);
     toast('로그인에 실패했어요');
@@ -156,7 +159,7 @@ function openClaim(user) {
     try {
       await setDoc(doc(db, 'tsites', h), defaultSite(user.uid, h));
       await setDoc(doc(db, 'tusers', user.uid), { handle: h });
-      location.href = location.origin + '/?h=' + h;
+      location.href = BASE + '?h=' + h;
     } catch (e) {
       console.log('[성향글] claim err', e);
       toast('생성 실패 — 규칙 게시 여부를 확인해 주세요');
@@ -201,7 +204,7 @@ function showSite() {
     $('#fab-login').onclick = login;
   } else if (st.myHandle && st.myHandle !== st.handle) {
     $('#fab-my').style.display = 'block';
-    $('#fab-my').onclick = () => { location.href = location.origin + '/?h=' + st.myHandle; };
+    $('#fab-my').onclick = () => { location.href = BASE + '?h=' + st.myHandle; };
   }
   bindShell();
 }
@@ -263,7 +266,7 @@ function bindShell() {
     catch (e) { console.log('[성향글] heart err', e); }
   };
   $('#copy-link').onclick = () => {
-    navigator.clipboard?.writeText(location.origin + '/?h=' + st.handle)
+    navigator.clipboard?.writeText(BASE + '?h=' + st.handle)
       .then(() => toast('링크를 복사했어요 ✓'))
       .catch(() => toast('복사에 실패했어요'));
   };
