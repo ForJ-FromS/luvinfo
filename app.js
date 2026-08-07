@@ -39,7 +39,7 @@ function toast(m) {
   t._tm = setTimeout(() => t.classList.remove('on'), 2400);
 }
 
-console.log('[성향글] app.js v1 로드');
+console.log('[성향글] app.js v7 로드');
 
 // ── 기본 사이트 데이터 ──
 function defaultSite(ownerUid, handle) {
@@ -67,8 +67,9 @@ function targetHandle() {
   // 404.html 라우터가 남긴 경로 우선
   const saved = sessionStorage.getItem('sh_route');
   if (saved) { sessionStorage.removeItem('sh_route'); history.replaceState(null, '', saved); }
-  const p = location.pathname.replace(/^\/+|\/+$/g, '');
-  if (p && p !== 'index.html') return p.toLowerCase();
+  // 경로의 마지막 조각만 핸들로 인식 (프로젝트 페이지 /레포명/ 은 핸들이 아님)
+  const seg = (location.pathname.match(/[^/]+$/) || [''])[0];
+  if (seg && seg !== 'index.html') return seg.toLowerCase();
   const q = new URLSearchParams(location.search).get('h');
   return q ? q.toLowerCase() : null;
 }
