@@ -27,7 +27,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v17 로드');
+console.log('[LUVINFO] app.js v18 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -447,7 +447,8 @@ function migrateBlocks(ch) {
 // ═══════════ 장 내 요소 렌더 ═══════════
 function imgVars(o) {
   const z = parseInt(o.z) || 100;
-  return 'background-image:url("' + esc(o.u || o.img || '') + '");--pz:' + z + '%;--px:' + (o.x ?? 50) + '%;--py:' + (o.y ?? 50) + '%;';
+  // 주의: style 속성이 큰따옴표라 url은 반드시 작은따옴표 (v17 사진 안 보임 사고)
+  return "background-image:url('" + esc(o.u || o.img || '') + "');--pz:" + z + '%;--px:' + (o.x ?? 50) + '%;--py:' + (o.y ?? 50) + '%;';
 }
 
 function buildProfile(p) {
