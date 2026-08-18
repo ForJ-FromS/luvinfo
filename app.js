@@ -32,7 +32,7 @@ const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const SIGNUP = { mode: 'open', code: '' };
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v24 로드');
+console.log('[LUVINFO] app.js v26 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -181,8 +181,12 @@ async function login() {
   try {
     const r = await signInWithPopup(auth, new GoogleAuthProvider());
     const ud = await getDoc(doc(db, 'tusers', r.user.uid));
-    if (!ud.exists()) openClaim(r.user);
-    else location.href = homeUrl(ud.data().handle);
+    if (!ud.exists()) { openClaim(r.user); return; }
+    if (!ud.data().email) {
+      try { await setDoc(doc(db, 'tusers', r.user.uid), { email: r.user.email || '' }, { merge: true }); }
+      catch (e) { console.log('[LUVINFO] email backfill err', e); }
+    }
+    location.href = homeUrl(ud.data().handle);
   } catch (e) {
     console.log('[LUVINFO] login err', e);
     toast('로그인에 실패했어요');
@@ -201,11 +205,30 @@ function openClaim(user) {
     }
     const h = $('#claim-h').value.trim().toLowerCase();
     if (!/^[a-z0-9]{2,20}$/.test(h)) { toast('영문 소문자·숫자 2~20자로 입력해 주세요'); return; }
+    // 시스템 예약어 + 예약 핸들 목록(러브로그 config/reserved 공유 + 러브인포 전용 config/treserved)
+    const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about'];
+    if (SYS_RESERVED.includes(h)) { toast('사용할 수 없는 핸들이에요'); return; }
+    try {
+      const [r1, r2] = await Promise.all([
+        getDoc(doc(db, 'config', 'reserved')),
+        getDoc(doc(db, 'config', 'treserved'))
+      ]);
+      const rl = []
+        .concat(r1.exists() ? (r1.data().list || []) : [])
+        .concat(r2.exists() ? (r2.data().list || []) : [])
+        .map((x) => String(x).trim().toLowerCase());
+      if (rl.includes(h)) { toast('사용할 수 없는 핸들이에요'); return; }
+    } catch (e) { console.log('[LUVINFO] reserved check err', e); }
     const ex = await getDoc(doc(db, 'tsites', h));
     if (ex.exists()) { toast('이미 사용 중인 핸들이에요'); return; }
     try {
       await setDoc(doc(db, 'tsites', h), defaultSite(user.uid, h));
-      await setDoc(doc(db, 'tusers', user.uid), { handle: h });
+      await setDoc(doc(db, 'tusers', user.uid), {
+        handle: h,
+        email: user.email || '',
+        joined: new Date().toISOString().slice(0, 10),
+        ts: Date.now()
+      });
       location.href = homeUrl(h);
     } catch (e) {
       console.log('[LUVINFO] claim err', e);
