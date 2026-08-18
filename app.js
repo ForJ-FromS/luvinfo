@@ -35,7 +35,7 @@ function gid(i) { return document.getElementById(i); }
 const SIGNUP = { mode: 'invite', code: '' }; // invite = config/tsignup 목록의 러브인포 전용 코드 / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v37 로드');
+console.log('[LUVINFO] app.js v38 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1878,13 +1878,13 @@ function bindDeco() {
     }
     const gImg = pick('enterImg');
     const gMsg = pick('enterText');
-    const gPw = pick('gate');
     if (gImg || gMsg) {
       st.site.gate = st.site.gate || { on: false, msg: '', pw: '', img: '' };
       if (gImg) st.site.gate.img = String(gImg);
       if (gMsg) st.site.gate.msg = String(gMsg);
-      if (gPw) st.site.gate.pw = String(gPw);
-      got.push('대문(이미지·문구' + (gPw ? '·비밀번호' : '') + ' — 켜려면 꾸미기에서 대문 켬)');
+      // 비밀번호는 가져오지 않음 — 러브로그는 암호화 저장이라 형식이 달라요
+      if (st.site.gate.pw && /^[0-9a-f]{64}$/i.test(st.site.gate.pw)) st.site.gate.pw = ''; // 이전 가져오기로 들어온 해시 청소
+      got.push('대문 이미지·문구 (비밀번호는 러브인포에서 새로 설정해 주세요)');
     }
     if (!got.length) { toast('가져올 수 있는 설정을 못 찾았어요 — 러브로그 홈 구조가 예상과 달라요'); return; }
     setDirty();
