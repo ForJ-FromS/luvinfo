@@ -35,7 +35,7 @@ function gid(i) { return document.getElementById(i); }
 const SIGNUP = { mode: 'invite', code: '' }; // invite = config/tsignup 목록의 러브인포 전용 코드 / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v41 로드');
+console.log('[LUVINFO] app.js v42 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -349,6 +349,7 @@ function applyTheme() {
 function showSite() {
   $('#site').style.display = 'block';
   $('#fabs').style.display = 'flex';
+  checkNotice();
   if (gid('fab-logout')) {
     gid('fab-logout').style.display = st.user ? 'block' : 'none';
     gid('fab-logout').onclick = doLogout;
@@ -563,6 +564,8 @@ function renderBlocks(ch, bodyEl) {
     else if (blk.kind === 'stk' && (d.items || []).length) div.appendChild(buildSticker(d));
     else if (blk.kind === 'bn' && (d.items || []).length) div.appendChild(buildBanner(d));
     else if (blk.kind === 'lnk' && (d.items || []).length) div.appendChild(buildLinks(d));
+    else if (blk.kind === 'quo' && d.text) div.appendChild(buildQuote(d));
+    else if (blk.kind === 'dd' && d.date) div.appendChild(buildDday(d));
     else return;
     host.appendChild(div);
   });
@@ -703,6 +706,29 @@ function buildSticker(s) {
     '<img src="' + esc(it.u) + '" style="width:' + (parseInt(it.size) || 64) + 'px;transform:rotate(' + (parseInt(it.rot) || 0) + 'deg);" alt="">'
   ).join('');
   return d;
+}
+
+function buildQuote(d) {
+  const w = document.createElement('div');
+  w.className = 'quoblk';
+  w.innerHTML = '<span class="qmark">“</span><p>' + esc(d.text || '').replace(/\n/g, '<br>') + '</p>' +
+    (d.by ? '<i>— ' + esc(d.by) + '</i>' : '');
+  return w;
+}
+
+function buildDday(d) {
+  const w = document.createElement('div');
+  w.className = 'ddblk';
+  const target = new Date(d.date + 'T00:00:00');
+  let txt = '';
+  if (!isNaN(target)) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const diff = Math.round((target - today) / 86400000);
+    txt = diff > 0 ? 'D-' + diff : (diff === 0 ? 'D-DAY' : 'D+' + (-diff));
+  }
+  w.innerHTML = '<b>' + txt + '</b>' + (d.label ? '<span>' + esc(d.label) + '</span>' : '') +
+    '<i>' + esc(d.date || '') + '</i>';
+  return w;
 }
 
 function buildLinks(d) {
@@ -895,12 +921,34 @@ async function openOps() {
   gid('ops-bg').classList.add('on');
   gid('ops-sheet').classList.add('on');
   gid('ops-out').value = '';
+  try { const n = await getDoc(doc(db, 'config', 'tnotice')); if (gid('ops-notice')) gid('ops-notice').value = (n.exists() && n.data().text) || ''; } catch (e) { /* */ }
   gid('codes-list').innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오는 중…</p>';
   try { await loadCodes(); renderCodes(); }
   catch (e) { gid('codes-list').innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오기 실패</p>'; }
   renderOnceList();
   renderInqBox();
 }
+async function checkNotice() {
+  try {
+    const s = await getDoc(doc(db, 'config', 'tnotice'));
+    if (!s.exists()) return;
+    const d = s.data() || {};
+    if (!d.text || !d.id) return;
+    if (localStorage.getItem('li_notice_seen') === String(d.id)) return;
+    gid('notice-body').textContent = d.text;
+    gid('notice-bg').classList.add('on');
+    gid('notice-pop').classList.add('on');
+    const close = () => {
+      localStorage.setItem('li_notice_seen', String(d.id));
+      gid('notice-bg').classList.remove('on');
+      gid('notice-pop').classList.remove('on');
+    };
+    gid('notice-ok').onclick = close;
+    gid('notice-close').onclick = close;
+    gid('notice-bg').onclick = close;
+  } catch (e) { /* 공지는 실패해도 조용히 */ }
+}
+
 async function renderOnceList() {
   const box = gid('once-list');
   if (!box) return;
@@ -1121,6 +1169,19 @@ function bindShell() {
   if (gid('ops-bg')) gid('ops-bg').onclick = closeOps;
   if (gid('ops-make')) gid('ops-make').onclick = opsMake;
   if (gid('once-refresh')) gid('once-refresh').onclick = renderOnceList;
+  if (gid('ops-notice-save')) gid('ops-notice-save').onclick = async () => {
+    const text = gid('ops-notice').value.trim();
+    if (!text) { toast('공지 내용을 적어주세요'); return; }
+    try {
+      await setDoc(doc(db, 'config', 'tnotice'), { text, id: Date.now(), date: new Date().toISOString().slice(0, 10) });
+      toast('공지 올렸어요 ✓ — 유저들이 다음 방문 때 봐요');
+    } catch (e) { console.log('[LUVINFO] notice err', e); toast('공지 저장 실패 — tnotice 쓰기 규칙 확인'); }
+  };
+  if (gid('ops-notice-del')) gid('ops-notice-del').onclick = async () => {
+    if (!confirm('공지를 내릴까요?')) return;
+    try { await setDoc(doc(db, 'config', 'tnotice'), { text: '', id: 0 }); gid('ops-notice').value = ''; toast('공지 내렸어요'); }
+    catch (e) { toast('실패'); }
+  };
   if (gid('ops-copy')) gid('ops-copy').onclick = () => {
     const v = gid('ops-out').value.trim();
     if (!v) { toast('복사할 코드가 없어요'); return; }
@@ -1192,7 +1253,7 @@ let work = null;
 let isNewCh = false;
 let editingBlk = null;
 
-const KIND_LABEL = { txt: '글', pf: '프로필', gal: '갤러리', mu: '음악', stk: '스티커', bn: '배너', lnk: '링크' };
+const KIND_LABEL = { txt: '글', pf: '프로필', gal: '갤러리', mu: '음악', stk: '스티커', bn: '배너', lnk: '링크', quo: '인용구', dd: '디데이' };
 
 function newBlockData(kind) {
   if (kind === 'txt') return { body: '', imgs: [] };
@@ -1202,6 +1263,8 @@ function newBlockData(kind) {
   if (kind === 'stk') return { items: [] };
   if (kind === 'bn') return { items: [] };
   if (kind === 'lnk') return { items: [] };
+  if (kind === 'quo') return { text: '', by: '' };
+  if (kind === 'dd') return { label: '', date: '' };
   return {};
 }
 
@@ -1214,6 +1277,8 @@ function blkSummary(blk) {
   if (blk.kind === 'stk') return (d.items || []).length + '개';
   if (blk.kind === 'bn') return (d.items || []).length + '개';
   if (blk.kind === 'lnk') return (d.items || []).length + '개';
+  if (blk.kind === 'quo') return (d.text || '').slice(0, 14);
+  if (blk.kind === 'dd') return d.label || d.date || '';
   return '';
 }
 
@@ -1299,7 +1364,7 @@ function openBlockEdit(blk) {
   editingBlk = blk;
   $('#es-cellrow').style.display = 'none';
   $('#bl-edit').style.display = 'block';
-  ['txt', 'pf', 'gal', 'mu', 'stk', 'bn', 'lnk'].forEach((k) => {
+  ['txt', 'pf', 'gal', 'mu', 'stk', 'bn', 'lnk', 'quo', 'dd'].forEach((k) => {
     $('#ble-' + k).style.display = blk.kind === k ? 'block' : 'none';
   });
   const d = blk.data;
@@ -1329,6 +1394,12 @@ function openBlockEdit(blk) {
     renderBnChips();
   } else if (blk.kind === 'lnk') {
     renderLnkChips();
+  } else if (blk.kind === 'quo') {
+    $('#eq-text').value = blk.data.text || '';
+    $('#eq-by').value = blk.data.by || '';
+  } else if (blk.kind === 'dd') {
+    $('#ed-label').value = blk.data.label || '';
+    $('#ed-date').value = blk.data.date || '';
   }
   $('#bs-card').value = blk.style?.card || '';
   $('#bs-corner').value = blk.style?.corner || '';
@@ -1353,6 +1424,12 @@ function saveBlockFields() {
     d.title = $('#em-title').value.trim();
     d.artist = $('#em-artist').value.trim();
     d.url = $('#em-url').value.trim();
+  } else if (editingBlk.kind === 'quo') {
+    d.text = $('#eq-text').value;
+    d.by = $('#eq-by').value.trim();
+  } else if (editingBlk.kind === 'dd') {
+    d.label = $('#ed-label').value.trim();
+    d.date = $('#ed-date').value.trim();
   }
   editingBlk.style = {
     card: $('#bs-card').value,
@@ -1712,6 +1789,7 @@ function openDeco() {
   $('#dc-nav').value = t.nav || 'dot';
   $('#dc-num').value = t.num || 'on';
   if (gid('dc-chtitle')) gid('dc-chtitle').value = t.chtitle || '';
+  if (gid('dc-css')) gid('dc-css').value = t.css || '';
   $('#dc-corner').value = t.corner || '';
   $('#dc-cardop').value = t.cardop || '';
   $('#dc-bgdim').value = parseInt(t.bgDim) || 84;
@@ -1767,6 +1845,7 @@ function bindDeco() {
   $('#dc-nav').onchange = (e) => { t().nav = e.target.value; setDirty(); renderPager(); };
   $('#dc-num').onchange = (e) => { t().num = e.target.value; setDirty(); renderChapter(); };
   if (gid('dc-chtitle')) gid('dc-chtitle').onchange = (e) => { t().chtitle = e.target.value; setDirty(); applyTheme(); };
+  if (gid('dc-css')) gid('dc-css').oninput = (e) => { t().css = e.target.value; setDirty(); applyTheme(); };
   $('#dc-corner').onchange = (e) => { t().corner = e.target.value; setDirty(); applyTheme(); };
   $('#dc-cardop').onchange = (e) => { t().cardop = e.target.value; setDirty(); applyTheme(); };
   $('#dc-valign').onchange = (e) => { t().valign = e.target.value; setDirty(); applyTheme(); };
@@ -1920,6 +1999,17 @@ function bindDeco() {
   };
   if (gid('dc-fav-up')) gid('dc-fav-up').onclick = () => uploadOne((url) => { st.site.favicon = url; setDirty(); applyTheme(); toast('파비콘 적용!'); });
   if (gid('dc-fav-del')) gid('dc-fav-del').onclick = () => { st.site.favicon = ''; setDirty(); applyTheme(); };
+  if (gid('dc-del-home')) gid('dc-del-home').onclick = async () => {
+    const typed = prompt('정말 삭제하려면 핸들(' + st.handle + ')을 그대로 입력해 주세요.\n장·사진·설정이 전부 사라지고 되돌릴 수 없어요.');
+    if (typed === null) return;
+    if (typed.trim().toLowerCase() !== st.handle) { toast('핸들이 달라요 — 삭제 취소'); return; }
+    try {
+      await deleteDoc(doc(db, 'tsites', st.handle));
+      await deleteDoc(doc(db, 'tusers', st.user.uid));
+      toast('삭제했어요 — 안녕히!');
+      setTimeout(() => { signOut(auth).finally(() => location.href = BASE); }, 900);
+    } catch (e) { console.log('[LUVINFO] del home err', e); toast('삭제 실패'); }
+  };
   $('#dc-bimg-up').onclick = () => uploadOne((url) => { st.site.theme.bgImg = url; setDirty(); applyTheme(); toast('배경 이미지 설정'); });
   $('#dc-bimg-del').onclick = () => { st.site.theme.bgImg = ''; setDirty(); applyTheme(); };
   $('#dc-gate').onchange = (e) => {
