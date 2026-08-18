@@ -754,17 +754,50 @@
         <button class="heart-btn" id="heart"><span class="h">♡</span><span id="hcount">0</span></button>
         <button class="copy-btn" id="copy-link">링크 복사</button>
       </div>
-      <span id="upd-date"></span> · <a href="#" id="foot-brand">LUVINFO</a>
+      <span id="upd-date"></span> · <a href="#" id="foot-inq">✉ 문의</a> · <a href="#" id="foot-brand">LUVINFO</a>
     </div>
   </div>
 </div>
 
 <!-- 주인 하단 바 -->
 <div class="owner-bar">
+  <button class="ob" id="ob-codes" style="display:none;">🎟 코드</button>
   <button class="ob" id="ob-add">＋ 새 장</button>
   <button class="ob" id="ob-addhtml">＋ HTML 장</button>
   <button class="ob" id="ob-deco">🎨 꾸미기</button>
   <button class="ob save" id="ob-save">✓ 저장</button>
+</div>
+
+<!-- 초대 코드 발급 (운영자) -->
+<div class="sheet-bg" id="codes-bg"></div>
+<div class="sheet" id="codes-sheet" style="width:min(480px,94vw);">
+  <h3><span>🎟 초대 코드</span><button id="codes-close">✕</button></h3>
+  <div class="f-row">
+    <div style="display:flex;gap:6px;">
+      <input type="text" id="codes-new" placeholder="직접 입력 (비우고 만들기 = 자동 생성)" style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--tx);font-size:12px;padding:8px 10px;font-family:inherit;">
+      <button class="mini-btn" id="codes-add">＋ 만들기</button>
+    </div>
+    <div class="f-note">코드는 목록에 있는 동안 계속 유효해요(다회용). 유출됐으면 🗑 하고 새로 만들면 돼요.</div>
+  </div>
+  <div id="codes-list"><p style="color:var(--mute);font-size:12px;">불러오는 중…</p></div>
+</div>
+
+<!-- 문의 작성 시트 -->
+<div class="sheet-bg" id="inq-bg"></div>
+<div class="sheet" id="inq-sheet" style="width:min(480px,94vw);">
+  <h3><span>문의 보내기</span><button id="inq-close">✕</button></h3>
+  <div class="f-row">
+    <textarea id="inq-body" class="tall" style="min-height:140px;" placeholder="러브인포 관련 문의·버그 제보·건의를 적어주세요."></textarea>
+    <div class="f-note">보낸 문의는 운영자만 볼 수 있어요. 로그인한 계정으로 접수돼요.</div>
+  </div>
+  <div class="f-actions"><button class="f-ok" id="inq-send">보내기</button></div>
+</div>
+
+<!-- 문의함 (운영자) -->
+<div class="sheet-bg" id="inqbox-bg"></div>
+<div class="sheet" id="inqbox-sheet">
+  <h3><span>📮 문의함</span><button id="inqbox-close">✕</button></h3>
+  <div id="inqbox-list"><p style="color:var(--mute);font-size:12px;">불러오는 중…</p></div>
 </div>
 
 <!-- 장 편집 시트 -->
@@ -1055,10 +1088,20 @@
     <label>머리글 이미지</label>
     <div style="display:flex;gap:6px;">
       <button class="mini-btn" id="dc-himg-up">이미지 업로드</button>
-      <button class="mini-btn" id="dc-himg-adj">사진 조정</button>
       <button class="mini-btn" id="dc-himg-del">제거</button>
     </div>
-    <div class="f-note">권장: 가로 1200px 이상, 비율 3:1쯤 (예: 1200×400) — 사진 조정에서 확대·위아래 위치를 맞출 수 있어요</div>
+    <div class="f-note">권장: 가로 1200px 이상, 비율 3:1쯤 (예: 1200×400)</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+      <label style="flex-shrink:0;font-size:11px;letter-spacing:.06em;color:var(--dim);">사진 위아래</label>
+      <input type="range" id="dc-hy" min="0" max="100" step="1" style="flex:1;">
+      <span style="font-size:10px;color:var(--mute);">위 ↔ 아래</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+      <label style="flex-shrink:0;font-size:11px;letter-spacing:.06em;color:var(--dim);">사진 확대</label>
+      <input type="range" id="dc-hz" min="100" max="220" step="2" style="flex:1;">
+      <span id="dc-hzv" style="font-size:11px;color:var(--dim);width:44px;text-align:right;">100%</span>
+    </div>
+    <div class="f-note" style="margin-top:4px;">위아래를 움직여도 크기는 변하지 않아요 — 확대는 확대 칸에서만!</div>
     <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
       <label style="flex-shrink:0;font-size:11px;letter-spacing:.06em;color:var(--dim);">머리글 높이</label>
       <input type="range" id="dc-hh" min="120" max="340" step="10" style="flex:1;">
@@ -1160,6 +1203,6 @@
 <input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=31"></script>
+<script type="module" src="app.js?v=35"></script>
 </body>
 </html>

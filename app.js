@@ -7,7 +7,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
-  getFirestore, doc, getDoc, setDoc, updateDoc, increment
+  getFirestore, doc, getDoc, setDoc, updateDoc, increment, getDocs, collection, deleteDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import {
   getStorage, ref as sref, uploadBytes, getDownloadURL
@@ -32,10 +32,10 @@ function gid(i) { return document.getElementById(i); }
 // ═══ 가입 설정 ═══
 // mode: 'open' = 누구나 가입 / 'code' = 초대 코드 입력해야 가입
 // 코드제로 바꾸려면: mode를 'code'로, code에 원하는 초대 코드를 넣고 재배포
-const SIGNUP = { mode: 'open', code: '' };
+const SIGNUP = { mode: 'invite', code: '' }; // invite = config/tsignup 목록의 러브인포 전용 코드 / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v31 로드');
+console.log('[LUVINFO] app.js v35 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -146,6 +146,7 @@ async function route() {
   }
   st.site = migrate(d.data());
   st.mine = !!(st.user && st.site.ownerUid === st.user.uid);
+  if (gid('ob-codes')) gid('ob-codes').style.display = (st.mine && st.myHandle === 'jeste') ? '' : 'none';
   const g = st.site.gate || {};
   if (g.on && !st.mine && sessionStorage.getItem('sh_gate_' + h) !== '1') {
     showGate(g);
@@ -205,6 +206,22 @@ function openClaim(user) {
       const c = prompt('초대 코드를 입력해 주세요');
       if (c === null) return;
       if (c.trim() !== SIGNUP.code) { toast('초대 코드가 달라요'); return; }
+    }
+    if (SIGNUP.mode === 'invite') {
+      const c = prompt('초대 코드를 입력해 주세요');
+      if (c === null) return;
+      const code = c.trim().toLowerCase();
+      if (!code) { toast('초대 코드를 입력해 주세요'); return; }
+      try {
+        // 러브인포 전용 코드 목록 — config/tsignup { list: [...] } (러브로그 invites와 무관)
+        const iv = await getDoc(doc(db, 'config', 'tsignup'));
+        const codes = (iv.exists() ? (iv.data().list || []) : []).map((x) => String(x).trim().toLowerCase());
+        if (!codes.includes(code)) { toast('초대 코드가 달라요'); return; }
+      } catch (e) {
+        console.log('[LUVINFO] invite check err', e);
+        toast('코드 확인에 실패했어요 — 잠시 후 다시 시도해 주세요');
+        return;
+      }
     }
     const h = $('#claim-h').value.trim().toLowerCase();
     if (!/^[a-z0-9]{2,20}$/.test(h)) { toast('영문 소문자·숫자 2~20자로 입력해 주세요'); return; }
@@ -288,18 +305,15 @@ function applyTheme() {
   const hi = $('#head-img');
   hi.style.height = (parseInt(hd.h) || 200) + 'px';
   if (hd.img) {
-    hi.style.backgroundImage = 'url("' + hd.img + '")';
-    if (hd.z) {
-      hi.style.backgroundSize = (parseInt(hd.z) || 100) + '% auto';
-      hi.style.backgroundPosition = (hd.x ?? 50) + '% ' + (hd.y ?? 50) + '%';
-    } else {
-      hi.style.backgroundSize = 'cover';
-      hi.style.backgroundPosition = 'center';
-    }
+    // img + object-fit: 위아래(py)를 움직여도 크기 불변, 확대(sc)는 별도
+    const py = Math.min(100, Math.max(0, parseInt(hd.py ?? 50)));
+    const sc = Math.min(300, Math.max(100, parseInt(hd.sc) || 100));
+    hi.style.backgroundImage = '';
+    hi.style.overflow = 'hidden';
+    hi.innerHTML = '<img src="' + esc(hd.img) + '" alt="" draggable="false" style="width:100%;height:100%;object-fit:cover;object-position:50% ' + py + '%;transform:scale(' + (sc / 100) + ');transform-origin:50% ' + py + '%;display:block;">';
   } else {
+    hi.innerHTML = '';
     hi.style.backgroundImage = 'linear-gradient(150deg, var(--line), var(--card))';
-    hi.style.backgroundSize = '';
-    hi.style.backgroundPosition = '';
   }
   document.title = (hd.title || st.handle) + ' — LUVINFO';
 }
@@ -796,6 +810,137 @@ function go(i) {
   window.scrollTo({ top: 0 });
 }
 
+let codesCache = null;
+async function loadCodes() {
+  const s = await getDoc(doc(db, 'config', 'tsignup'));
+  codesCache = s.exists() ? (s.data().list || []).map(String) : [];
+  return codesCache;
+}
+function renderCodes() {
+  const box = gid('codes-list');
+  if (!box) return;
+  if (!codesCache || !codesCache.length) {
+    box.innerHTML = '<p style="color:var(--mute);font-size:12px;">코드가 없어요 — 위에서 만들면 바로 가입에 쓸 수 있어요.<br>⚠ 코드가 하나도 없으면 아무도 가입 못 해요.</p>';
+    return;
+  }
+  box.innerHTML = codesCache.map((c, i) =>
+    '<div style="display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:8px;">' +
+    '<code style="flex:1;font-size:13px;letter-spacing:.04em;">' + esc(c) + '</code>' +
+    '<button class="mini-btn" data-ccopy="' + i + '">복사</button>' +
+    '<i data-cdel="' + i + '" style="cursor:pointer;font-style:normal;color:var(--mute);">🗑</i></div>'
+  ).join('');
+  box.querySelectorAll('[data-ccopy]').forEach((x) => {
+    x.onclick = () => navigator.clipboard?.writeText(codesCache[parseInt(x.dataset.ccopy)]).then(() => toast('복사!')).catch(() => toast('복사 실패'));
+  });
+  box.querySelectorAll('[data-cdel]').forEach((x) => {
+    x.onclick = async () => {
+      const i = parseInt(x.dataset.cdel);
+      if (!confirm('코드 「' + codesCache[i] + '」를 폐기할까요? 이 코드로는 더 이상 가입할 수 없어요.')) return;
+      codesCache.splice(i, 1);
+      await saveCodes();
+    };
+  });
+}
+async function saveCodes() {
+  try {
+    await setDoc(doc(db, 'config', 'tsignup'), { list: codesCache });
+    renderCodes();
+    toast('저장했어요 ✓');
+  } catch (e) {
+    console.log('[LUVINFO] codes err', e);
+    toast('저장 실패 — config/tsignup 쓰기 규칙이 게시됐는지 확인해 주세요');
+  }
+}
+async function openCodes() {
+  gid('codes-bg').classList.add('on');
+  gid('codes-sheet').classList.add('on');
+  gid('codes-new').value = '';
+  gid('codes-list').innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오는 중…</p>';
+  try { await loadCodes(); renderCodes(); }
+  catch (e) { gid('codes-list').innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오기 실패</p>'; }
+}
+function closeCodes() {
+  gid('codes-bg').classList.remove('on');
+  gid('codes-sheet').classList.remove('on');
+}
+function genCode() {
+  const words = ['star', 'wave', 'luna', 'nova', 'echo', 'aqua', 'iris', 'onyx', 'mint', 'fern'];
+  const w = words[Math.floor(Math.random() * words.length)];
+  const n = Math.random().toString(36).slice(2, 6);
+  return 'li-' + w + '-' + n;
+}
+async function addCode() {
+  let c = gid('codes-new').value.trim().toLowerCase();
+  if (!c) c = genCode();
+  if (c.length > 40) { toast('40자 이내로 해주세요'); return; }
+  if (!codesCache) { try { await loadCodes(); } catch (e) { codesCache = []; } }
+  if (codesCache.includes(c)) { toast('이미 있는 코드예요'); return; }
+  codesCache.unshift(c);
+  gid('codes-new').value = '';
+  await saveCodes();
+  navigator.clipboard?.writeText(c).then(() => toast('새 코드 복사됨: ' + c)).catch(() => {});
+}
+
+function openInq() {
+  if (!st.user) { toast('문의는 로그인 후 보낼 수 있어요'); return; }
+  gid('inq-body').value = '';
+  gid('inq-bg').classList.add('on');
+  gid('inq-sheet').classList.add('on');
+}
+function closeInq() {
+  gid('inq-bg').classList.remove('on');
+  gid('inq-sheet').classList.remove('on');
+}
+async function sendInq() {
+  const body = gid('inq-body').value.trim();
+  if (!body) { toast('내용을 적어주세요'); return; }
+  if (body.length > 2000) { toast('2000자 이내로 적어주세요'); return; }
+  try {
+    await setDoc(doc(db, 'tinquiries', uid()), {
+      uid: st.user.uid,
+      handle: st.myHandle || '',
+      email: st.user.email || '',
+      body,
+      ts: Date.now(),
+      date: new Date().toISOString().slice(0, 10)
+    });
+    closeInq();
+    toast('문의를 보냈어요 ✓');
+  } catch (e) {
+    console.log('[LUVINFO] inq err', e);
+    toast('전송 실패 — 규칙이 아직 없을 수 있어요 (운영자에게 알려주세요)');
+  }
+}
+async function openInqBox() {
+  gid('inqbox-bg').classList.add('on');
+  gid('inqbox-sheet').classList.add('on');
+  const box = gid('inqbox-list');
+  box.innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오는 중…</p>';
+  try {
+    const qs = await getDocs(collection(db, 'tinquiries'));
+    const rows = [];
+    qs.forEach((s) => rows.push({ id: s.id, ...s.data() }));
+    rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    if (!rows.length) { box.innerHTML = '<p style="color:var(--mute);font-size:12px;">아직 문의가 없어요.</p>'; return; }
+    box.innerHTML = rows.map((r) =>
+      '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;">' +
+      '<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">' + esc(r.date || '') + ' · @' + esc(r.handle || '?') + (r.email ? ' · ' + esc(r.email) : '') +
+      ' <i data-inqdel="' + esc(r.id) + '" style="float:right;cursor:pointer;font-style:normal;color:var(--mute);">🗑</i></div>' +
+      '<div style="font-size:12.5px;white-space:pre-wrap;word-break:break-word;">' + esc(r.body || '') + '</div></div>'
+    ).join('');
+    box.querySelectorAll('[data-inqdel]').forEach((x) => {
+      x.onclick = async () => {
+        if (!confirm('이 문의를 지울까요?')) return;
+        try { await deleteDoc(doc(db, 'tinquiries', x.dataset.inqdel)); x.closest('div[style]').remove(); toast('지웠어요'); }
+        catch (e) { toast('삭제 실패'); }
+      };
+    });
+  } catch (e) {
+    console.log('[LUVINFO] inqbox err', e);
+    box.innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오기 실패 — tinquiries 규칙이 게시됐는지 확인해 주세요.</p>';
+  }
+}
+
 function renderFoot() {
   $('#hcount').textContent = st.site.heart || 0;
   const liked = localStorage.getItem('sh_like_' + st.handle) === '1';
@@ -834,8 +979,23 @@ function bindShell() {
       .catch(() => toast('복사에 실패했어요'));
   };
   $('#foot-brand').onclick = (e) => { e.preventDefault(); location.href = BASE; };
+  if (gid('foot-inq')) gid('foot-inq').onclick = (e) => {
+    e.preventDefault();
+    if (st.myHandle === 'jeste') openInqBox();
+    else openInq();
+  };
+  if (gid('inq-close')) gid('inq-close').onclick = closeInq;
+  if (gid('inq-bg')) gid('inq-bg').onclick = closeInq;
+  if (gid('inq-send')) gid('inq-send').onclick = sendInq;
+  if (gid('inqbox-close')) gid('inqbox-close').onclick = () => { gid('inqbox-bg').classList.remove('on'); gid('inqbox-sheet').classList.remove('on'); };
+  if (gid('inqbox-bg')) gid('inqbox-bg').onclick = () => { gid('inqbox-bg').classList.remove('on'); gid('inqbox-sheet').classList.remove('on'); };
 
   // 주인 바
+  if (gid('ob-codes')) gid('ob-codes').onclick = openCodes;
+  if (gid('codes-close')) gid('codes-close').onclick = closeCodes;
+  if (gid('codes-bg')) gid('codes-bg').onclick = closeCodes;
+  if (gid('codes-add')) gid('codes-add').onclick = addCode;
+  if (gid('codes-new')) gid('codes-new').onkeydown = (e) => { if (e.key === 'Enter') addCode(); };
   $('#ob-add').onclick = () => openChapterEdit(null, 'cell');
   $('#ob-addhtml').onclick = () => openChapterEdit(null, 'html');
   $('#ob-deco').onclick = openDeco;
@@ -1430,6 +1590,8 @@ function openDeco() {
   $('#dc-cardc').value = t.cardC || CARDC[t.preset || 'white'] || '#FFFFFF';
   const hd = st.site.head;
   if (gid('dc-hh')) { gid('dc-hh').value = parseInt(hd.h) || 200; gid('dc-hhv').textContent = (parseInt(hd.h) || 200) + 'px'; }
+  if (gid('dc-hy')) gid('dc-hy').value = parseInt(hd.py ?? 50);
+  if (gid('dc-hz')) { gid('dc-hz').value = Math.max(100, parseInt(hd.sc) || 100); if (gid('dc-hzv')) gid('dc-hzv').textContent = (Math.max(100, parseInt(hd.sc) || 100)) + '%'; }
   $('#dc-head').value = hd.mode || 'text';
   $('#dc-over').value = hd.over || '';
   $('#dc-title').value = hd.title || '';
@@ -1534,7 +1696,7 @@ function bindDeco() {
     setDirty();
     applyTheme();
   });
-  $('#dc-himg-del').onclick = () => { st.site.head.img = ''; delete st.site.head.z; setDirty(); applyTheme(); };
+  $('#dc-himg-del').onclick = () => { st.site.head.img = ''; delete st.site.head.z; delete st.site.head.py; delete st.site.head.sc; setDirty(); applyTheme(); };
   if (gid('dc-lvimport')) gid('dc-lvimport').onclick = async () => {
     const lh = ($('#dc-lvh').value.trim() || st.handle || '').toLowerCase();
     if (!lh) { toast('러브로그 핸들을 입력해 주세요'); return; }
@@ -1579,7 +1741,7 @@ function bindDeco() {
     const himg = pick('headImg', 'head');
     const heads = Array.isArray(d.heads) ? d.heads.filter(Boolean) : [];
     const img = himg || heads[0];
-    if (img && typeof img === 'string') { hd.img = img; delete hd.z; if ((hd.mode || 'text') === 'text' || hd.mode === 'none') hd.mode = 'both'; got.push('머리글 이미지'); }
+    if (img && typeof img === 'string') { hd.img = img; delete hd.z; delete hd.py; delete hd.sc; if ((hd.mode || 'text') === 'text' || hd.mode === 'none') hd.mode = 'both'; got.push('머리글 이미지'); }
     const title = pick('title', 'name');
     if (title) { hd.title = String(title); got.push('제목'); }
     const over = [pick('overSym'), pick('overTxt')].filter(Boolean).join(' ');
@@ -1612,9 +1774,14 @@ function bindDeco() {
     openDeco();
     toast('가져왔어요: ' + got.join(' · ') + ' — 마음에 들면 ✓ 저장!');
   };
-  if (gid('dc-himg-adj')) gid('dc-himg-adj').onclick = () => {
-    if (!st.site.head.img) { toast('먼저 머리글 이미지를 올려주세요'); return; }
-    openAdjust(st.site.head, () => { setDirty(); applyTheme(); });
+  if (gid('dc-hy')) gid('dc-hy').oninput = (e) => {
+    st.site.head.py = parseInt(e.target.value);
+    setDirty(); applyTheme();
+  };
+  if (gid('dc-hz')) gid('dc-hz').oninput = (e) => {
+    st.site.head.sc = parseInt(e.target.value);
+    if (gid('dc-hzv')) gid('dc-hzv').textContent = e.target.value + '%';
+    setDirty(); applyTheme();
   };
   if (gid('dc-hh')) gid('dc-hh').oninput = (e) => {
     st.site.head.h = parseInt(e.target.value) || 200;
