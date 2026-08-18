@@ -25,9 +25,14 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const uid = () => Math.random().toString(36).slice(2, 9);
 
 const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
+
+// ═══ 가입 설정 ═══
+// mode: 'open' = 누구나 가입 / 'code' = 초대 코드 입력해야 가입
+// 코드제로 바꾸려면: mode를 'code'로, code에 원하는 초대 코드를 넣고 재배포
+const SIGNUP = { mode: 'open', code: '' };
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v23 로드');
+console.log('[LUVINFO] app.js v24 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -189,6 +194,11 @@ function openClaim(user) {
   $('#claim').classList.add('on');
   $('#claim-cancel').onclick = () => { $('#claim').classList.remove('on'); $('#landing').classList.add('show'); };
   $('#claim-ok').onclick = async () => {
+    if (SIGNUP.mode === 'code') {
+      const c = prompt('초대 코드를 입력해 주세요');
+      if (c === null) return;
+      if (c.trim() !== SIGNUP.code) { toast('초대 코드가 달라요'); return; }
+    }
     const h = $('#claim-h').value.trim().toLowerCase();
     if (!/^[a-z0-9]{2,20}$/.test(h)) { toast('영문 소문자·숫자 2~20자로 입력해 주세요'); return; }
     const ex = await getDoc(doc(db, 'tsites', h));
