@@ -35,7 +35,7 @@ function gid(i) { return document.getElementById(i); }
 const SIGNUP = { mode: 'invite', code: '' }; // invite = config/tsignup 목록의 러브인포 전용 코드 / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v39 로드');
+console.log('[LUVINFO] app.js v41 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -349,9 +349,9 @@ function applyTheme() {
 function showSite() {
   $('#site').style.display = 'block';
   $('#fabs').style.display = 'flex';
-  if (gid('top-logout')) {
-    gid('top-logout').style.display = st.user ? '' : 'none';
-    gid('top-logout').onclick = doLogout;
+  if (gid('fab-logout')) {
+    gid('fab-logout').style.display = st.user ? 'block' : 'none';
+    gid('fab-logout').onclick = doLogout;
   }
   applyTheme();
   renderChapter();
@@ -739,6 +739,10 @@ async function bannerInfo(h) {
     const s = d.data();
     let mut = false;
     (s.chapters || []).forEach((c) => {
+      // 현행: 블록 스택(v17~) / 하위 호환: 옛 el.bn 구조
+      (c.blocks || []).forEach((b) => {
+        if (b.kind === 'bn') ((b.data?.items) || []).forEach((it) => { if (it.h === st.handle) mut = true; });
+      });
       ((c.el?.bn?.items) || []).forEach((it) => { if (it.h === st.handle) mut = true; });
     });
     return (bannerCache[h] = { img: s.myBanner || '', title: s.head?.title || h, mut });
