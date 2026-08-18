@@ -32,7 +32,7 @@ const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const SIGNUP = { mode: 'open', code: '' };
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v26 로드');
+console.log('[LUVINFO] app.js v27 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -207,17 +207,21 @@ function openClaim(user) {
     if (!/^[a-z0-9]{2,20}$/.test(h)) { toast('영문 소문자·숫자 2~20자로 입력해 주세요'); return; }
     // 시스템 예약어 + 예약 핸들 목록(러브로그 config/reserved 공유 + 러브인포 전용 config/treserved)
     const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about'];
-    if (SYS_RESERVED.includes(h)) { toast('사용할 수 없는 핸들이에요'); return; }
     try {
-      const [r1, r2] = await Promise.all([
+      const [r1, r2, r3] = await Promise.all([
         getDoc(doc(db, 'config', 'reserved')),
-        getDoc(doc(db, 'config', 'treserved'))
+        getDoc(doc(db, 'config', 'treserved')),
+        getDoc(doc(db, 'config', 'tallow'))
       ]);
-      const rl = []
-        .concat(r1.exists() ? (r1.data().list || []) : [])
-        .concat(r2.exists() ? (r2.data().list || []) : [])
-        .map((x) => String(x).trim().toLowerCase());
-      if (rl.includes(h)) { toast('사용할 수 없는 핸들이에요'); return; }
+      const norm = (arr) => arr.map((x) => String(x).trim().toLowerCase());
+      const allow = norm(r3.exists() ? (r3.data().list || []) : []);
+      if (!allow.includes(h)) {
+        if (SYS_RESERVED.includes(h)) { toast('사용할 수 없는 핸들이에요'); return; }
+        const rl = norm([]
+          .concat(r1.exists() ? (r1.data().list || []) : [])
+          .concat(r2.exists() ? (r2.data().list || []) : []));
+        if (rl.includes(h)) { toast('사용할 수 없는 핸들이에요'); return; }
+      }
     } catch (e) { console.log('[LUVINFO] reserved check err', e); }
     const ex = await getDoc(doc(db, 'tsites', h));
     if (ex.exists()) { toast('이미 사용 중인 핸들이에요'); return; }
