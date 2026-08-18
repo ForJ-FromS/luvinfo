@@ -4,23 +4,45 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>러브인포</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Serif+KR:wght@400;600&display=swap" rel="stylesheet">
 <style>
   /* ═══ 프리셋 ═══ */
   body[data-preset="white"] {
     --bg: #FDFDFC; --tx: #1F1E1C; --dim: #8A867E; --mute: #C4C1BA;
-    --line: #ECEAE5; --pri: #1F1E1C; --card: #FFFFFF; --radius: 4px;
+    --line: #ECEAE5; --pri: #1F1E1C; --card: #FFFFFF; --cardbase: 255, 255, 255; --radius: 4px;
   }
   body[data-preset="dark"] {
     --bg: #08080B; --tx: #E8E4DA; --dim: #8B8878; --mute: #55524A;
-    --line: #23232E; --pri: #C9A227; --card: #101017; --radius: 4px;
+    --line: #23232E; --pri: #C9A227; --card: #101017; --cardbase: 16, 16, 23; --radius: 4px;
   }
   body[data-preset="diary"] {
     --bg: #F7F3EA; --tx: #4A4238; --dim: #9C907E; --mute: #C9BFAE;
-    --line: #E5DCCB; --pri: #B0693C; --card: #FFFDF8; --radius: 6px;
+    --line: #E5DCCB; --pri: #B0693C; --card: #FFFDF8; --cardbase: 255, 253, 248; --radius: 6px;
   }
   body[data-preset="cute"] {
     --bg: #FDF6F8; --tx: #5C4A52; --dim: #B39AA5; --mute: #DCC8D0;
-    --line: #F3E2E8; --pri: #E58FA8; --card: #FFFFFF; --radius: 16px;
+    --line: #F3E2E8; --pri: #E58FA8; --card: #FFFFFF; --cardbase: 255, 255, 255; --radius: 16px;
+  }
+  body[data-preset="mono"] {
+    --bg: #FFFFFF; --tx: #151515; --dim: #6E6E6E; --mute: #B8B8B8;
+    --line: #E4E4E4; --pri: #151515; --card: #FAFAFA; --cardbase: 250, 250, 250; --radius: 0px;
+  }
+  body[data-preset="glass"] {
+    --bg: #EDF0F7; --tx: #3A3F52; --dim: #8A90A8; --mute: #C0C5D6;
+    --line: #DFE3EE; --pri: #6B7AA8; --card: #FFFFFFB8; --cardbase: 255, 255, 255; --cardop: .68; --radius: 14px;
+  }
+  body[data-preset="glass"] .site-bg { background: linear-gradient(160deg, #E9EDF9, #F6EAF1 55%, #E8F2EE); }
+  body[data-preset="glass"] .fold, body[data-preset="glass"] .heart-btn, body[data-preset="glass"] .pg-pill { backdrop-filter: blur(8px); }
+  body[data-preset="midnight"] {
+    --bg: #0B1026; --tx: #DCE0F2; --dim: #7C82A6; --mute: #4A4F73;
+    --line: #1E2444; --pri: #8E9BD8; --card: #121733; --cardbase: 18, 23, 51; --radius: 10px;
+  }
+  body[data-preset="forest"] {
+    --bg: #12201A; --tx: #E3E9E1; --dim: #8CA096; --mute: #52645B;
+    --line: #22352C; --pri: #7FB89A; --card: #182A22; --cardbase: 24, 42, 34; --radius: 8px;
   }
   body[data-preset="diary"] .site-bg {
     background-image: repeating-linear-gradient(180deg, transparent 0 31px, #E5DCCB55 31px 32px);
@@ -29,6 +51,14 @@
     background-image: radial-gradient(#EFD9E155 1.2px, transparent 1.2px);
     background-size: 22px 22px;
   }
+
+  body { --cardop: 1; }
+  body[data-corner="round"] { --radius: 16px; }
+  body[data-corner="soft"] { --radius: 6px; }
+  body[data-corner="sharp"] { --radius: 0px; }
+  body[data-op="solid"] { --cardop: 1; }
+  body[data-op="half"] { --cardop: .55; }
+  body[data-op="clear"] { --cardop: 0; }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -123,7 +153,7 @@
     box-shadow: 0 4px 12px #0000000d;
   }
   /* 접은 글 */
-  .fold { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); overflow: hidden; margin: 14px 0; }
+  .fold { border: 1px solid var(--line); border-radius: var(--radius); background: rgba(var(--cardbase), var(--cardop)); overflow: hidden; margin: 14px 0; }
   body[data-preset="white"] .fold, body[data-preset="dark"] .fold { border-left: none; border-right: none; border-radius: 0; background: none; }
   .fold-head {
     padding: 15px 12px;
@@ -162,7 +192,7 @@
     padding: 7px 16px;
     border: 1px solid var(--line);
     border-radius: 999px;
-    background: var(--card);
+    background: rgba(var(--cardbase), var(--cardop));
     color: var(--dim);
     font-size: 11.5px; letter-spacing: .06em;
     cursor: pointer;
@@ -176,7 +206,7 @@
   .heart-btn {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 9px 22px; border-radius: 999px;
-    border: 1px solid var(--line); background: var(--card);
+    border: 1px solid var(--line); background: rgba(var(--cardbase), var(--cardop));
     color: var(--dim); font-size: 12px; letter-spacing: .04em;
     cursor: pointer; transition: all .2s;
   }
@@ -253,26 +283,41 @@
   .ct:hover { color: var(--pri); border-color: var(--pri); }
   .ct.del:hover { color: #C0392B; border-color: #C0392B; }
 
-  /* ═══ 시트 공통 ═══ */
+  /* ═══ 시트 공통: PC=중앙 큰 창 · 모바일=하단 풀시트 ═══ */
   .sheet-bg { display: none; position: fixed; inset: 0; background: #00000033; z-index: 200; }
   .sheet-bg.on { display: block; }
   .sheet {
     position: fixed;
-    left: 50%; bottom: 0;
-    transform: translate(-50%, 100%);
-    width: 100%; max-width: 620px;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%) scale(.96);
+    width: min(720px, 94vw);
     max-height: 88dvh;
     background: var(--card);
     border: 1px solid var(--line);
-    border-bottom: none;
-    border-radius: 18px 18px 0 0;
-    box-shadow: 0 -10px 40px #00000018;
+    border-radius: 18px;
+    box-shadow: 0 18px 60px #00000026;
     z-index: 201;
-    transition: transform .3s ease;
-    padding: 20px 20px 28px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .22s ease, transform .22s ease;
+    padding: 24px 24px 26px;
     overflow-y: auto;
   }
-  .sheet.on { transform: translate(-50%, 0); }
+  .sheet.on { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+  @media (max-width: 640px) {
+    .sheet {
+      left: 0; right: 0; top: auto; bottom: 0;
+      transform: translateY(100%);
+      width: 100%;
+      max-height: 92dvh;
+      border-radius: 18px 18px 0 0;
+      border-bottom: none;
+      opacity: 1;
+      padding: 20px 18px 28px;
+      transition: transform .28s ease;
+    }
+    .sheet.on { transform: translateY(0); }
+  }
   .sheet h3 { font-size: 11px; letter-spacing: .26em; color: var(--mute); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
   .sheet h3 button { background: none; border: none; color: var(--mute); font-size: 14px; cursor: pointer; }
   .f-row { margin-bottom: 14px; }
@@ -284,7 +329,8 @@
     font-family: inherit;
   }
   .f-row textarea { min-height: 150px; resize: vertical; line-height: 1.8; }
-  .f-row textarea.tall { min-height: 240px; font-family: inherit; }
+  .f-row textarea.tall { min-height: 320px; font-family: inherit; }
+  @media (max-width: 640px) { .f-row textarea.tall { min-height: 220px; } }
   .f-row textarea.code { font-family: monospace; font-size: 12px; }
   .f-row input:focus, .f-row textarea:focus, .f-row select:focus { outline: none; border-color: var(--pri); }
   .f-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -348,6 +394,152 @@
   #lightbox.on { display: flex; }
   #lightbox img { max-width: 92vw; max-height: 88dvh; border-radius: 8px; }
 
+  body.mv .wrap { max-width: 390px; }
+
+  .cellbody mark { background: color-mix(in srgb, var(--pri), transparent 78%); color: inherit; padding: 1px 3px; border-radius: 3px; }
+  .cellbody u { text-underline-offset: 3px; text-decoration-color: var(--pri); }
+  .cellbody s { color: var(--dim); }
+  .divider { display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--mute); font-size: 10px; margin: 26px 0; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--line)); }
+  .divider::after { background: linear-gradient(90deg, var(--line), transparent); }
+
+  .pf {
+    background: rgba(var(--cardbase), var(--cardop));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    display: flex; align-items: center; gap: 16px;
+    position: relative; overflow: hidden;
+    margin: 20px 0;
+  }
+  .pf[data-pos="right"] { flex-direction: row-reverse; }
+  .pf[data-pos="top"] { flex-direction: column; text-align: center; padding: 26px 20px 24px; }
+  .pf[data-pos="none"] .pf-img { display: none; }
+  .pf[data-pos="bg"] { aspect-ratio: 21/9; min-height: 160px; align-items: flex-end; padding: 0; }
+  .pf[data-pos="bg"] .pf-img { position: absolute; inset: 0; width: 100% !important; height: 100% !important; border-radius: 0; border: none; }
+  .pf[data-pos="bg"] .pf-txt { position: relative; z-index: 2; width: 100%; padding: 40px 20px 16px; background: linear-gradient(180deg, transparent, rgba(var(--cardbase), .92)); }
+  .pf-img {
+    width: var(--psize, 64px); height: var(--psize, 64px);
+    flex-shrink: 0; border: 1px solid var(--line);
+    background-color: color-mix(in srgb, var(--pri), transparent 88%);
+    background-size: var(--pz, 100%) auto;
+    background-position: var(--px, 50%) var(--py, 50%);
+    background-repeat: no-repeat;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--pri); font-size: 17px;
+  }
+  .pf-img[data-shape="circle"] { border-radius: 50%; }
+  .pf-img[data-shape="rounded"] { border-radius: calc(var(--radius) * .75 + 4px); }
+  .pf-img[data-shape="square"] { border-radius: 0; }
+  .pf-nm { font-size: 15px; font-weight: 600; }
+  .pf-acc { display: inline-block; font-size: 10.5px; color: var(--pri); letter-spacing: .14em; margin-top: 4px; }
+  .pf[data-pos="left"] .pf-acc, .pf[data-pos="right"] .pf-acc { margin-left: 12px; margin-top: 0; }
+  .pf-ds { font-size: 12.5px; color: var(--dim); margin-top: 6px; line-height: 1.75; }
+
+  .gal { margin: 20px 0; }
+  .gal-grid { display: grid; gap: 7px; }
+  .gal-grid[data-cols="2"] { grid-template-columns: 1fr 1fr; }
+  .gal-grid[data-cols="3"] { grid-template-columns: repeat(3, 1fr); }
+  .gal-grid[data-cols="4"] { grid-template-columns: repeat(4, 1fr); }
+  .gal-cell {
+    aspect-ratio: 1; border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background-color: rgba(var(--cardbase), var(--cardop));
+    background-size: var(--gz, 100%) auto;
+    background-position: var(--gx, 50%) var(--gy, 50%);
+    background-repeat: no-repeat;
+    cursor: pointer;
+  }
+  .gal-slider { position: relative; }
+  .gal-track { display: flex; overflow: hidden; border-radius: var(--radius); }
+  .gal-slide {
+    min-width: 100%; aspect-ratio: 16/10;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background-color: rgba(var(--cardbase), var(--cardop));
+    background-size: cover; background-position: center;
+    transition: transform .4s ease;
+    cursor: pointer;
+  }
+  .gal-nav { display: flex; justify-content: center; gap: 6px; margin-top: 11px; }
+  .gal-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--mute); cursor: pointer; transition: all .2s; }
+  .gal-dot.on { background: var(--pri); }
+  .gal-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(var(--cardbase), .8); border: 1px solid var(--line);
+    color: var(--pri); font-size: 13px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; z-index: 2;
+  }
+  .gal-prev { left: 10px; } .gal-next { right: 10px; }
+
+  .music {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(var(--cardbase), var(--cardop));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px; max-width: 420px;
+    margin: 20px 0;
+  }
+  .m-disc {
+    width: 46px; height: 46px; border-radius: 50%;
+    background: repeating-radial-gradient(circle, color-mix(in srgb, var(--tx), transparent 88%) 0 2px, transparent 2px 4px);
+    border: 1px solid var(--pri);
+    position: relative; flex-shrink: 0;
+    animation: spin 7s linear infinite; animation-play-state: paused;
+  }
+  .music.playing .m-disc { animation-play-state: running; }
+  .m-disc::after { content: ''; position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; border-radius: 50%; background: var(--pri); transform: translate(-50%, -50%); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .m-info { flex: 1; min-width: 0; }
+  .m-title { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .m-artist { font-size: 11px; color: var(--dim); margin-top: 3px; }
+  .m-bar { margin-top: 8px; height: 2px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .m-bar i { display: block; height: 100%; width: 0%; background: var(--pri); transition: width .3s linear; }
+  .m-btn { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--pri); background: transparent; color: var(--pri); font-size: 12px; cursor: pointer; flex-shrink: 0; }
+
+  .stk { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 20px 0; }
+  .stk img { display: block; }
+
+  .adj-bg { display: none; position: fixed; inset: 0; background: #00000040; z-index: 300; }
+  .adj-bg.on { display: block; }
+  .adj {
+    display: none;
+    position: fixed; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px;
+    z-index: 301;
+    box-shadow: 0 18px 60px #00000026;
+    width: 320px; max-width: 92vw;
+  }
+  .adj.on { display: block; }
+  .adj h3 { font-size: 11px; letter-spacing: .22em; color: var(--mute); margin-bottom: 14px; }
+  .adj-view {
+    width: 100%; aspect-ratio: 1;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background-color: var(--bg);
+    background-repeat: no-repeat;
+    cursor: grab;
+    touch-action: none;
+  }
+  .adj-view.grab { cursor: grabbing; }
+  .adj-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 11px; color: var(--dim); }
+  .adj-row input { flex: 1; accent-color: var(--pri); }
+  .adj-ok { width: 100%; margin-top: 14px; padding: 10px 0; border: none; border-radius: 10px; background: var(--pri); color: var(--bg); font-size: 12.5px; font-weight: 600; cursor: pointer; }
+
+  .ea { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; overflow: hidden; }
+  .ea-head { padding: 12px 13px; font-size: 12.5px; color: var(--dim); cursor: pointer; display: flex; justify-content: space-between; user-select: none; }
+  .ea-head b { font-weight: 600; color: var(--tx); }
+  .ea-head .st { font-size: 11px; color: var(--pri); }
+  .ea-body { display: none; padding: 10px 13px 14px; border-top: 1px solid var(--line); }
+  .ea.open .ea-body { display: block; }
+  .ea .f-row { margin-bottom: 10px; }
+  .ea-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .fmt-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+
   #toast {
     position: fixed; bottom: 80px; left: 50%;
     transform: translateX(-50%) translateY(16px);
@@ -391,6 +583,7 @@
 <div class="fab-row" id="fabs" style="display:none;">
   <button class="fab" id="fab-my" style="display:none;">MY ⌂</button>
   <button class="fab" id="fab-login" style="display:none;">로그인</button>
+  <button class="fab" id="fab-view" style="display:none;">📱</button>
   <button class="fab" id="fab-edit" style="display:none;">✎ 편집</button>
 </div>
 
@@ -447,12 +640,83 @@
   <div class="f-row" id="es-cellrow">
     <label>내용</label>
     <textarea id="es-body" class="tall" placeholder="자유롭게 쓰세요. 빈 줄로 문단을 나눕니다."></textarea>
-    <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-      <button class="mini-btn" id="es-photo">📷 사진 추가</button>
-      <button class="mini-btn" id="es-fold">▸ 접은 글 삽입</button>
+    <div class="fmt-row">
+      <button class="mini-btn" id="es-photo">📷 사진</button>
+      <button class="mini-btn" id="es-fold">▸ 접은 글</button>
+      <button class="mini-btn" id="fmt-b"><b>가</b> 굵게</button>
+      <button class="mini-btn" id="fmt-hl">형광</button>
+      <button class="mini-btn" id="fmt-u">밑줄</button>
+      <button class="mini-btn" id="fmt-s">취소선</button>
+      <button class="mini-btn" id="fmt-hr">─ 구분선</button>
     </div>
     <div class="imgchips" id="es-imgs"></div>
-    <div class="f-note">사진은 [사진1]처럼 원하는 자리에 놓여요. 접은 글은 {접기:제목} … {접기끝} 사이가 접혀요.</div>
+    <div class="f-note">[사진N] 자리에 사진 · {접기:제목}…{접기끝} · **굵게** ==형광== __밑줄__ ~~취소~~ · 한 줄에 --- 는 구분선</div>
+
+    <label style="display:block;font-size:11px;letter-spacing:.06em;color:var(--dim);margin:16px 0 8px;">요소 (넣고 싶은 것만 켜서 본문에 배치)</label>
+
+    <div class="ea" id="ea-profile">
+      <div class="ea-head"><span><b>프로필</b> — 사진 + 이름 + 소개</span><span class="st" id="ep-st"></span></div>
+      <div class="ea-body">
+        <div class="f-2col">
+          <div class="f-row"><label>이름</label><input type="text" id="ep-nm"></div>
+          <div class="f-row"><label>계정 (이름 옆 작은 글)</label><input type="text" id="ep-acc"></div>
+        </div>
+        <div class="f-row"><label>소개</label><textarea id="ep-ds" style="min-height:64px;"></textarea></div>
+        <div class="f-2col">
+          <div class="f-row"><label>사진 위치</label>
+            <select id="ep-pos"><option value="left">왼쪽</option><option value="right">오른쪽</option><option value="top">위 (가운데)</option><option value="bg">배경으로</option><option value="none">사진 없음</option></select>
+          </div>
+          <div class="f-row"><label>사진 모양</label>
+            <select id="ep-shape"><option value="circle">원형</option><option value="rounded">둥근네모</option><option value="square">네모</option></select>
+          </div>
+        </div>
+        <div class="f-row"><label>사진 크기 <span id="ep-sizev"></span></label><input type="range" id="ep-size" min="48" max="120" style="width:100%;accent-color:var(--pri);"></div>
+        <div class="ea-btns">
+          <button class="mini-btn" id="ep-up">📷 사진 업로드</button>
+          <button class="mini-btn" id="ep-adj">🔍 사진 조정</button>
+          <button class="mini-btn" id="ep-ins">본문에 배치 [프로필]</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ea" id="ea-gallery">
+      <div class="ea-head"><span><b>갤러리</b> — 사진 여러 장</span><span class="st" id="eg-st"></span></div>
+      <div class="ea-body">
+        <div class="f-row"><label>레이아웃</label>
+          <select id="eg-layout"><option value="2">2열 그리드</option><option value="3">3열 그리드</option><option value="4">4열 그리드</option><option value="slider">슬라이더</option></select>
+        </div>
+        <div class="ea-btns">
+          <button class="mini-btn" id="eg-up">📷 사진 추가 (여러 장)</button>
+          <button class="mini-btn" id="eg-ins">본문에 배치 [갤러리]</button>
+        </div>
+        <div class="imgchips" id="eg-imgs"></div>
+        <div class="f-note">각 사진의 🔍를 누르면 확대·위치를 잡을 수 있어요 (그리드에서 잘리는 부분 조정)</div>
+      </div>
+    </div>
+
+    <div class="ea" id="ea-music">
+      <div class="ea-head"><span><b>음악</b> — 플레이어</span><span class="st" id="em-st"></span></div>
+      <div class="ea-body">
+        <div class="f-2col">
+          <div class="f-row"><label>곡 제목</label><input type="text" id="em-title"></div>
+          <div class="f-row"><label>아티스트</label><input type="text" id="em-artist"></div>
+        </div>
+        <div class="f-row"><label>오디오 URL (mp3 링크 — 비우면 장식용)</label><input type="text" id="em-url"></div>
+        <div class="ea-btns"><button class="mini-btn" id="em-ins">본문에 배치 [음악]</button></div>
+      </div>
+    </div>
+
+    <div class="ea" id="ea-sticker">
+      <div class="ea-head"><span><b>스티커</b> — 투명 PNG 나열</span><span class="st" id="esk-st"></span></div>
+      <div class="ea-body">
+        <div class="ea-btns">
+          <button class="mini-btn" id="esk-up">📷 스티커 추가 (여러 장)</button>
+          <button class="mini-btn" id="esk-ins">본문에 배치 [스티커]</button>
+        </div>
+        <div class="imgchips" id="esk-imgs"></div>
+        <div class="f-note">칩의 숫자 = 크기(px)·기울기(도). 눌러서 수정할 수 있어요.</div>
+      </div>
+    </div>
   </div>
   <div class="f-row" id="es-htmlrow" style="display:none;">
     <label>HTML 코드</label>
@@ -492,6 +756,22 @@
         <div class="pc-dots"><i style="background:#FDF6F8;border:1px solid #F3E2E8;"></i><i style="background:#E58FA8;"></i><i style="background:#5C4A52;"></i></div>
         <b>파스텔</b><small>말랑 · 둥근 · ♡</small>
       </div>
+      <div class="preset-card" data-p="mono">
+        <div class="pc-dots"><i style="background:#FFFFFF;border:1px solid #E4E4E4;"></i><i style="background:#151515;"></i><i style="background:#6E6E6E;"></i></div>
+        <b>모노</b><small>흑백 · 잡지처럼 담백</small>
+      </div>
+      <div class="preset-card" data-p="glass">
+        <div class="pc-dots"><i style="background:linear-gradient(160deg,#E9EDF9,#F6EAF1);border:1px solid #DFE3EE;"></i><i style="background:#6B7AA8;"></i><i style="background:#3A3F52;"></i></div>
+        <b>글래스</b><small>뿌연 유리 · 파스텔 그라데이션</small>
+      </div>
+      <div class="preset-card" data-p="midnight">
+        <div class="pc-dots"><i style="background:#0B1026;border:1px solid #1E2444;"></i><i style="background:#8E9BD8;"></i><i style="background:#DCE0F2;"></i></div>
+        <b>미드나잇</b><small>깊은 밤 남색 · 라벤더</small>
+      </div>
+      <div class="preset-card" data-p="forest">
+        <div class="pc-dots"><i style="background:#12201A;border:1px solid #22352C;"></i><i style="background:#7FB89A;"></i><i style="background:#E3E9E1;"></i></div>
+        <b>포레스트</b><small>짙은 숲 · 세이지</small>
+      </div>
     </div>
   </div>
 
@@ -505,8 +785,9 @@
     <div class="f-row">
       <label>폰트</label>
       <select id="dc-font">
-        <option value="'Pretendard'">Pretendard</option>
-        <option value="'Noto Serif KR', serif">세리프</option>
+        <option value="'Pretendard'">Pretendard (고딕)</option>
+        <option value="'Noto Serif KR', serif">Noto Serif (세리프)</option>
+        <option value="'Gowun Dodum', sans-serif">고운돋움 (둥근 고딕)</option>
         <option value="monospace">모노스페이스</option>
       </select>
     </div>
@@ -517,6 +798,17 @@
         <option value="arrow">화살표 (1 / 3)</option>
         <option value="pill">이름 알약</option>
       </select>
+    </div>
+  </div>
+
+  <div class="f-2col">
+    <div class="f-row">
+      <label>카드 모서리 (접은글·위젯 전부)</label>
+      <select id="dc-corner"><option value="">프리셋 기본</option><option value="round">둥글게</option><option value="soft">살짝 각지게</option><option value="sharp">뾰족하게</option></select>
+    </div>
+    <div class="f-row">
+      <label>카드 투명도</label>
+      <select id="dc-cardop"><option value="">프리셋 기본</option><option value="solid">불투명</option><option value="half">반투명</option><option value="clear">투명</option></select>
     </div>
   </div>
 
@@ -551,6 +843,17 @@
       <button class="mini-btn" id="dc-himg-up">이미지 업로드</button>
       <button class="mini-btn" id="dc-himg-del">제거</button>
     </div>
+  </div>
+
+  <div class="f-row">
+    <label>페이지 배경 이미지</label>
+    <div style="display:flex;gap:6px;">
+      <button class="mini-btn" id="dc-bimg-up">이미지 업로드</button>
+      <button class="mini-btn" id="dc-bimg-del">제거</button>
+    </div>
+    <label style="margin-top:10px;">배경색으로 덮는 정도 <span id="dc-bgdimv"></span></label>
+    <input type="range" id="dc-bgdim" min="30" max="96" style="width:100%;accent-color:var(--pri);">
+    <div class="f-note">낮을수록 사진이 진하게, 높을수록 은은하게 보여요.</div>
   </div>
 
   <div class="f-row">
@@ -595,12 +898,20 @@
   </div>
 </div>
 
+<div class="adj-bg" id="adj-bg"></div>
+<div class="adj" id="adj">
+  <h3>사진 조정</h3>
+  <div class="adj-view" id="adj-view"></div>
+  <div class="adj-row">확대 <input type="range" id="adj-zoom" min="100" max="260" value="100"></div>
+  <button class="adj-ok" id="adj-ok">완료</button>
+</div>
+
 <div id="lightbox"><img id="lb-img" alt=""></div>
 <div id="toast"></div>
 <input type="file" id="file-one" accept="image/*" style="display:none;">
 <input type="file" id="file-multi" accept="image/*" multiple style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=9"></script>
+<script type="module" src="app.js?v=12"></script>
 </body>
 </html>
