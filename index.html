@@ -719,6 +719,9 @@
   <button class="btn" id="gate-enter">입장</button>
 </div>
 
+<!-- 우상단 로그아웃 -->
+<button id="top-logout" style="display:none;position:fixed;top:14px;right:14px;z-index:150;background:transparent;border:1px solid var(--line);border-radius:999px;color:var(--mute);font-size:10.5px;letter-spacing:.08em;padding:6px 13px;cursor:pointer;font-family:inherit;">로그아웃</button>
+
 <!-- 주인 fab -->
 <div class="fab-row" id="fabs" style="display:none;">
   <button class="fab" id="fab-my" style="display:none;">MY ⌂</button>
@@ -1201,7 +1204,9 @@
   <div class="pop-in">
     <h3>내 성향글 주소 만들기</h3>
     <div class="f-row">
-      <label>핸들 (영문 소문자·숫자, 2~20자)</label>
+      <label>초대 코드</label>
+    <input type="text" id="claim-code" placeholder="받은 초대 코드를 입력해 주세요" autocomplete="off" style="margin-bottom:14px;">
+    <label>핸들 (영문 소문자·숫자, 2~20자)</label>
       <input type="text" id="claim-h" placeholder="예: jeste" autocomplete="off">
       <div class="f-note">주소가 됩니다. 나중에 바꾸기 어려우니 신중히!</div>
     </div>
@@ -1227,6 +1232,6 @@
 <input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=38"></script>
+<script type="module" src="app.js?v=39"></script>
 </body>
 </html>

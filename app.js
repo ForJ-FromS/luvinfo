@@ -35,7 +35,7 @@ function gid(i) { return document.getElementById(i); }
 const SIGNUP = { mode: 'invite', code: '' }; // invite = config/tsignup 목록의 러브인포 전용 코드 / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v38 로드');
+console.log('[LUVINFO] app.js v39 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -211,18 +211,21 @@ async function login() {
 function openClaim(user) {
   $('#landing').classList.remove('show');
   $('#claim').classList.add('on');
+  if (gid('claim-code')) {
+    gid('claim-code').value = '';
+    const needCode = SIGNUP.mode === 'invite' || SIGNUP.mode === 'code';
+    gid('claim-code').style.display = needCode ? '' : 'none';
+    gid('claim-code').previousElementSibling.style.display = needCode ? '' : 'none';
+  }
   $('#claim-cancel').onclick = () => { $('#claim').classList.remove('on'); $('#landing').classList.add('show'); };
   $('#claim-ok').onclick = async () => {
     if (SIGNUP.mode === 'code') {
-      const c = prompt('초대 코드를 입력해 주세요');
-      if (c === null) return;
-      if (c.trim() !== SIGNUP.code) { toast('초대 코드가 달라요'); return; }
+      const c = (gid('claim-code') ? gid('claim-code').value : '').trim();
+      if (c !== SIGNUP.code) { toast('초대 코드가 달라요'); return; }
     }
     let onceCode = null;
     if (SIGNUP.mode === 'invite') {
-      const c = prompt('초대 코드를 입력해 주세요');
-      if (c === null) return;
-      const code = c.trim().toLowerCase();
+      const code = (gid('claim-code') ? gid('claim-code').value : '').trim().toLowerCase();
       if (!code) { toast('초대 코드를 입력해 주세요'); return; }
       try {
         // ①다회용: config/tsignup 목록 ②1회용: invites/{코드} (svc=luvinfo, 미사용)
@@ -346,6 +349,10 @@ function applyTheme() {
 function showSite() {
   $('#site').style.display = 'block';
   $('#fabs').style.display = 'flex';
+  if (gid('top-logout')) {
+    gid('top-logout').style.display = st.user ? '' : 'none';
+    gid('top-logout').onclick = doLogout;
+  }
   applyTheme();
   renderChapter();
   renderFoot();
@@ -1620,13 +1627,13 @@ function bindEditor() {
     });
   };
   // 배너
-  $('#eb-addh').onclick = async () => {
-    if (!editingBlk) return;
   if (gid('el-add')) gid('el-add').onclick = () => {
     if (!editingBlk || editingBlk.kind !== 'lnk') return;
     (editingBlk.data.items = editingBlk.data.items || []).push({ t: '', u: '' });
     renderLnkChips();
   };
+  $('#eb-addh').onclick = async () => {
+    if (!editingBlk) return;
     const inp = $('#eb-hin');
     const h = (inp.value || '').trim().toLowerCase().replace(/^@/, '');
     if (!/^[a-z0-9]{2,20}$/.test(h)) { toast('핸들 형식이 아니에요 (영문 소문자·숫자)'); return; }
