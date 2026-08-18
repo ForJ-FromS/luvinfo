@@ -617,6 +617,38 @@
   .adj-row input { flex: 1; accent-color: var(--pri); }
   .adj-ok { width: 100%; margin-top: 14px; padding: 10px 0; border: none; border-radius: 10px; background: var(--pri); color: var(--bg); font-size: 12.5px; font-weight: 600; cursor: pointer; }
 
+  .blrow {
+    display: flex; align-items: center; gap: 9px;
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 7px;
+    font-size: 12.5px;
+  }
+  .blrow .kind {
+    font-size: 10px; letter-spacing: .1em;
+    color: var(--pri);
+    border: 1px solid color-mix(in srgb, var(--pri), transparent 60%);
+    border-radius: 6px; padding: 3px 7px;
+    flex-shrink: 0;
+  }
+  .blrow .sum { flex: 1; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .blrow .ct { width: 27px; height: 27px; font-size: 11px; }
+  .bl-empty { text-align: center; font-size: 11.5px; color: var(--mute); padding: 20px 0; border: 1px dashed var(--line); border-radius: 10px; margin-bottom: 7px; }
+
+  .blk { margin: 18px 0; }
+  .blk[data-card="on"] {
+    background: rgba(var(--cardbase), var(--cardop));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .blk > .pf, .blk > .music, .blk > .gal, .blk > .stk, .blk > .banners { margin: 0; }
+  .chwrap[data-on="1"] {
+    background: rgba(var(--cardbase), var(--cardop));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 10px 20px;
+  }
+
   .ea { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; overflow: hidden; }
   .ea-head { padding: 12px 13px; font-size: 12.5px; color: var(--dim); cursor: pointer; display: flex; justify-content: space-between; user-select: none; }
   .ea-head b { font-weight: 600; color: var(--tx); }
@@ -731,102 +763,118 @@
     </div>
   </div>
   <div class="f-row" id="es-cellrow">
-    <label>내용</label>
-    <textarea id="es-body" class="tall" placeholder="자유롭게 쓰세요. 빈 줄로 문단을 나눕니다."></textarea>
-    <div class="fmt-row">
-      <button class="mini-btn" id="es-photo">📷 사진</button>
-      <button class="mini-btn" id="es-fold">▸ 접은 글</button>
-      <button class="mini-btn" id="fmt-b"><b>가</b> 굵게</button>
-      <button class="mini-btn" id="fmt-hl">형광</button>
-      <button class="mini-btn" id="fmt-u">밑줄</button>
-      <button class="mini-btn" id="fmt-s">취소선</button>
-      <button class="mini-btn" id="fmt-hr">─ 구분선</button>
-    </div>
-    <div class="imgchips" id="es-imgs"></div>
-    <div class="f-note">[사진N] 자리에 사진 · {접기:제목}…{접기끝} · **굵게** ==형광== __밑줄__ ~~취소~~ · 한 줄에 --- 는 구분선</div>
-
-    <label style="display:block;font-size:11px;letter-spacing:.06em;color:var(--dim);margin:16px 0 8px;">요소 (넣고 싶은 것만 켜서 본문에 배치)</label>
-
-    <div class="ea" id="ea-profile">
-      <div class="ea-head"><span><b>프로필</b> — 사진 + 이름 + 소개</span><span class="st" id="ep-st"></span></div>
-      <div class="ea-body">
-        <div class="f-2col">
-          <div class="f-row"><label>이름</label><input type="text" id="ep-nm"></div>
-          <div class="f-row"><label>계정 (이름 옆 작은 글)</label><input type="text" id="ep-acc"></div>
-        </div>
-        <div class="f-row"><label>소개</label><textarea id="ep-ds" style="min-height:64px;"></textarea></div>
-        <div class="f-2col">
-          <div class="f-row"><label>사진 위치</label>
-            <select id="ep-pos"><option value="left">왼쪽</option><option value="right">오른쪽</option><option value="top">위 (가운데)</option><option value="bg">배경으로</option><option value="none">사진 없음</option></select>
-          </div>
-          <div class="f-row"><label>사진 모양</label>
-            <select id="ep-shape"><option value="circle">원형</option><option value="rounded">둥근네모</option><option value="square">네모</option></select>
-          </div>
-        </div>
-        <div class="f-row"><label>사진 크기 <span id="ep-sizev"></span></label><input type="range" id="ep-size" min="48" max="120" style="width:100%;accent-color:var(--pri);"></div>
-        <div class="ea-btns">
-          <button class="mini-btn" id="ep-up">📷 사진 업로드</button>
-          <button class="mini-btn" id="ep-adj">🔍 사진 조정</button>
-          <button class="mini-btn" id="ep-ins">본문에 배치 [프로필]</button>
-        </div>
+    <div class="f-row">
+      <label>이 장 디자인 — 블록 전체에 한 번에 적용 (블록마다 재수정 가능)</label>
+      <div class="f-3col">
+        <select id="ebs-card"><option value="">블록 카드: 끔</option><option value="on">블록 카드: 켬</option></select>
+        <select id="ebs-corner"><option value="">모서리: 프리셋</option><option value="round">둥글게</option><option value="soft">살짝</option><option value="sharp">각지게</option></select>
+        <select id="ebs-op"><option value="">투명도: 프리셋</option><option value="solid">불투명</option><option value="half">반투명</option><option value="clear">투명</option></select>
+      </div>
+      <div class="f-3col" style="margin-top:8px;">
+        <select id="ew-on"><option value="">바깥 큰 카드: 끔</option><option value="1">바깥 큰 카드: 켬</option></select>
+        <select id="ew-corner"><option value="">모서리: 프리셋</option><option value="round">둥글게</option><option value="soft">살짝</option><option value="sharp">각지게</option></select>
+        <select id="ew-op"><option value="">투명도: 프리셋</option><option value="solid">불투명</option><option value="half">반투명</option><option value="clear">투명</option></select>
       </div>
     </div>
-
-    <div class="ea" id="ea-gallery">
-      <div class="ea-head"><span><b>갤러리</b> — 사진 여러 장</span><span class="st" id="eg-st"></span></div>
-      <div class="ea-body">
-        <div class="f-row"><label>레이아웃</label>
-          <select id="eg-layout"><option value="2">2열 그리드</option><option value="3">3열 그리드</option><option value="4">4열 그리드</option><option value="slider">슬라이더</option></select>
-        </div>
-        <div class="ea-btns">
-          <button class="mini-btn" id="eg-up">📷 사진 추가 (여러 장)</button>
-          <button class="mini-btn" id="eg-ins">본문에 배치 [갤러리]</button>
-        </div>
-        <div class="imgchips" id="eg-imgs"></div>
-        <div class="f-note">각 사진의 🔍를 누르면 확대·위치를 잡을 수 있어요 (그리드에서 잘리는 부분 조정)</div>
-      </div>
-    </div>
-
-    <div class="ea" id="ea-music">
-      <div class="ea-head"><span><b>음악</b> — 플레이어</span><span class="st" id="em-st"></span></div>
-      <div class="ea-body">
-        <div class="f-2col">
-          <div class="f-row"><label>곡 제목</label><input type="text" id="em-title"></div>
-          <div class="f-row"><label>아티스트</label><input type="text" id="em-artist"></div>
-        </div>
-        <div class="f-row"><label>오디오 URL (mp3 링크 — 비우면 장식용)</label><input type="text" id="em-url"></div>
-        <div class="ea-btns"><button class="mini-btn" id="em-ins">본문에 배치 [음악]</button></div>
-      </div>
-    </div>
-
-    <div class="ea" id="ea-sticker">
-      <div class="ea-head"><span><b>스티커</b> — 투명 PNG 나열</span><span class="st" id="esk-st"></span></div>
-      <div class="ea-body">
-        <div class="ea-btns">
-          <button class="mini-btn" id="esk-up">📷 스티커 추가 (여러 장)</button>
-          <button class="mini-btn" id="esk-ins">본문에 배치 [스티커]</button>
-        </div>
-        <div class="imgchips" id="esk-imgs"></div>
-        <div class="f-note">칩의 숫자 = 크기(px)·기울기(도). 눌러서 수정할 수 있어요.</div>
-      </div>
-    </div>
-
-    <div class="ea" id="ea-banner">
-      <div class="ea-head"><span><b>배너</b> — 러브인포끼리 맞배너 ♥</span><span class="st" id="eb-st"></span></div>
-      <div class="ea-body">
-        <div style="display:flex;gap:6px;margin-bottom:8px;">
-          <input type="text" id="eb-hin" placeholder="러브인포 핸들 (예: jeste)" style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--tx);font-size:12px;padding:8px 10px;font-family:inherit;">
-          <button class="mini-btn" id="eb-addh">핸들로 추가</button>
-        </div>
-        <div class="ea-btns">
-          <button class="mini-btn" id="eb-up">외부 배너 이미지 추가</button>
-          <button class="mini-btn" id="eb-ins">본문에 배치 [배너]</button>
-        </div>
-        <div class="imgchips" id="eb-imgs"></div>
-        <div class="f-note">핸들로 추가하면 상대 배너가 자동으로 걸리고, 서로 추가한 사이면 ♥가 붙어요. 내 배너 이미지는 🎨 꾸미기에서 올려요.</div>
-      </div>
+    <label style="display:block;font-size:11px;letter-spacing:.06em;color:var(--dim);margin:14px 0 8px;">블록 — 위에서부터 차례로 쌓여요</label>
+    <div id="bl-list"></div>
+    <div class="fmt-row" id="bl-add">
+      <button class="mini-btn" data-add="txt">＋ 글</button>
+      <button class="mini-btn" data-add="pf">＋ 프로필</button>
+      <button class="mini-btn" data-add="gal">＋ 갤러리</button>
+      <button class="mini-btn" data-add="mu">＋ 음악</button>
+      <button class="mini-btn" data-add="stk">＋ 스티커</button>
+      <button class="mini-btn" data-add="bn">＋ 배너</button>
     </div>
   </div>
+
+  <div id="bl-edit" style="display:none;">
+    <div id="ble-txt" style="display:none;">
+      <div class="f-row">
+        <label>글</label>
+        <textarea id="es-body" class="tall" placeholder="자유롭게 쓰세요. 빈 줄로 문단을 나눕니다."></textarea>
+        <div class="fmt-row">
+          <button class="mini-btn" id="es-photo">📷 사진</button>
+          <button class="mini-btn" id="es-fold">▸ 접은 글</button>
+          <button class="mini-btn" id="fmt-b"><b>가</b> 굵게</button>
+          <button class="mini-btn" id="fmt-hl">형광</button>
+          <button class="mini-btn" id="fmt-u">밑줄</button>
+          <button class="mini-btn" id="fmt-s">취소선</button>
+          <button class="mini-btn" id="fmt-hr">─ 구분선</button>
+        </div>
+        <div class="imgchips" id="es-imgs"></div>
+        <div class="f-note">[사진N] 자리에 사진 · {접기:제목}…{접기끝} · **굵게** ==형광== __밑줄__ ~~취소~~ · 한 줄에 --- 는 구분선</div>
+      </div>
+    </div>
+
+    <div id="ble-pf" style="display:none;">
+      <div class="f-2col">
+        <div class="f-row"><label>이름</label><input type="text" id="ep-nm"></div>
+        <div class="f-row"><label>계정 (이름 옆 작은 글)</label><input type="text" id="ep-acc"></div>
+      </div>
+      <div class="f-row"><label>소개</label><textarea id="ep-ds" style="min-height:64px;"></textarea></div>
+      <div class="f-2col">
+        <div class="f-row"><label>사진 위치</label>
+          <select id="ep-pos"><option value="left">왼쪽</option><option value="right">오른쪽</option><option value="top">위 (가운데)</option><option value="bg">배경으로</option><option value="none">사진 없음</option></select>
+        </div>
+        <div class="f-row"><label>사진 모양</label>
+          <select id="ep-shape"><option value="circle">원형</option><option value="rounded">둥근네모</option><option value="square">네모</option></select>
+        </div>
+      </div>
+      <div class="f-row"><label>사진 크기 <span id="ep-sizev"></span></label><input type="range" id="ep-size" min="48" max="120" style="width:100%;accent-color:var(--pri);"></div>
+      <div class="ea-btns">
+        <button class="mini-btn" id="ep-up">📷 사진 업로드</button>
+        <button class="mini-btn" id="ep-adj">🔍 사진 조정</button>
+      </div>
+    </div>
+
+    <div id="ble-gal" style="display:none;">
+      <div class="f-row"><label>레이아웃</label>
+        <select id="eg-layout"><option value="2">2열 그리드</option><option value="3">3열 그리드</option><option value="4">4열 그리드</option><option value="slider">슬라이더</option></select>
+      </div>
+      <div class="ea-btns"><button class="mini-btn" id="eg-up">📷 사진 추가 (여러 장)</button></div>
+      <div class="imgchips" id="eg-imgs"></div>
+      <div class="f-note">◀▶로 순서, 🔍로 잘리는 부분 조정</div>
+    </div>
+
+    <div id="ble-mu" style="display:none;">
+      <div class="f-2col">
+        <div class="f-row"><label>곡 제목</label><input type="text" id="em-title"></div>
+        <div class="f-row"><label>아티스트</label><input type="text" id="em-artist"></div>
+      </div>
+      <div class="f-row"><label>오디오 URL (mp3 링크 — 비우면 장식용)</label><input type="text" id="em-url"></div>
+    </div>
+
+    <div id="ble-stk" style="display:none;">
+      <div class="ea-btns"><button class="mini-btn" id="esk-up">📷 스티커 추가 (여러 장)</button></div>
+      <div class="imgchips" id="esk-imgs"></div>
+      <div class="f-note">칩의 숫자 = 크기(px)·기울기(도)</div>
+    </div>
+
+    <div id="ble-bn" style="display:none;">
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <input type="text" id="eb-hin" placeholder="러브인포 핸들 (예: jeste)" style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--tx);font-size:12px;padding:8px 10px;font-family:inherit;">
+        <button class="mini-btn" id="eb-addh">핸들로 추가</button>
+      </div>
+      <div class="ea-btns"><button class="mini-btn" id="eb-up">외부 배너 이미지 추가</button></div>
+      <div class="imgchips" id="eb-imgs"></div>
+      <div class="f-note">핸들 추가 = 상대 배너 자동 + 맞배너 ♥ · 내 배너는 🎨 꾸미기에서</div>
+    </div>
+
+    <div class="f-row" style="margin-top:14px;">
+      <label>이 블록 디자인 (장 설정과 다르게)</label>
+      <div class="f-3col">
+        <select id="bs-card"><option value="">카드: 장 설정</option><option value="on">켬</option><option value="off">끔</option></select>
+        <select id="bs-corner"><option value="">모서리: 장 설정</option><option value="round">둥글게</option><option value="soft">살짝</option><option value="sharp">각지게</option></select>
+        <select id="bs-op"><option value="">투명도: 장 설정</option><option value="solid">불투명</option><option value="half">반투명</option><option value="clear">투명</option></select>
+      </div>
+    </div>
+    <div class="f-actions">
+      <button class="btn" id="ble-back">← 블록 목록</button>
+      <button class="btn solid" id="ble-ok">블록 확인</button>
+    </div>
+  </div>
+
   <div class="f-row" id="es-htmlrow" style="display:none;">
     <label>HTML 코드</label>
     <textarea id="es-html" class="tall code" placeholder="<div>…</div> — 페이지 코드를 통째로 붙여넣으세요."></textarea>
@@ -1039,6 +1087,6 @@
 <input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=16"></script>
+<script type="module" src="app.js?v=17"></script>
 </body>
 </html>
