@@ -26,13 +26,16 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 
 const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 
+// 구 index + 신 app 스큐에서도 안 죽는 바인딩 헬퍼
+function gid(i) { return document.getElementById(i); }
+
 // ═══ 가입 설정 ═══
 // mode: 'open' = 누구나 가입 / 'code' = 초대 코드 입력해야 가입
 // 코드제로 바꾸려면: mode를 'code'로, code에 원하는 초대 코드를 넣고 재배포
 const SIGNUP = { mode: 'open', code: '' };
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v30 로드');
+console.log('[LUVINFO] app.js v31 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -932,14 +935,14 @@ function openChapterEdit(ch, type) {
   $('#es-title').textContent = ch ? '장 수정' : (type === 'html' ? '새 HTML 장' : '새 장');
   $('#es-name').value = work.title || '';
   $('#es-pw').value = work.pw || '';
-  $('#es-timgpos').value = work.timgPos || 'top';
-  $('#es-timg-chip').textContent = work.timg ? '이미지 있음 ✓' : '없음';
+  if (gid('es-timgpos')) gid('es-timgpos').value = work.timgPos || 'top';
+  if (gid('es-timg-chip')) gid('es-timg-chip').textContent = work.timg ? '이미지 있음 ✓' : '없음';
   const isHtml = type === 'html';
   $('#es-cellrow').style.display = isHtml ? 'none' : 'block';
   $('#bl-edit').style.display = 'none';
   $('#es-htmlrow').style.display = isHtml ? 'block' : 'none';
   if (isHtml) {
-    $('#es-showhead').checked = !!work.showHead;
+    if (gid('es-showhead')) gid('es-showhead').checked = !!work.showHead;
     const cached = work.body || htmlCache[work.id];
     if (!cached && work.bodyRef) {
       $('#es-html').value = '불러오는 중…';
@@ -1251,10 +1254,10 @@ function bindEditor() {
   };
   $('#es-body').addEventListener('input', saveDraft);
   $('#es-htmlphoto').onclick = () => uploadOne((url) => insertAt($('#es-html'), '<img src="' + url + '">'));
-  $('#es-htmlfile').onclick = () => $('#es-htmlfile-input').click();
-  $('#es-timg-up').onclick = () => uploadOne((url) => { if (work) { work.timg = url; $('#es-timg-chip').textContent = '이미지 있음 ✓'; } });
-  $('#es-timg-del').onclick = () => { if (work) { work.timg = ''; $('#es-timg-chip').textContent = '없음'; } };
-  $('#es-htmlfile-input').onchange = (e) => {
+  if (gid('es-htmlfile')) gid('es-htmlfile').onclick = () => gid('es-htmlfile-input') && gid('es-htmlfile-input').click();
+  if (gid('es-timg-up')) gid('es-timg-up').onclick = () => uploadOne((url) => { if (work) { work.timg = url; if (gid('es-timg-chip')) gid('es-timg-chip').textContent = '이미지 있음 ✓'; } });
+  if (gid('es-timg-del')) gid('es-timg-del').onclick = () => { if (work) { work.timg = ''; if (gid('es-timg-chip')) gid('es-timg-chip').textContent = '없음'; } };
+  if (gid('es-htmlfile-input')) gid('es-htmlfile-input').onchange = (e) => {
     const f = e.target.files && e.target.files[0];
     e.target.value = '';
     if (!f) return;
@@ -1340,7 +1343,7 @@ function bindEditor() {
   // 배너
   $('#eb-addh').onclick = async () => {
     if (!editingBlk) return;
-  $('#el-add').onclick = () => {
+  if (gid('el-add')) gid('el-add').onclick = () => {
     if (!editingBlk || editingBlk.kind !== 'lnk') return;
     (editingBlk.data.items = editingBlk.data.items || []).push({ t: '', u: '' });
     renderLnkChips();
@@ -1372,11 +1375,11 @@ function confirmChapterEdit() {
   if (editingBlk) saveBlockFields();
   work.title = $('#es-name').value.trim();
   work.pw = $('#es-pw').value.trim();
-    work.timgPos = $('#es-timgpos').value;
+    if (gid('es-timgpos')) work.timgPos = gid('es-timgpos').value;
   if (work.type === 'html') {
     work.body = $('#es-html').value;
-    work.showHead = $('#es-showhead').checked;
-    work.timgPos = $('#es-timgpos').value;
+    if (gid('es-showhead')) work.showHead = gid('es-showhead').checked;
+    if (gid('es-timgpos')) work.timgPos = gid('es-timgpos').value;
   } else {
     work.bstyle = {
       card: $('#ebs-card').value,
@@ -1418,7 +1421,7 @@ function openDeco() {
   $('#dc-font').value = t.font || "'Pretendard'";
   $('#dc-nav').value = t.nav || 'dot';
   $('#dc-num').value = t.num || 'on';
-  $('#dc-chtitle').value = t.chtitle || '';
+  if (gid('dc-chtitle')) gid('dc-chtitle').value = t.chtitle || '';
   $('#dc-corner').value = t.corner || '';
   $('#dc-cardop').value = t.cardop || '';
   $('#dc-bgdim').value = parseInt(t.bgDim) || 84;
@@ -1426,8 +1429,7 @@ function openDeco() {
   $('#dc-valign').value = t.valign || '';
   $('#dc-cardc').value = t.cardC || CARDC[t.preset || 'white'] || '#FFFFFF';
   const hd = st.site.head;
-  $('#dc-hh').value = parseInt(hd.h) || 200;
-  $('#dc-hhv').textContent = (parseInt(hd.h) || 200) + 'px';
+  if (gid('dc-hh')) { gid('dc-hh').value = parseInt(hd.h) || 200; gid('dc-hhv').textContent = (parseInt(hd.h) || 200) + 'px'; }
   $('#dc-head').value = hd.mode || 'text';
   $('#dc-over').value = hd.over || '';
   $('#dc-title').value = hd.title || '';
@@ -1472,7 +1474,7 @@ function bindDeco() {
   $('#dc-font').onchange = (e) => { t().font = e.target.value; setDirty(); applyTheme(); };
   $('#dc-nav').onchange = (e) => { t().nav = e.target.value; setDirty(); renderPager(); };
   $('#dc-num').onchange = (e) => { t().num = e.target.value; setDirty(); renderChapter(); };
-  $('#dc-chtitle').onchange = (e) => { t().chtitle = e.target.value; setDirty(); applyTheme(); };
+  if (gid('dc-chtitle')) gid('dc-chtitle').onchange = (e) => { t().chtitle = e.target.value; setDirty(); applyTheme(); };
   $('#dc-corner').onchange = (e) => { t().corner = e.target.value; setDirty(); applyTheme(); };
   $('#dc-cardop').onchange = (e) => { t().cardop = e.target.value; setDirty(); applyTheme(); };
   $('#dc-valign').onchange = (e) => { t().valign = e.target.value; setDirty(); applyTheme(); };
@@ -1533,7 +1535,7 @@ function bindDeco() {
     applyTheme();
   });
   $('#dc-himg-del').onclick = () => { st.site.head.img = ''; delete st.site.head.z; setDirty(); applyTheme(); };
-  $('#dc-lvimport').onclick = async () => {
+  if (gid('dc-lvimport')) gid('dc-lvimport').onclick = async () => {
     const lh = ($('#dc-lvh').value.trim() || st.handle || '').toLowerCase();
     if (!lh) { toast('러브로그 핸들을 입력해 주세요'); return; }
     toast('가져오는 중…');
@@ -1610,17 +1612,17 @@ function bindDeco() {
     openDeco();
     toast('가져왔어요: ' + got.join(' · ') + ' — 마음에 들면 ✓ 저장!');
   };
-  $('#dc-himg-adj').onclick = () => {
+  if (gid('dc-himg-adj')) gid('dc-himg-adj').onclick = () => {
     if (!st.site.head.img) { toast('먼저 머리글 이미지를 올려주세요'); return; }
     openAdjust(st.site.head, () => { setDirty(); applyTheme(); });
   };
-  $('#dc-hh').oninput = (e) => {
+  if (gid('dc-hh')) gid('dc-hh').oninput = (e) => {
     st.site.head.h = parseInt(e.target.value) || 200;
-    $('#dc-hhv').textContent = st.site.head.h + 'px';
+    if (gid('dc-hhv')) gid('dc-hhv').textContent = st.site.head.h + 'px';
     setDirty(); applyTheme();
   };
-  $('#dc-fav-up').onclick = () => uploadOne((url) => { st.site.favicon = url; setDirty(); applyTheme(); toast('파비콘 적용!'); });
-  $('#dc-fav-del').onclick = () => { st.site.favicon = ''; setDirty(); applyTheme(); };
+  if (gid('dc-fav-up')) gid('dc-fav-up').onclick = () => uploadOne((url) => { st.site.favicon = url; setDirty(); applyTheme(); toast('파비콘 적용!'); });
+  if (gid('dc-fav-del')) gid('dc-fav-del').onclick = () => { st.site.favicon = ''; setDirty(); applyTheme(); };
   $('#dc-bimg-up').onclick = () => uploadOne((url) => { st.site.theme.bgImg = url; setDirty(); applyTheme(); toast('배경 이미지 설정'); });
   $('#dc-bimg-del').onclick = () => { st.site.theme.bgImg = ''; setDirty(); applyTheme(); };
   $('#dc-gate').onchange = (e) => {
