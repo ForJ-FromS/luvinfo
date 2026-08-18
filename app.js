@@ -27,7 +27,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v18 로드');
+console.log('[LUVINFO] app.js v19 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -294,14 +294,49 @@ function renderChapter() {
     return;
   }
   if (ch.type === 'html') {
+    let body = ch.body || '';
+    if (!body && ch.bodyRef) {
+      if (htmlCache[ch.id] !== undefined) {
+        body = htmlCache[ch.id];
+      } else {
+        bodyEl.innerHTML = '<p style="text-align:center;color:var(--mute);font-size:11px;letter-spacing:.24em;padding:60px 0;">LOADING…</p>';
+        fetch(ch.bodyRef)
+          .then((r) => r.text())
+          .then((t) => {
+            htmlCache[ch.id] = t;
+            if ((st.site.chapters || [])[st.cur] === ch) renderChapter();
+          })
+          .catch((e) => {
+            console.log('[LUVINFO] html fetch err', e);
+            bodyEl.innerHTML = '<p style="text-align:center;color:var(--mute);font-size:12px;padding:60px 0;">이 장을 불러오지 못했어요 — 새로고침해 주세요</p>';
+          });
+        renderPager();
+        return;
+      }
+    }
     const scope = 'hb-' + ch.id;
     bodyEl.innerHTML = '<div class="htmlblk ' + scope + '"></div>';
-    bodyEl.querySelector('.htmlblk').innerHTML = scopeHtml(ch.body || '', '.' + scope);
+    const holder = bodyEl.querySelector('.htmlblk');
+    holder.innerHTML = scopeHtml(body, '.' + scope);
+    runScripts(holder);
   } else {
     migrateBlocks(ch);
     renderBlocks(ch, bodyEl);
   }
   renderPager();
+}
+
+// 대용량 HTML 장 본문 캐시 (Storage 오프로드용)
+const htmlCache = {};
+
+// HTML 장 스크립트 실행: innerHTML로 넣은 <script>는 죽어 있으므로 재생성
+function runScripts(root) {
+  root.querySelectorAll('script').forEach((old) => {
+    const s = document.createElement('script');
+    Array.from(old.attributes).forEach((a) => s.setAttribute(a.name, a.value));
+    s.textContent = old.textContent;
+    old.replaceWith(s);
+  });
 }
 
 // HTML 장 격리: <style>이 페이지 크롬을 오염시키지 않게 셀렉터에 스코프를 접두
@@ -815,7 +850,17 @@ function openChapterEdit(ch, type) {
   $('#bl-edit').style.display = 'none';
   $('#es-htmlrow').style.display = isHtml ? 'block' : 'none';
   if (isHtml) {
-    $('#es-html').value = work.body || '';
+    const cached = work.body || htmlCache[work.id];
+    if (!cached && work.bodyRef) {
+      $('#es-html').value = '불러오는 중…';
+      const wid = work.id;
+      fetch(work.bodyRef).then((r) => r.text()).then((t) => {
+        htmlCache[wid] = t;
+        if (work && work.id === wid) $('#es-html').value = t;
+      }).catch(() => { $('#es-html').value = ''; toast('본문을 불러오지 못했어요'); });
+    } else {
+      $('#es-html').value = cached || '';
+    }
   } else {
     $('#ebs-card').value = work.bstyle.card || '';
     $('#ebs-corner').value = work.bstyle.corner || '';
@@ -1403,10 +1448,34 @@ function uploadMulti(cb) {
 }
 
 // ═══════════ 저장 ═══════════
+async function offloadBigHtml() {
+  for (const ch of st.site.chapters || []) {
+    if (ch.type !== 'html') continue;
+    const body = ch.body || '';
+    if (body.length > 150000) {
+      const path = 'tsites/' + st.handle + '/html_' + ch.id + '_' + Date.now() + '.html';
+      const r = sref(storage, path);
+      await uploadBytes(r, new Blob([body], { type: 'text/html; charset=utf-8' }));
+      ch.bodyRef = await getDownloadURL(r);
+      htmlCache[ch.id] = body;
+      ch.body = '';
+    } else if (ch.bodyRef && body) {
+      ch.bodyRef = '';
+      delete htmlCache[ch.id];
+    }
+  }
+}
+
 async function saveSite() {
   if (!st.mine) return;
   delete st.site._migrated;
   st.site.updated = Date.now();
+  try { await offloadBigHtml(); }
+  catch (e) {
+    console.log('[LUVINFO] offload err', e);
+    toast('큰 HTML 장 보관에 실패했어요 — 다시 시도해 주세요');
+    return;
+  }
   const size = new Blob([JSON.stringify(st.site)]).size;
   if (size > 950000) {
     toast('용량 초과에 가까워요 (' + Math.round(size / 1024) + 'KB / 최대 약 1MB) — HTML 장을 줄여 주세요');
