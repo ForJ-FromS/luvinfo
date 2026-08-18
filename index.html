@@ -395,6 +395,8 @@
   #lightbox img { max-width: 92vw; max-height: 88dvh; border-radius: 8px; }
 
   body.mv .wrap { max-width: 390px; }
+  body[data-valign="center"] .site-bg { display: flex; flex-direction: column; min-height: 100vh; }
+  body[data-valign="center"] .wrap { margin: auto; width: 100%; padding-top: 40px; padding-bottom: 60px; }
 
   .cellbody mark { background: color-mix(in srgb, var(--pri), transparent 78%); color: inherit; padding: 1px 3px; border-radius: 3px; }
   .cellbody u { text-underline-offset: 3px; text-decoration-color: var(--pri); }
@@ -832,6 +834,14 @@
   </div>
 
   <div class="f-row">
+    <label>내용 세로 위치 (내용이 적을 때)</label>
+    <select id="dc-valign">
+      <option value="">위에서 시작 (기본)</option>
+      <option value="center">화면 세로 가운데</option>
+    </select>
+  </div>
+
+  <div class="f-row">
     <label>머리글 내용</label>
     <input type="text" id="dc-over" placeholder="맨 위 작은 글 (예: INFO)" style="margin-bottom:7px;">
     <input type="text" id="dc-title" placeholder="제목" style="margin-bottom:7px;">
@@ -912,6 +922,6 @@
 <input type="file" id="file-multi" accept="image/*" multiple style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=12"></script>
+<script type="module" src="app.js?v=13"></script>
 </body>
 </html>

@@ -27,7 +27,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v12 로드');
+console.log('[LUVINFO] app.js v13 로드');
 
 function toast(m) {
   const t = $('#toast');
@@ -53,7 +53,7 @@ function defaultSite(ownerUid, handle) {
   return {
     ownerUid,
     head: { mode: 'text', over: 'INFO', title: handle.toUpperCase(), sub: 'TASTE ARCHIVE', img: '' },
-    theme: { preset: 'white', bg: '', tx: '', pri: '', font: "'Pretendard'", nav: 'dot', num: 'on', css: '', corner: '', cardop: '', bgImg: '', bgDim: 84 },
+    theme: { preset: 'white', bg: '', tx: '', pri: '', font: "'Pretendard'", nav: 'dot', num: 'on', css: '', corner: '', cardop: '', bgImg: '', bgDim: 84, valign: '' },
     gate: { on: false, msg: '', pw: '', img: '' },
     chapters: [{
       id: uid(), title: '기본', type: 'cell',
@@ -192,6 +192,7 @@ function applyTheme() {
   b.setProperty('--font', t.font || "'Pretendard'");
   $('#usercss').textContent = t.css || '';
   if (t.corner) document.body.dataset.corner = t.corner; else delete document.body.dataset.corner;
+  if (t.valign) document.body.dataset.valign = t.valign; else delete document.body.dataset.valign;
   if (t.cardop) document.body.dataset.op = t.cardop; else delete document.body.dataset.op;
   const sb = $('#site');
   if (t.bgImg) {
@@ -858,6 +859,7 @@ function openDeco() {
   $('#dc-cardop').value = t.cardop || '';
   $('#dc-bgdim').value = parseInt(t.bgDim) || 84;
   $('#dc-bgdimv').textContent = (parseInt(t.bgDim) || 84) + '%';
+  $('#dc-valign').value = t.valign || '';
   const hd = st.site.head;
   $('#dc-head').value = hd.mode || 'text';
   $('#dc-over').value = hd.over || '';
@@ -902,12 +904,24 @@ function bindDeco() {
   $('#dc-num').onchange = (e) => { t().num = e.target.value; st.dirty = true; renderChapter(); };
   $('#dc-corner').onchange = (e) => { t().corner = e.target.value; st.dirty = true; applyTheme(); };
   $('#dc-cardop').onchange = (e) => { t().cardop = e.target.value; st.dirty = true; applyTheme(); };
+  $('#dc-valign').onchange = (e) => { t().valign = e.target.value; st.dirty = true; applyTheme(); };
   $('#dc-bgdim').oninput = (e) => { t().bgDim = parseInt(e.target.value); $('#dc-bgdimv').textContent = e.target.value + '%'; st.dirty = true; applyTheme(); };
   $('#dc-head').onchange = (e) => { st.site.head.mode = e.target.value; st.dirty = true; applyTheme(); };
   $('#dc-over').oninput = (e) => { st.site.head.over = e.target.value; st.dirty = true; applyTheme(); };
   $('#dc-title').oninput = (e) => { st.site.head.title = e.target.value; st.dirty = true; applyTheme(); };
   $('#dc-sub').oninput = (e) => { st.site.head.sub = e.target.value; st.dirty = true; applyTheme(); };
-  $('#dc-himg-up').onclick = () => uploadOne((url) => { st.site.head.img = url; st.dirty = true; applyTheme(); toast('머리글 이미지 설정'); });
+  $('#dc-himg-up').onclick = () => uploadOne((url) => {
+    st.site.head.img = url;
+    if ((st.site.head.mode || 'text') === 'text' || st.site.head.mode === 'none') {
+      st.site.head.mode = 'both';
+      $('#dc-head').value = 'both';
+      toast('머리글 이미지 설정 — 구성을 "이미지 + 글"로 바꿨어요');
+    } else {
+      toast('머리글 이미지 설정');
+    }
+    st.dirty = true;
+    applyTheme();
+  });
   $('#dc-himg-del').onclick = () => { st.site.head.img = ''; st.dirty = true; applyTheme(); };
   $('#dc-bimg-up').onclick = () => uploadOne((url) => { st.site.theme.bgImg = url; st.dirty = true; applyTheme(); toast('배경 이미지 설정'); });
   $('#dc-bimg-del').onclick = () => { st.site.theme.bgImg = ''; st.dirty = true; applyTheme(); };
