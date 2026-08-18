@@ -32,7 +32,7 @@ const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const SIGNUP = { mode: 'open', code: '' };
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v28 로드');
+console.log('[LUVINFO] app.js v30 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1533,6 +1533,83 @@ function bindDeco() {
     applyTheme();
   });
   $('#dc-himg-del').onclick = () => { st.site.head.img = ''; delete st.site.head.z; setDirty(); applyTheme(); };
+  $('#dc-lvimport').onclick = async () => {
+    const lh = ($('#dc-lvh').value.trim() || st.handle || '').toLowerCase();
+    if (!lh) { toast('러브로그 핸들을 입력해 주세요'); return; }
+    toast('가져오는 중…');
+    let d;
+    try {
+      const snap = await getDoc(doc(db, 'pages', lh));
+      if (!snap.exists()) { toast('러브로그 @' + lh + ' 홈을 못 찾았어요'); return; }
+      d = snap.data();
+    } catch (e) { console.log('[LUVINFO] lvimport err', e); toast('가져오기 실패'); return; }
+    const t = st.site.theme = st.site.theme || {};
+    const got = [];
+    const pick = (...keys) => { for (const k of keys) { if (d[k] !== undefined && d[k] !== '' && d[k] !== null) return d[k]; } return undefined; };
+    const bg = pick('color', 'bg', 'bgC');
+    if (bg) { t.bg = bg; got.push('배경색'); }
+    const pri = pick('pri', 'priC', 'point');
+    if (pri) { t.pri = pri; got.push('포인트색'); }
+    if (d.light !== undefined) { t.tx = d.light ? '#24242C' : '#EDEDF2'; got.push('글자색(' + (d.light ? '밝음' : '어둠') + ' 기준)'); }
+    const cardC = pick('cardC', 'cardColor');
+    if (cardC) { t.cardC = cardC; got.push('카드 색'); }
+    const corner = pick('corner');
+    if (corner === 'soft' || corner === 'sharp') { t.corner = corner === 'soft' ? 'soft' : 'sharp'; got.push('모서리'); }
+    const font = pick('font', 'fontFam');
+    if (font) {
+      const fv = String(font);
+      // 러브로그는 키워드('sans' 등), 러브인포는 CSS 패밀리 — 키워드 맵 우선, 실패 시 문자열 대조
+      const FONT_MAP = {
+        sans: "'Pretendard'", pretendard: "'Pretendard'",
+        serif: "'Noto Serif KR'", myeongjo: "'Nanum Myeongjo'", nanummj: "'Nanum Myeongjo'",
+        gowun: "'Gowun Dodum'", gowundodum: "'Gowun Dodum'", gowunbatang: "'Gowun Batang'",
+        plex: "'IBM Plex Sans KR'", ibmplex: "'IBM Plex Sans KR'", gaegu: "'Gaegu'"
+      };
+      const opts = Array.from(document.querySelectorAll('#dc-font option')).map((o) => o.value);
+      const mapped = FONT_MAP[fv.toLowerCase()];
+      if (mapped && opts.includes(mapped)) { t.font = mapped; got.push('폰트'); }
+      else {
+        const opt = opts.find((v) => fv.includes(v.replace(/'/g, '')) || v.includes(fv.replace(/'/g, '')));
+        if (opt) { t.font = opt; got.push('폰트'); }
+      }
+    }
+    const hd = st.site.head = st.site.head || {};
+    const himg = pick('headImg', 'head');
+    const heads = Array.isArray(d.heads) ? d.heads.filter(Boolean) : [];
+    const img = himg || heads[0];
+    if (img && typeof img === 'string') { hd.img = img; delete hd.z; if ((hd.mode || 'text') === 'text' || hd.mode === 'none') hd.mode = 'both'; got.push('머리글 이미지'); }
+    const title = pick('title', 'name');
+    if (title) { hd.title = String(title); got.push('제목'); }
+    const over = [pick('overSym'), pick('overTxt')].filter(Boolean).join(' ');
+    if (over) { hd.over = over; got.push('머리글 라벨'); }
+    const sub = pick('sub', 'subtitle', 'desc');
+    if (sub && typeof sub === 'string') { hd.sub = sub; got.push('부제'); }
+    const fav = pick('fav', 'favicon');
+    if (fav && typeof fav === 'string') { st.site.favicon = fav; got.push('파비콘'); }
+    const bgImg = pick('bgImg');
+    if (bgImg && typeof bgImg === 'string') {
+      t.bgImg = bgImg;
+      const bd = parseInt(pick('bgDim'));
+      if (!isNaN(bd)) t.bgDim = Math.min(96, Math.max(30, bd));
+      got.push('배경 이미지');
+    }
+    const gImg = pick('enterImg');
+    const gMsg = pick('enterText');
+    const gPw = pick('gate');
+    if (gImg || gMsg) {
+      st.site.gate = st.site.gate || { on: false, msg: '', pw: '', img: '' };
+      if (gImg) st.site.gate.img = String(gImg);
+      if (gMsg) st.site.gate.msg = String(gMsg);
+      if (gPw) st.site.gate.pw = String(gPw);
+      got.push('대문(이미지·문구' + (gPw ? '·비밀번호' : '') + ' — 켜려면 꾸미기에서 대문 켬)');
+    }
+    if (!got.length) { toast('가져올 수 있는 설정을 못 찾았어요 — 러브로그 홈 구조가 예상과 달라요'); return; }
+    setDirty();
+    applyTheme();
+    renderChapter();
+    openDeco();
+    toast('가져왔어요: ' + got.join(' · ') + ' — 마음에 들면 ✓ 저장!');
+  };
   $('#dc-himg-adj').onclick = () => {
     if (!st.site.head.img) { toast('먼저 머리글 이미지를 올려주세요'); return; }
     openAdjust(st.site.head, () => { setDirty(); applyTheme(); });

@@ -1011,6 +1011,14 @@
       </select>
     </div>
     <div class="f-row">
+      <label>러브로그에서 가져오기</label>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="text" id="dc-lvh" placeholder="러브로그 핸들" style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--tx);font-size:12px;padding:8px 10px;font-family:inherit;">
+        <button class="mini-btn" id="dc-lvimport">가져오기</button>
+      </div>
+      <div class="f-note">겹치는 설정만 가져와요: 색·포인트색·카드 색·모서리·폰트·머리글 이미지/제목 — 위젯·커서 등은 대상 아님</div>
+    </div>
+    <div class="f-row">
       <label>파비콘 (탭 아이콘)</label>
       <div style="display:flex;gap:6px;">
         <button class="mini-btn" id="dc-fav-up">이미지 올리기</button>
@@ -1152,6 +1160,6 @@
 <input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=28"></script>
+<script type="module" src="app.js?v=30"></script>
 </body>
 </html>
