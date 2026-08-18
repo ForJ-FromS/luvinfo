@@ -35,7 +35,7 @@ function gid(i) { return document.getElementById(i); }
 const SIGNUP = { mode: 'invite', code: '' }; // invite = config/tsignup 목록의 러브인포 전용 코드 / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v36 로드');
+console.log('[LUVINFO] app.js v37 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -887,7 +887,46 @@ async function openOps() {
   gid('codes-list').innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오는 중…</p>';
   try { await loadCodes(); renderCodes(); }
   catch (e) { gid('codes-list').innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오기 실패</p>'; }
+  renderOnceList();
   renderInqBox();
+}
+async function renderOnceList() {
+  const box = gid('once-list');
+  if (!box) return;
+  box.innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오는 중…</p>';
+  try {
+    const qs = await getDocs(collection(db, 'invites'));
+    const mineOnce = [];
+    qs.forEach((s) => { const d = s.data() || {}; if (d.svc === 'luvinfo') mineOnce.push({ id: s.id, ...d }); });
+    mineOnce.sort((a, b) => (b.at || 0) - (a.at || 0));
+    const fresh = mineOnce.filter((c) => c.used !== true);
+    const spent = mineOnce.length - fresh.length;
+    if (!mineOnce.length) { box.innerHTML = '<p style="color:var(--mute);font-size:12px;">아직 만든 1회용 코드가 없어요.</p>'; return; }
+    box.innerHTML =
+      (fresh.length ? fresh.map((c) =>
+        '<div style="display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:6px;">' +
+        '<code style="flex:1;font-size:12.5px;">' + esc(c.id) + '</code>' +
+        '<button class="mini-btn" data-ocopy="' + esc(c.id) + '">복사</button>' +
+        '<i data-okill="' + esc(c.id) + '" style="cursor:pointer;font-style:normal;color:var(--mute);" title="폐기">🗑</i></div>'
+      ).join('') : '<p style="color:var(--mute);font-size:12px;">미사용 코드가 없어요.</p>') +
+      (spent ? '<p style="color:var(--mute);font-size:11px;margin-top:4px;">사용·폐기됨 ' + spent + '개</p>' : '');
+    box.querySelectorAll('[data-ocopy]').forEach((x) => {
+      x.onclick = () => navigator.clipboard?.writeText(x.dataset.ocopy).then(() => toast('복사!')).catch(() => toast('복사 실패'));
+    });
+    box.querySelectorAll('[data-okill]').forEach((x) => {
+      x.onclick = async () => {
+        if (!confirm('코드 「' + x.dataset.okill + '」를 폐기할까요? 이 코드로는 가입할 수 없게 돼요.')) return;
+        try {
+          await setDoc(doc(db, 'invites', x.dataset.okill), { used: true, usedAt: Date.now(), revoked: true }, { merge: true });
+          renderOnceList();
+          toast('폐기했어요');
+        } catch (e) { console.log('[LUVINFO] revoke err', e); toast('폐기 실패'); }
+      };
+    });
+  } catch (e) {
+    console.log('[LUVINFO] once list err', e);
+    box.innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오기 실패</p>';
+  }
 }
 function closeOps() {
   gid('ops-bg').classList.remove('on');
@@ -922,6 +961,7 @@ async function opsMake() {
     }
     gid('ops-out').value = made.join('\n');
     toast(made.length + '개 만들었어요 ✓');
+    if (kind === 'once') renderOnceList();
   } catch (e) {
     console.log('[LUVINFO] ops make err', e);
     toast('코드 생성 실패 — 규칙이 게시됐는지 확인해 주세요');
@@ -1069,6 +1109,7 @@ function bindShell() {
   if (gid('ops-close')) gid('ops-close').onclick = closeOps;
   if (gid('ops-bg')) gid('ops-bg').onclick = closeOps;
   if (gid('ops-make')) gid('ops-make').onclick = opsMake;
+  if (gid('once-refresh')) gid('once-refresh').onclick = renderOnceList;
   if (gid('ops-copy')) gid('ops-copy').onclick = () => {
     const v = gid('ops-out').value.trim();
     if (!v) { toast('복사할 코드가 없어요'); return; }
