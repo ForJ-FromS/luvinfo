@@ -27,7 +27,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v20 로드');
+console.log('[LUVINFO] app.js v21 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1498,13 +1498,15 @@ async function saveSite() {
     toast('큰 HTML 장 보관에 실패했어요 — 다시 시도해 주세요');
     return;
   }
-  const size = new Blob([JSON.stringify(st.site)]).size;
+  // undefined 필드는 Firestore가 거부하므로 저장 직전 전부 제거 (배열 속은 null로)
+  const payload = JSON.parse(JSON.stringify(st.site));
+  const size = new Blob([JSON.stringify(payload)]).size;
   if (size > 950000) {
     toast('용량 초과에 가까워요 (' + Math.round(size / 1024) + 'KB / 최대 약 1MB) — HTML 장을 줄여 주세요');
     if (size > 1000000) return;
   }
   try {
-    await setDoc(doc(db, 'tsites', st.handle), st.site);
+    await setDoc(doc(db, 'tsites', st.handle), payload);
     st.dirty = false;
     const sb = document.getElementById('ob-save');
     if (sb) sb.classList.remove('attn');
