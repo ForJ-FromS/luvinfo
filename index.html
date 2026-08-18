@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" href="data:,">
+<link rel="icon" id="fav" href="data:,">
   <title>러브인포</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -196,6 +196,20 @@
   body[data-head="text"] .head-img { display: none; }
   body[data-head="img"] .head { display: none; }
 
+  .ch-timg { text-align: center; }
+  .ch-timg img { max-width: 100%; display: inline-block; margin: 0 auto 4px; border-radius: 10px; }
+  #ch-timg-bot img { margin: 18px auto 0; }
+  body[data-chtitle="underline"] .ch-title { border-bottom: 1px solid var(--pri); display: table; margin-left: auto; margin-right: auto; padding-bottom: 6px; }
+  body[data-chtitle="bracket"] .ch-title::before { content: '( '; color: var(--mute); }
+  body[data-chtitle="bracket"] .ch-title::after { content: ' )'; color: var(--mute); }
+  body[data-chtitle="pill"] .ch-title { display: table; margin-left: auto; margin-right: auto; border: 1px solid var(--line); border-radius: 999px; padding: 7px 18px; background: rgba(var(--cardbase), var(--cardop)); }
+  body[data-chtitle="dot"] .ch-title::before { content: '· '; color: var(--pri); }
+  body[data-chtitle="dot"] .ch-title::after { content: ' ·'; color: var(--pri); }
+  .lnkblk { display: flex; flex-direction: column; }
+  .lnkrow { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 12px 4px; font-size: 13px; color: var(--tx); text-decoration: none; transition: color .2s; }
+  .lnkrow:hover { color: var(--pri); }
+  .lnkrow i { font-style: normal; color: var(--mute); font-size: 11px; }
+  .blk[data-card="on"] .lnkrow:last-child { border-bottom: none; }
   .ch-title {
     font-size: 11px; letter-spacing: .28em;
     color: var(--dim);
@@ -728,8 +742,10 @@
       <button class="ct del" id="ct-del" title="삭제">🗑</button>
     </div>
 
+    <div class="ch-timg" id="ch-timg-top"></div>
     <div class="ch-title" id="ch-title"></div>
     <div id="ch-body"></div>
+    <div class="ch-timg" id="ch-timg-bot"></div>
 
     <div class="pager" id="pager"></div>
 
@@ -765,6 +781,18 @@
       <input type="text" id="es-pw" placeholder="이 장만 잠그기" autocomplete="off">
     </div>
   </div>
+  <div class="f-row">
+    <label>장 제목 꾸미기 이미지 (선택)</label>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <button class="mini-btn" id="es-timg-up">이미지 올리기</button>
+      <button class="mini-btn" id="es-timg-del">삭제</button>
+      <select id="es-timgpos" style="flex:0 0 auto;">
+        <option value="top">제목 위에</option>
+        <option value="bot">장 맨 아래에</option>
+      </select>
+      <span id="es-timg-chip" style="font-size:11px;color:var(--dim);"></span>
+    </div>
+  </div>
   <div class="f-row" id="es-cellrow">
     <div class="f-row">
       <label>이 장 디자인 — 블록 전체에 한 번에 적용 (블록마다 재수정 가능)</label>
@@ -788,6 +816,7 @@
       <button class="mini-btn" data-add="mu">＋ 음악</button>
       <button class="mini-btn" data-add="stk">＋ 스티커</button>
       <button class="mini-btn" data-add="bn">＋ 배너</button>
+      <button class="mini-btn" data-add="lnk">＋ 링크</button>
     </div>
   </div>
 
@@ -862,6 +891,12 @@
       <div class="ea-btns"><button class="mini-btn" id="eb-up">외부 배너 이미지 추가</button></div>
       <div class="imgchips" id="eb-imgs"></div>
       <div class="f-note">핸들 추가 = 상대 배너 자동 + 맞배너 ♥ · 내 배너는 🎨 꾸미기에서</div>
+    </div>
+
+    <div id="ble-lnk" style="display:none;">
+      <div class="imgchips" id="el-list" style="flex-direction:column;"></div>
+      <div class="ea-btns" style="margin-top:8px;"><button class="mini-btn" id="el-add">＋ 링크 줄 추가</button></div>
+      <div class="f-note">라벨과 주소를 넣으면 「→ 라벨 ↗」 줄로 나와요</div>
     </div>
 
     <div class="f-row" style="margin-top:14px;">
@@ -973,6 +1008,23 @@
       <select id="dc-num">
         <option value="on">표시</option>
         <option value="off">숨김</option>
+      </select>
+    </div>
+    <div class="f-row">
+      <label>파비콘 (탭 아이콘)</label>
+      <div style="display:flex;gap:6px;">
+        <button class="mini-btn" id="dc-fav-up">이미지 올리기</button>
+        <button class="mini-btn" id="dc-fav-del">삭제</button>
+      </div>
+    </div>
+    <div class="f-row">
+      <label>장 제목 디자인</label>
+      <select id="dc-chtitle">
+        <option value="">기본</option>
+        <option value="underline">밑줄</option>
+        <option value="bracket">괄호 ( )</option>
+        <option value="pill">알약</option>
+        <option value="dot">포인트 ·</option>
       </select>
     </div>
   </div>
@@ -1093,6 +1145,6 @@
 <input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=21"></script>
+<script type="module" src="app.js?v=22"></script>
 </body>
 </html>
