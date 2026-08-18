@@ -44,6 +44,64 @@
     --bg: #12201A; --tx: #E3E9E1; --dim: #8CA096; --mute: #52645B;
     --line: #22352C; --pri: #7FB89A; --card: #182A22; --cardbase: 24, 42, 34; --radius: 8px;
   }
+  body[data-preset="retro"] {
+    --bg: #C0C0C0; --tx: #1F1F1F; --dim: #4E4E4E; --mute: #7A7A7A;
+    --line: #8A8A8A; --pri: #000080; --card: #C9C9C9; --cardbase: 201, 201, 201; --radius: 0px;
+  }
+  body[data-preset="retro"] .site-bg { background: #008080; }
+  body[data-preset="retro"] .wrap {
+    background: #C0C0C0;
+    border: 2px solid;
+    border-color: #FFFFFF #5C5C5C #5C5C5C #FFFFFF;
+    box-shadow: 3px 3px 0 #00000033;
+    margin: 44px auto 70px;
+    padding: 20px 22px 56px;
+  }
+  body[data-preset="retro"] .head {
+    background: linear-gradient(90deg, #000080, #1084D0);
+    margin: -20px -22px 34px;
+    padding: 8px 13px 9px;
+    text-align: left;
+  }
+  body[data-preset="retro"] .head h1 { color: #FFFFFF; font-size: 13.5px; letter-spacing: .1em; text-indent: 0; }
+  body[data-preset="retro"] .head .over, body[data-preset="retro"] .head .rule { display: none; }
+  body[data-preset="retro"] .head .sub { color: #C4D2EE; font-size: 10px; margin-top: 4px; letter-spacing: .12em; }
+  body[data-preset="retro"] .head-img { margin: -20px -22px 24px; height: 160px; border-bottom: 2px solid #5C5C5C; }
+  body[data-preset="retro"] .fold, body[data-preset="retro"] .pf, body[data-preset="retro"] .music,
+  body[data-preset="retro"] .heart-btn, body[data-preset="retro"] .pg-pill, body[data-preset="retro"] .gal-cell,
+  body[data-preset="retro"] .pf-img, body[data-preset="retro"] .m-btn {
+    border: 2px solid;
+    border-color: #FFFFFF #5C5C5C #5C5C5C #FFFFFF;
+    border-radius: 0;
+  }
+  body[data-preset="retro"] .pg-pill.on { border-color: #5C5C5C #FFFFFF #FFFFFF #5C5C5C; }
+
+  body[data-preset="vhs"] {
+    --bg: #060608; --tx: #E8E8E8; --dim: #9A9A9A; --mute: #4E4E4E;
+    --line: #262626; --pri: #FF3B4E; --card: #101013; --cardbase: 16, 16, 19; --radius: 2px;
+  }
+  body[data-preset="vhs"] .site-bg {
+    background-image: repeating-linear-gradient(0deg, transparent 0 2px, #FFFFFF07 2px 3px),
+      radial-gradient(ellipse at center, transparent 55%, #00000066);
+  }
+  body[data-preset="vhs"] .head { position: relative; }
+  body[data-preset="vhs"] .head::before {
+    content: '● REC';
+    position: absolute; left: 0; top: -36px;
+    font-size: 10px; letter-spacing: .26em;
+    color: #FF3B3B;
+    animation: vhsblink 1.4s steps(1) infinite;
+  }
+  body[data-preset="vhs"] .head::after {
+    content: 'SP 0:00:00';
+    position: absolute; right: 0; top: -36px;
+    font-size: 10px; letter-spacing: .22em;
+    color: #BFBFBF;
+  }
+  @keyframes vhsblink { 50% { opacity: 0; } }
+  body[data-preset="vhs"] .head h1, body[data-preset="vhs"] .ch-title {
+    text-shadow: 2px 0 rgba(255, 0, 70, .45), -2px 0 rgba(0, 240, 255, .35);
+  }
   body[data-preset="diary"] .site-bg {
     background-image: repeating-linear-gradient(180deg, transparent 0 31px, #E5DCCB55 31px 32px);
   }
@@ -769,41 +827,19 @@
   <h3><span>이 공간 꾸미기</span><button id="dc-close">✕</button></h3>
 
   <div class="f-row">
-    <label>프리셋 (시작값 — 고른 뒤에도 아래에서 자유 수정)</label>
-    <div class="preset-grid">
-      <div class="preset-card" data-p="white">
-        <div class="pc-dots"><i style="background:#FDFDFC;border:1px solid #ECEAE5;"></i><i style="background:#1F1E1C;"></i><i style="background:#8A867E;"></i></div>
-        <b>화이트</b><small>여백과 선, 기본</small>
-      </div>
-      <div class="preset-card" data-p="dark">
-        <div class="pc-dots"><i style="background:#08080B;border:1px solid #23232E;"></i><i style="background:#C9A227;"></i><i style="background:#E8E4DA;"></i></div>
-        <b>다크</b><small>검정 + 금색</small>
-      </div>
-      <div class="preset-card" data-p="diary">
-        <div class="pc-dots"><i style="background:#F7F3EA;border:1px solid #E5DCCB;"></i><i style="background:#B0693C;"></i><i style="background:#4A4238;"></i></div>
-        <b>다이어리</b><small>종이 · 줄노트 · 테이프</small>
-      </div>
-      <div class="preset-card" data-p="cute">
-        <div class="pc-dots"><i style="background:#FDF6F8;border:1px solid #F3E2E8;"></i><i style="background:#E58FA8;"></i><i style="background:#5C4A52;"></i></div>
-        <b>파스텔</b><small>말랑 · 둥근 · ♡</small>
-      </div>
-      <div class="preset-card" data-p="mono">
-        <div class="pc-dots"><i style="background:#FFFFFF;border:1px solid #E4E4E4;"></i><i style="background:#151515;"></i><i style="background:#6E6E6E;"></i></div>
-        <b>모노</b><small>흑백 · 잡지처럼 담백</small>
-      </div>
-      <div class="preset-card" data-p="glass">
-        <div class="pc-dots"><i style="background:linear-gradient(160deg,#E9EDF9,#F6EAF1);border:1px solid #DFE3EE;"></i><i style="background:#6B7AA8;"></i><i style="background:#3A3F52;"></i></div>
-        <b>글래스</b><small>뿌연 유리 · 파스텔 그라데이션</small>
-      </div>
-      <div class="preset-card" data-p="midnight">
-        <div class="pc-dots"><i style="background:#0B1026;border:1px solid #1E2444;"></i><i style="background:#8E9BD8;"></i><i style="background:#DCE0F2;"></i></div>
-        <b>미드나잇</b><small>깊은 밤 남색 · 라벤더</small>
-      </div>
-      <div class="preset-card" data-p="forest">
-        <div class="pc-dots"><i style="background:#12201A;border:1px solid #22352C;"></i><i style="background:#7FB89A;"></i><i style="background:#E3E9E1;"></i></div>
-        <b>포레스트</b><small>짙은 숲 · 세이지</small>
-      </div>
-    </div>
+    <label>테마 프리셋 — 분위기를 통째로 갈아입어요 (고른 뒤에도 자유 수정)</label>
+    <select id="dc-preset">
+      <option value="white">화이트 — 여백과 선, 기본</option>
+      <option value="dark">다크 — 검정 + 금색</option>
+      <option value="diary">다이어리 — 종이 · 줄노트 · 테이프</option>
+      <option value="cute">파스텔 — 말랑 · 둥근 · ♡</option>
+      <option value="mono">모노 — 흑백 · 잡지처럼 담백</option>
+      <option value="glass">글래스 — 뿌연 유리 · 그라데이션</option>
+      <option value="midnight">미드나잇 — 깊은 밤 남색 · 라벤더</option>
+      <option value="forest">포레스트 — 짙은 숲 · 세이지</option>
+      <option value="retro">레트로 창 — Windows 98풍</option>
+      <option value="vhs">비디오 테이프 — VHS 레코딩</option>
+    </select>
   </div>
 
   <div class="f-3col">
@@ -982,6 +1018,6 @@
 <input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=14"></script>
+<script type="module" src="app.js?v=15"></script>
 </body>
 </html>

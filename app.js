@@ -27,7 +27,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v14 로드');
+console.log('[LUVINFO] app.js v15 로드');
 
 function toast(m) {
   const t = $('#toast');
@@ -38,7 +38,7 @@ function toast(m) {
 }
 
 // ── 프리셋 기본값 (색 피커 표시용) ──
-const CARDC = { white: '#FFFFFF', dark: '#101017', diary: '#FFFDF8', cute: '#FFFFFF', mono: '#FAFAFA', glass: '#FFFFFF', midnight: '#121733', forest: '#182A22' };
+const CARDC = { white: '#FFFFFF', dark: '#101017', diary: '#FFFDF8', cute: '#FFFFFF', mono: '#FAFAFA', glass: '#FFFFFF', midnight: '#121733', forest: '#182A22', retro: '#C9C9C9', vhs: '#101013' };
 const PRESETS = {
   white: { bg: '#FDFDFC', tx: '#1F1E1C', pri: '#1F1E1C' },
   dark:  { bg: '#08080B', tx: '#E8E4DA', pri: '#C9A227' },
@@ -47,7 +47,9 @@ const PRESETS = {
   mono:  { bg: '#FFFFFF', tx: '#151515', pri: '#151515' },
   glass: { bg: '#EDF0F7', tx: '#3A3F52', pri: '#6B7AA8' },
   midnight: { bg: '#0B1026', tx: '#DCE0F2', pri: '#8E9BD8' },
-  forest: { bg: '#12201A', tx: '#E3E9E1', pri: '#7FB89A' }
+  forest: { bg: '#12201A', tx: '#E3E9E1', pri: '#7FB89A' },
+  retro: { bg: '#C0C0C0', tx: '#1F1F1F', pri: '#000080' },
+  vhs: { bg: '#060608', tx: '#E8E8E8', pri: '#FF3B4E' }
 };
 
 function defaultSite(ownerUid, handle) {
@@ -1037,7 +1039,7 @@ function closeEditSheet() {
 function openDeco() {
   const t = st.site.theme;
   const p = PRESETS[t.preset || 'white'];
-  $$('.preset-card').forEach((c) => c.classList.toggle('on', c.dataset.p === (t.preset || 'white')));
+  $('#dc-preset').value = t.preset || 'white';
   $('#dc-bg').value = t.bg || p.bg;
   $('#dc-tx').value = t.tx || p.tx;
   $('#dc-pri').value = t.pri || p.pri;
@@ -1075,17 +1077,20 @@ function bindDeco() {
   if (decoBound) return;
   decoBound = true;
   const t = () => st.site.theme;
-  $$('.preset-card').forEach((c) => {
-    c.onclick = () => {
-      if (!confirm('프리셋을 적용하면 현재 색 설정을 프리셋 기본값으로 덮어씁니다. 적용할까요?')) return;
-      t().preset = c.dataset.p;
-      t().bg = ''; t().tx = ''; t().pri = ''; t().cardC = '';
-      st.dirty = true;
-      applyTheme();
-      renderChapter();
-      openDeco();
-    };
-  });
+  $('#dc-preset').onchange = (e) => {
+    const p = e.target.value;
+    if (p === (t().preset || 'white')) return;
+    if (!confirm('프리셋을 적용하면 현재 색 설정을 프리셋 기본값으로 덮어씁니다. 적용할까요?')) {
+      e.target.value = t().preset || 'white';
+      return;
+    }
+    t().preset = p;
+    t().bg = ''; t().tx = ''; t().pri = ''; t().cardC = '';
+    st.dirty = true;
+    applyTheme();
+    renderChapter();
+    openDeco();
+  };
   $('#dc-bg').oninput = (e) => { t().bg = e.target.value; st.dirty = true; applyTheme(); };
   $('#dc-tx').oninput = (e) => { t().tx = e.target.value; st.dirty = true; applyTheme(); };
   $('#dc-pri').oninput = (e) => { t().pri = e.target.value; st.dirty = true; applyTheme(); };
