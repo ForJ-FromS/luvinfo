@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LUVINFO 가이드</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root { --bg:#FDFDFB; --card:#FFFFFF; --line:#E8E6E1; --tx:#2A2A28; --dim:#8A8880; --mute:#B5B3AB; --pri:#B5A184; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--tx); font-family:'Pretendard',sans-serif; font-size:14px; line-height:1.85; }
+  .wrap { max-width:640px; margin:0 auto; padding:52px 22px 80px; }
+  h1 { font-size:22px; letter-spacing:.28em; margin:0 0 4px; }
+  .sub { font-size:11px; letter-spacing:.2em; color:var(--mute); margin:0 0 44px; }
+  h2 { font-size:14px; letter-spacing:.14em; color:var(--pri); margin:44px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+  p { margin:0 0 10px; }
+  ul { margin:0 0 10px; padding-left:18px; }
+  li { margin-bottom:6px; }
+  b { font-weight:700; }
+  code { background:#F3F1EC; border:1px solid var(--line); border-radius:5px; padding:1px 6px; font-size:12px; font-family:'Pretendard',monospace; }
+  .tip { background:#F8F6F1; border:1px solid var(--line); border-radius:12px; padding:12px 16px; font-size:12.5px; color:var(--dim); margin:12px 0; }
+  .tbl { width:100%; border-collapse:collapse; font-size:12.5px; margin:10px 0; }
+  .tbl th, .tbl td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  .tbl th { background:#F8F6F1; font-weight:600; width:88px; }
+  /* 배너 미리보기 (실서비스와 같은 스타일) */
+  .banners { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start; margin:14px 0; }
+  .banners a { display:block; border:1px solid var(--line); border-radius:8px; overflow:hidden; position:relative; text-decoration:none; }
+  .banners .tb { display:flex; align-items:center; justify-content:center; width:200px; height:52px; background:#fff; color:var(--dim); font-size:12px; letter-spacing:.1em; }
+  .banners .bimg { display:flex; align-items:center; justify-content:center; width:220px; height:60px; background:linear-gradient(120deg,#2b2b33,#4a4152); color:#e8dcc8; font-size:11px; letter-spacing:.18em; }
+  .banners .mut { position:absolute; top:2px; right:5px; font-size:10px; color:var(--pri); }
+  .foot { margin-top:56px; padding-top:16px; border-top:1px solid var(--line); font-size:11px; color:var(--mute); text-align:center; letter-spacing:.1em; }
+  a.back { color:var(--pri); text-decoration:none; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>LUVINFO</h1>
+  <p class="sub">사용 가이드 · GUIDE</p>
+
+  <h2>01 — 시작하기</h2>
+  <ul>
+    <li>가입에는 <b>초대 코드</b>가 필요해요. 코드를 받았다면 첫 화면 → <b>시작하기</b> → Google 로그인 → 코드와 핸들 입력.</li>
+    <li><b>핸들</b>은 곧 주소예요 — <code>luvinfo.me/핸들</code>. 영문 소문자·숫자 2~20자, 나중에 바꾸기 어려우니 신중히!</li>
+    <li>화면 오른쪽 위: <b>📱 미리보기 · ✎ 편집 · 로그아웃</b> 버튼이 있어요.</li>
+  </ul>
+
+  <h2>02 — 장(페이지) 만들기</h2>
+  <p>성향글은 <b>장</b>을 넘기며 읽는 구조예요. 장은 두 종류:</p>
+  <ul>
+    <li><b>보통 장</b> — 블록을 쌓아 만드는 장. ＋ 버튼으로 블록을 추가하고 ↑↓로 순서를 바꿔요.</li>
+    <li><b>HTML 장</b> — 코드를 통째로 붙여넣는 장. <b>📄 HTML 파일 불러오기</b>로 파일째 올릴 수도 있어요. 이 장에서는 위 머리글이 자동으로 숨겨져요(체크로 다시 켤 수 있음).</li>
+  </ul>
+  <ul>
+    <li><b>장 넘김</b>은 화살표·이름 알약·점 3종 중 🎨 꾸미기에서 선택.</li>
+    <li><b>장 비밀번호</b> — 장 편집에서 비번을 넣으면 그 장만 잠겨요(대문 비번과 별개).</li>
+    <li><b>장 제목 꾸미기</b> — 제목 디자인 5종(꾸미기) + 장마다 제목 이미지(위/아래 위치 선택).</li>
+  </ul>
+
+  <h2>03 — 블록 9종</h2>
+  <table class="tbl">
+    <tr><th>글</th><td>자유 입력. 서식: <code>**굵게**</code> <code>==형광==</code> <code>__밑줄__</code> <code>~~취소~~</code> · 구분선 <code>---</code> · 접은 글 <code>{접기:제목}</code>…<code>{접기끝}</code> · 사진 <code>[사진1]</code></td></tr>
+    <tr><th>프로필</th><td>사진(원/네모, 좌/우)+닉네임+계정+소개 — 파츠별로 켜고 끄기, 사진은 드래그 조정</td></tr>
+    <tr><th>갤러리</th><td>여러 장 업로드, 2·3·4열/슬라이더 선택, 사진마다 위치 조정</td></tr>
+    <tr><th>음악</th><td>곡 제목+아티스트(+mp3 링크면 재생 가능)</td></tr>
+    <tr><th>스티커</th><td>이미지 여러 개를 크기·기울기 다르게 흩뿌리기</td></tr>
+    <tr><th>배너</th><td>아래 04 참고</td></tr>
+    <tr><th>링크</th><td>라벨+주소 → 「→ 라벨 ↗」 목록</td></tr>
+    <tr><th>인용구</th><td>기억하고 싶은 문장 + 출처</td></tr>
+    <tr><th>디데이</th><td>라벨+날짜 → D-30 / D-DAY / D+18 자동 계산</td></tr>
+  </table>
+  <div class="tip">모든 블록은 ✎에서 <b>카드 켬/끔 · 모서리 · 투명도</b>를 따로 정할 수 있고, 장 전체 통일 옵션도 있어요.</div>
+
+  <h2>04 — 배너 교환</h2>
+  <p>러브인포끼리는 <b>핸들만 넣으면</b> 배너가 걸려요:</p>
+  <ul>
+    <li>✎ 편집 → <b>＋ 배너</b> → 상대 핸들 입력 → 핸들로 추가 → 확인 → ✓ 저장</li>
+    <li>상대가 🎨 꾸미기의 <b>내 배너</b>(220×60 권장)에 올려둔 이미지가 자동으로 떠요. 없으면 홈 제목이 글자 배너로 나와요.</li>
+    <li><b>서로 걸면 배너에 ♥</b>가 자동으로 붙어요 — 맞배너 표시!</li>
+    <li>러브인포 밖 사이트는 이미지+주소를 직접 넣는 <b>외부 배너</b>로.</li>
+  </ul>
+  <p>이렇게 보여요:</p>
+  <div class="banners">
+    <a href="#"><span class="bimg">STELLAR · MARE</span><span class="mut">♥</span></a>
+    <a href="#"><span class="tb">@nyang</span></a>
+  </div>
+  <p style="font-size:12px;color:var(--dim);">← 왼쪽: 이미지 배너+맞배너 ♥ / 오른쪽: 이미지가 없어 글자 배너로 뜬 경우</p>
+
+  <h2>05 — 꾸미기</h2>
+  <ul>
+    <li><b>프리셋 10종</b> — 화이트·다크·다이어리·파스텔·모노·글래스·미드나잇·포레스트·레트로 창·VHS. 프리셋은 시작값이에요 — 고른 뒤 색·폰트를 얼마든지 바꿔도 돼요.</li>
+    <li><b>머리글</b> — 글/이미지+글/이미지만/없음. 이미지는 <b>가로 1200px·비율 3:1</b>(예: 1200×400) 권장, 슬라이더로 <b>위아래 위치·확대·높이</b> 조절.</li>
+    <li><b>배경 이미지</b>+덮임 정도, <b>파비콘</b>(탭 아이콘), 장 번호 표시/숨김.</li>
+    <li><b>직접 CSS</b> — 아는 사람용. 화면이 깨지면 주소 뒤에 <code>?nocss=1</code>을 붙여 들어와 지우세요.</li>
+    <li><b>러브로그에서 가져오기</b> — 러브로그 핸들을 넣으면 색·폰트·머리글·파비콘·배경·대문(이미지·문구)을 겹치는 만큼 가져와요. <b>대문 비밀번호는 안 가져오니</b> 러브인포에서 새로 설정!</li>
+  </ul>
+
+  <h2>06 — 저장 규칙 (중요!)</h2>
+  <ul>
+    <li>편집 창의 <b>확인</b> = 화면에만 반영 / 하단 <b>✓ 저장</b> = 서버에 진짜 저장. 저장 안 하고 닫으면 날아가요!</li>
+    <li>쓰던 글은 <b>자동 임시저장</b>돼요 — 실수로 닫아도 다시 열면 복구를 물어봐요.</li>
+    <li>🎨 꾸미기 맨 아래에서 <b>백업(JSON)</b> 내보내기/복원 가능. 큰 수정 전엔 백업 추천!</li>
+  </ul>
+
+  <h2>07 — 기타</h2>
+  <ul>
+    <li><b>문의</b> — 아무 홈이나 맨 아래 <b>✉ 문의</b>. 보낸 문의와 답변은 같은 창에서 확인.</li>
+    <li><b>대문</b> — 입장 화면(이미지+문구+비밀번호)을 켤 수 있어요.</li>
+    <li><b>홈 삭제</b> — 꾸미기 맨 아래. 되돌릴 수 없으니 신중히.</li>
+  </ul>
+
+  <p class="foot"><a class="back" href="./">‹ LUVINFO 첫 화면으로</a><br><br>LUVINFO · GUIDE</p>
+</div>
+</body>
+</html>

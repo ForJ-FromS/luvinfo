@@ -35,7 +35,7 @@ function gid(i) { return document.getElementById(i); }
 const SIGNUP = { mode: 'invite', code: '' }; // invite = config/tsignup 목록의 러브인포 전용 코드 / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v42 로드');
+console.log('[LUVINFO] app.js v44 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -152,7 +152,6 @@ async function route() {
   }
   st.site = migrate(d.data());
   st.mine = !!(st.user && st.site.ownerUid === st.user.uid);
-  if (gid('ob-codes')) gid('ob-codes').style.display = (st.mine && st.myHandle === 'jeste') ? '' : 'none';
   const g = st.site.gate || {};
   if (g.on && !st.mine && sessionStorage.getItem('sh_gate_' + h) !== '1') {
     showGate(g);
@@ -250,7 +249,7 @@ function openClaim(user) {
     const h = $('#claim-h').value.trim().toLowerCase();
     if (!/^[a-z0-9]{2,20}$/.test(h)) { toast('영문 소문자·숫자 2~20자로 입력해 주세요'); return; }
     // 시스템 예약어 + 예약 핸들 목록(러브로그 config/reserved 공유 + 러브인포 전용 config/treserved)
-    const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about'];
+    const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
     try {
       const [r1, r2, r3] = await Promise.all([
         getDoc(doc(db, 'config', 'reserved')),
@@ -1154,6 +1153,11 @@ function bindShell() {
       .catch(() => toast('복사에 실패했어요'));
   };
   $('#foot-brand').onclick = (e) => { e.preventDefault(); location.href = BASE; };
+  const lv = (st.site.luvlog || '').trim();
+  if (gid('foot-lv')) {
+    gid('foot-lv').style.display = lv ? '' : 'none';
+    if (lv && gid('foot-luvlog')) gid('foot-luvlog').href = 'https://' + lv + '.luvlog.me';
+  }
   if (gid('foot-inq')) gid('foot-inq').onclick = (e) => {
     e.preventDefault();
     if (st.myHandle === 'jeste') openOps();
@@ -1164,7 +1168,6 @@ function bindShell() {
   if (gid('inq-send')) gid('inq-send').onclick = sendInq;
 
   // 운영
-  if (gid('ob-codes')) gid('ob-codes').onclick = openOps;
   if (gid('ops-close')) gid('ops-close').onclick = closeOps;
   if (gid('ops-bg')) gid('ops-bg').onclick = closeOps;
   if (gid('ops-make')) gid('ops-make').onclick = opsMake;
@@ -1790,6 +1793,7 @@ function openDeco() {
   $('#dc-num').value = t.num || 'on';
   if (gid('dc-chtitle')) gid('dc-chtitle').value = t.chtitle || '';
   if (gid('dc-css')) gid('dc-css').value = t.css || '';
+  if (gid('dc-luvlog')) gid('dc-luvlog').value = st.site.luvlog || '';
   $('#dc-corner').value = t.corner || '';
   $('#dc-cardop').value = t.cardop || '';
   $('#dc-bgdim').value = parseInt(t.bgDim) || 84;
@@ -1846,6 +1850,10 @@ function bindDeco() {
   $('#dc-num').onchange = (e) => { t().num = e.target.value; setDirty(); renderChapter(); };
   if (gid('dc-chtitle')) gid('dc-chtitle').onchange = (e) => { t().chtitle = e.target.value; setDirty(); applyTheme(); };
   if (gid('dc-css')) gid('dc-css').oninput = (e) => { t().css = e.target.value; setDirty(); applyTheme(); };
+  if (gid('dc-luvlog')) gid('dc-luvlog').oninput = (e) => {
+    st.site.luvlog = e.target.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    setDirty(); renderFoot();
+  };
   $('#dc-corner').onchange = (e) => { t().corner = e.target.value; setDirty(); applyTheme(); };
   $('#dc-cardop').onchange = (e) => { t().cardop = e.target.value; setDirty(); applyTheme(); };
   $('#dc-valign').onchange = (e) => { t().valign = e.target.value; setDirty(); applyTheme(); };

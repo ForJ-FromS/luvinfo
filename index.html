@@ -716,7 +716,7 @@
     </div>
     <button class="btn" id="btn-logout" style="display:none;font-size:11px;padding:8px 18px;">로그아웃</button>
   </div>
-  <p class="lnote" style="line-height:1.8;">가입에는 초대 코드가 필요해요<br>LUVINFO · <a href="#" id="landing-inq" style="color:inherit;">문의</a></p>
+  <p class="lnote" style="line-height:1.8;">가입에는 초대 코드가 필요해요<br>LUVINFO · <a href="guide.html" style="color:inherit;">가이드</a> · <a href="#" id="landing-inq" style="color:inherit;">문의</a></p>
 </div>
 
 <!-- 게이트 -->
@@ -768,14 +768,13 @@
         <button class="heart-btn" id="heart"><span class="h">♡</span><span id="hcount">0</span></button>
         <button class="copy-btn" id="copy-link">링크 복사</button>
       </div>
-      <span id="upd-date"></span> · <a href="#" id="foot-inq">✉ 문의</a> · <a href="#" id="foot-brand">LUVINFO</a>
+      <span id="upd-date"></span><span id="foot-lv" style="display:none;"> · <a href="#" id="foot-luvlog" target="_blank" rel="noopener">러브로그 홈 ↗</a></span> · <a href="guide.html" id="foot-guide">가이드</a> · <a href="#" id="foot-inq">✉ 문의</a> · <a href="#" id="foot-brand">LUVINFO</a>
     </div>
   </div>
 </div>
 
 <!-- 주인 하단 바 -->
 <div class="owner-bar">
-  <button class="ob" id="ob-codes" style="display:none;">🎟 코드</button>
   <button class="ob" id="ob-add">＋ 새 장</button>
   <button class="ob" id="ob-addhtml">＋ HTML 장</button>
   <button class="ob" id="ob-deco">🎨 꾸미기</button>
@@ -1118,6 +1117,10 @@
       <div class="f-note">잘못 넣어 화면이 깨지면 주소 뒤에 ?nocss=1 을 붙여 들어와 지울 수 있어요</div>
     </div>
     <div class="f-row">
+      <label>내 러브로그 홈 연결 (선택)</label>
+      <input type="text" id="dc-luvlog" placeholder="러브로그 핸들 — 홈 아래에 「러브로그 홈 ↗」이 떠요" autocomplete="off">
+    </div>
+    <div class="f-row">
       <label>러브로그에서 가져오기</label>
       <div style="display:flex;gap:6px;align-items:center;">
         <input type="text" id="dc-lvh" placeholder="러브로그 핸들" style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--tx);font-size:12px;padding:8px 10px;font-family:inherit;">
@@ -1279,6 +1282,6 @@
 <input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=42"></script>
+<script type="module" src="app.js?v=44"></script>
 </body>
 </html>
