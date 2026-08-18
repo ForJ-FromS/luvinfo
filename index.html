@@ -320,6 +320,20 @@
   }
   .ob:hover { color: var(--pri); }
   .ob.save { background: var(--pri); color: var(--bg); font-weight: 600; }
+  .ob.save.attn { animation: savepulse 1.3s ease infinite; }
+  @keyframes savepulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--pri), transparent 72%); } }
+
+  .ch-lock { text-align: center; padding: 46px 0 30px; }
+  .ch-lock .lk { font-size: 22px; margin-bottom: 16px; }
+  .ch-lock p { font-size: 12px; color: var(--dim); letter-spacing: .08em; margin-bottom: 18px; }
+  .ch-lock input {
+    background: rgba(var(--cardbase), var(--cardop));
+    border: 1px solid var(--line); border-radius: 999px;
+    color: var(--tx); font-size: 13px; padding: 10px 18px;
+    text-align: center; letter-spacing: .2em; width: 200px; font-family: inherit;
+  }
+  .ch-lock input:focus { outline: none; border-color: var(--pri); }
+  .ch-lock button { margin-left: 8px; }
 
   .ch-tools {
     display: none;
@@ -706,9 +720,15 @@
 <div class="sheet-bg" id="edit-bg"></div>
 <div class="sheet" id="edit-sheet">
   <h3><span id="es-title">장 편집</span><button id="es-close">✕</button></h3>
-  <div class="f-row">
-    <label>장 제목 (비우면 표시 안 함)</label>
-    <input type="text" id="es-name" placeholder="예: 기본, 드림, 페어…">
+  <div class="f-2col">
+    <div class="f-row">
+      <label>장 제목 (비우면 표시 안 함)</label>
+      <input type="text" id="es-name" placeholder="예: 기본, 드림, 페어…">
+    </div>
+    <div class="f-row">
+      <label>이 장 비밀번호 (비우면 공개)</label>
+      <input type="text" id="es-pw" placeholder="이 장만 잠그기" autocomplete="off">
+    </div>
   </div>
   <div class="f-row" id="es-cellrow">
     <label>내용</label>
@@ -815,7 +835,8 @@
     </div>
     <div class="f-note">이미지·iframe은 화면 폭에 자동으로 맞춰져요. 용량은 저장 시 안내됩니다.</div>
   </div>
-  <div class="f-actions">
+  <div class="f-actions" style="align-items:center;gap:12px;">
+    <span style="font-size:10.5px;color:var(--mute);margin-right:auto;">확인 = 화면 반영 · 하단 <b style="color:var(--pri);">✓ 저장</b> = 서버 저장</span>
     <button class="btn" id="es-cancel">취소</button>
     <button class="btn solid" id="es-ok">확인</button>
   </div>
@@ -1018,6 +1039,6 @@
 <input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=15"></script>
+<script type="module" src="app.js?v=16"></script>
 </body>
 </html>
