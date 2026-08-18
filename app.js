@@ -27,7 +27,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v13 로드');
+console.log('[LUVINFO] app.js v14 로드');
 
 function toast(m) {
   const t = $('#toast');
@@ -38,6 +38,7 @@ function toast(m) {
 }
 
 // ── 프리셋 기본값 (색 피커 표시용) ──
+const CARDC = { white: '#FFFFFF', dark: '#101017', diary: '#FFFDF8', cute: '#FFFFFF', mono: '#FAFAFA', glass: '#FFFFFF', midnight: '#121733', forest: '#182A22' };
 const PRESETS = {
   white: { bg: '#FDFDFC', tx: '#1F1E1C', pri: '#1F1E1C' },
   dark:  { bg: '#08080B', tx: '#E8E4DA', pri: '#C9A227' },
@@ -190,9 +191,16 @@ function applyTheme() {
   if (t.tx) b.setProperty('--tx', t.tx); else b.removeProperty('--tx');
   if (t.pri) b.setProperty('--pri', t.pri); else b.removeProperty('--pri');
   b.setProperty('--font', t.font || "'Pretendard'");
-  $('#usercss').textContent = t.css || '';
+  const nocss = new URLSearchParams(location.search).get('nocss') === '1';
+  $('#usercss').textContent = nocss ? '' : (t.css || '');
   if (t.corner) document.body.dataset.corner = t.corner; else delete document.body.dataset.corner;
   if (t.valign) document.body.dataset.valign = t.valign; else delete document.body.dataset.valign;
+  if (t.cardC && /^#[0-9a-fA-F]{6}$/.test(t.cardC)) {
+    const r = parseInt(t.cardC.slice(1, 3), 16), g = parseInt(t.cardC.slice(3, 5), 16), bl = parseInt(t.cardC.slice(5, 7), 16);
+    b.setProperty('--cardbase', r + ', ' + g + ', ' + bl);
+  } else {
+    b.removeProperty('--cardbase');
+  }
   if (t.cardop) document.body.dataset.op = t.cardop; else delete document.body.dataset.op;
   const sb = $('#site');
   if (t.bgImg) {
@@ -264,13 +272,30 @@ function renderChapter() {
   titleEl.textContent = name;
   titleEl.style.display = name ? '' : 'none';
   if (ch.type === 'html') {
-    bodyEl.innerHTML = '<div class="htmlblk"></div>';
-    bodyEl.querySelector('.htmlblk').innerHTML = ch.body || '';
+    const scope = 'hb-' + ch.id;
+    bodyEl.innerHTML = '<div class="htmlblk ' + scope + '"></div>';
+    bodyEl.querySelector('.htmlblk').innerHTML = scopeHtml(ch.body || '', '.' + scope);
   } else {
     bodyEl.innerHTML = '<div class="cellbody">' + renderCellBody(ch.body, ch.imgs) + '</div>';
     mountElements(ch, bodyEl);
   }
   renderPager();
+}
+
+// HTML 장 격리: <style>이 페이지 크롬을 오염시키지 않게 셀렉터에 스코프를 접두
+function scopeCSS(css, scope) {
+  return css.replace(/(^|[{}])([^{}@;]+)\{/g, (m, boundary, sel) => {
+    const scoped = sel.split(',').map((s) => {
+      s = s.trim();
+      if (!s) return s;
+      if (/^(body|html|:root)$/i.test(s)) return scope;
+      return scope + ' ' + s;
+    }).filter(Boolean).join(', ');
+    return boundary + ' ' + scoped + ' {';
+  });
+}
+function scopeHtml(html, scope) {
+  return html.replace(/<style([^>]*)>([\s\S]*?)<\/style>/gi, (m, attrs, css) => '<style' + attrs + '>' + scopeCSS(css, scope) + '</style>');
 }
 
 // 보통 장 본문: 빈 줄 문단 + [사진N] + {접기:제목}…{접기끝}
@@ -297,6 +322,7 @@ function renderCellBody(body, imgs) {
     s = s.replace(/\[갤러리\]/g, '</p><div class="elslot" data-el="gal"></div><p>');
     s = s.replace(/\[음악\]/g, '</p><div class="elslot" data-el="mu"></div><p>');
     s = s.replace(/\[스티커\]/g, '</p><div class="elslot" data-el="stk"></div><p>');
+    s = s.replace(/\[배너\]/g, '</p><div class="elslot" data-el="bn"></div><p>');
     s = s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
     s = s.replace(/__(.+?)__/g, '<u>$1</u>');
     s = s.replace(/~~(.+?)~~/g, '<s>$1</s>');
@@ -328,6 +354,7 @@ function mountElements(ch, root) {
     else if (kind === 'gal' && el.gal && (el.gal.imgs || []).length) slot.replaceWith(buildGallery(el.gal));
     else if (kind === 'mu' && el.mu) slot.replaceWith(buildMusic(el.mu));
     else if (kind === 'stk' && el.stk && (el.stk.items || []).length) slot.replaceWith(buildSticker(el.stk));
+    else if (kind === 'bn' && el.bn && (el.bn.items || []).length) slot.replaceWith(buildBanner(el.bn));
     else slot.remove();
   });
 }
@@ -420,6 +447,40 @@ function buildSticker(s) {
     '<img src="' + esc(it.u) + '" style="width:' + (parseInt(it.size) || 64) + 'px;transform:rotate(' + (parseInt(it.rot) || 0) + 'deg);" alt="">'
   ).join('');
   return d;
+}
+
+function buildBanner(bn) {
+  const d = document.createElement('div');
+  d.className = 'banners';
+  d.innerHTML = (bn.items || []).map((it) => {
+    if (it.h) return '<a data-bh="' + esc(it.h) + '" href="' + BASE + '?h=' + esc(it.h) + '"><span class="tb">@' + esc(it.h) + '</span></a>';
+    return '<a href="' + esc(it.url || '#') + '" target="_blank" rel="noopener"><img src="' + esc(it.img) + '" alt=""></a>';
+  }).join('');
+  d.querySelectorAll('[data-bh]').forEach(async (a) => {
+    const info = await bannerInfo(a.dataset.bh);
+    if (!info) { const tb = a.querySelector('.tb'); if (tb) tb.textContent = '@' + a.dataset.bh + ' (없음)'; return; }
+    if (info.img) a.innerHTML = '<img src="' + esc(info.img) + '" alt="">' + (info.mut ? '<span class="mut">♥</span>' : '');
+    else a.innerHTML = '<span class="tb">' + esc(info.title) + '</span>' + (info.mut ? '<span class="mut">♥</span>' : '');
+  });
+  return d;
+}
+
+const bannerCache = {};
+async function bannerInfo(h) {
+  if (bannerCache[h] !== undefined) return bannerCache[h];
+  try {
+    const d = await getDoc(doc(db, 'tsites', h));
+    if (!d.exists()) return (bannerCache[h] = null);
+    const s = d.data();
+    let mut = false;
+    (s.chapters || []).forEach((c) => {
+      ((c.el?.bn?.items) || []).forEach((it) => { if (it.h === st.handle) mut = true; });
+    });
+    return (bannerCache[h] = { img: s.myBanner || '', title: s.head?.title || h, mut });
+  } catch (e) {
+    console.log('[LUVINFO] bannerInfo err', e);
+    return null;
+  }
 }
 
 // ═══════════ 사진 조정 팝업 (공용) ═══════════
@@ -586,12 +647,14 @@ function bindShell() {
   $('#dc-close').onclick = closeDeco;
   $('#deco-bg').onclick = closeDeco;
 
-  bindDeco();
-  bindEditor();
-  bindAdjust();
-  $('#fab-view').onclick = () => {
+  // 스큐(구 index + 신 app) 방어: 한 구획이 죽어도 나머지는 산다
+  try { bindDeco(); } catch (e) { console.log('[LUVINFO] bindDeco err (index 구버전 캐시?)', e); }
+  try { bindEditor(); } catch (e) { console.log('[LUVINFO] bindEditor err (index 구버전 캐시?)', e); }
+  try { bindAdjust(); } catch (e) { console.log('[LUVINFO] bindAdjust err (index 구버전 캐시?)', e); }
+  const fv = $('#fab-view');
+  if (fv) fv.onclick = () => {
     const on = document.body.classList.toggle('mv');
-    $('#fab-view').textContent = on ? '💻' : '📱';
+    fv.textContent = on ? '💻' : '📱';
   };
 }
 
@@ -629,6 +692,7 @@ const epCfg = () => ensureEl('pf', { img: '', z: 100, x: 50, y: 50, pos: 'left',
 const egCfg = () => ensureEl('gal', { layout: '3', imgs: [] });
 const emCfg = () => ensureEl('mu', { title: '', artist: '', url: '' });
 const eskCfg = () => ensureEl('stk', { items: [] });
+const ebCfg = () => ensureEl('bn', { items: [] });
 
 function openChapterEdit(ch, type) {
   work = ch || { id: uid(), title: '', type, body: '', imgs: [], el: {} };
@@ -647,6 +711,25 @@ function openChapterEdit(ch, type) {
     $$('.ea').forEach((a) => a.classList.remove('open'));
     fillElementForms();
   }
+  // 임시저장 복구
+  try {
+    const raw = localStorage.getItem('li_draft_' + st.handle);
+    if (raw) {
+      const d = JSON.parse(raw);
+      const sameTarget = isNewCh ? (d.id === null && d.type === type) : d.id === work.id;
+      const cur = isHtml ? $('#es-html').value : $('#es-body').value;
+      if (sameTarget && d.body && d.body !== cur) {
+        const min = Math.max(1, Math.round((Date.now() - d.at) / 60000));
+        if (confirm(min + '분 전에 쓰다 만 내용이 있어요. 이어서 쓸까요?\n[취소]하면 지워져요.')) {
+          $('#es-name').value = d.title || '';
+          if (isHtml) $('#es-html').value = d.body;
+          else $('#es-body').value = d.body;
+        } else {
+          localStorage.removeItem('li_draft_' + st.handle);
+        }
+      }
+    }
+  } catch (e) { /* 파싱 실패 — 무시 */ }
   $('#edit-bg').classList.add('on');
   $('#edit-sheet').classList.add('on');
 }
@@ -674,6 +757,26 @@ function fillElementForms() {
   $('#em-st').textContent = markerSt('[음악]');
   $('#esk-st').textContent = markerSt('[스티커]');
   renderStkChips();
+  $('#eb-st').textContent = markerSt('[배너]');
+  renderBnChips();
+}
+
+function renderBnChips() {
+  const box = $('#eb-imgs');
+  if (!box) return;
+  const items = work.el.bn?.items || [];
+  box.innerHTML = items.map((it, i) => {
+    if (it.h) return '<div class="imgchip"><b style="color:var(--pri);">@' + esc(it.h) + '</b><i data-bnrm="' + i + '">✕</i></div>';
+    return '<div class="imgchip"><img src="' + esc(it.img) + '" alt="">' +
+      '<input type="text" data-bnurl="' + i + '" value="' + esc(it.url || '') + '" placeholder="연결 URL" style="width:120px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--tx);font-size:10.5px;padding:4px 6px;font-family:inherit;">' +
+      '<i data-bnrm="' + i + '">✕</i></div>';
+  }).join('');
+  box.querySelectorAll('[data-bnrm]').forEach((x) => {
+    x.onclick = () => { items.splice(parseInt(x.dataset.bnrm), 1); renderBnChips(); };
+  });
+  box.querySelectorAll('[data-bnurl]').forEach((x) => {
+    x.oninput = () => { items[parseInt(x.dataset.bnurl)].url = x.value.trim(); };
+  });
 }
 
 function renderImgChips(imgs) {
@@ -694,8 +797,19 @@ function renderGalChips() {
   const box = $('#eg-imgs');
   const imgs = work.el.gal?.imgs || [];
   box.innerHTML = imgs.map((it, i) =>
-    '<div class="imgchip"><img src="' + esc(it.u) + '" alt=""><i data-adj="' + i + '" style="color:var(--pri);">🔍</i><i data-grm="' + i + '">✕</i></div>'
+    '<div class="imgchip"><img src="' + esc(it.u) + '" alt="">' +
+    '<i data-gmv="' + i + ',-1" style="color:var(--dim);">◀</i><i data-gmv="' + i + ',1" style="color:var(--dim);">▶</i>' +
+    '<i data-adj="' + i + '" style="color:var(--pri);">🔍</i><i data-grm="' + i + '">✕</i></div>'
   ).join('');
+  box.querySelectorAll('[data-gmv]').forEach((x) => {
+    x.onclick = () => {
+      const [i, d] = x.dataset.gmv.split(',').map(Number);
+      const j = i + d;
+      if (j < 0 || j >= imgs.length) return;
+      [imgs[i], imgs[j]] = [imgs[j], imgs[i]];
+      renderGalChips();
+    };
+  });
   box.querySelectorAll('[data-adj]').forEach((x) => {
     x.onclick = () => openAdjust(imgs[parseInt(x.dataset.adj)], () => { st.dirty = true; });
   });
@@ -764,6 +878,60 @@ function bindEditor() {
   };
   $('#es-htmlphoto').onclick = () => uploadOne((url) => insertAt($('#es-html'), '<img src="' + url + '">'));
 
+  // ── 자동 임시저장 (localStorage, 1.2초 디바운스) ──
+  let draftTm = null;
+  const draftKey = () => 'li_draft_' + st.handle;
+  const saveDraft = () => {
+    clearTimeout(draftTm);
+    draftTm = setTimeout(() => {
+      if (!work) return;
+      const body = work.type === 'html' ? $('#es-html').value : $('#es-body').value;
+      const title = $('#es-name').value;
+      if (!body.trim() && !title.trim()) { localStorage.removeItem(draftKey()); return; }
+      try {
+        localStorage.setItem(draftKey(), JSON.stringify({ id: isNewCh ? null : work.id, type: work.type, title, body, at: Date.now() }));
+      } catch (e) { /* 용량 초과 등 — 무시 */ }
+    }, 1200);
+  };
+  $('#es-body').addEventListener('input', saveDraft);
+  $('#es-html').addEventListener('input', saveDraft);
+  $('#es-name').addEventListener('input', saveDraft);
+
+  // ── 사진 붙여넣기·끌어넣기 ──
+  const grabFiles = (list) => Array.from(list || []).filter((f) => f.type && f.type.startsWith('image/'));
+  const addPasted = async (files, isHtml) => {
+    if (!files.length) return;
+    toast('업로드 중… (' + files.length + '장)');
+    try {
+      const urls = [];
+      for (const f of files) { const u = await uploadFile(f); if (u) urls.push(u); }
+      if (!urls.length) return;
+      if (isHtml) {
+        urls.forEach((u) => insertAt($('#es-html'), '<img src="' + u + '">'));
+      } else {
+        const startN = work.imgs.length;
+        work.imgs = work.imgs.concat(urls);
+        const tags = urls.map((_, k) => '[사진' + (startN + k + 1) + ']').join(' ');
+        insertAt($('#es-body'), '\n' + tags + '\n');
+        renderImgChips(work.imgs);
+      }
+      toast('업로드 완료');
+      saveDraft();
+    } catch (e) { console.log('[LUVINFO] paste err', e); toast('업로드 실패'); }
+  };
+  [['#es-body', false], ['#es-html', true]].forEach(([sel, isHtml]) => {
+    const el = $(sel);
+    el.addEventListener('paste', (e) => {
+      const files = grabFiles(e.clipboardData?.files);
+      if (files.length) { e.preventDefault(); addPasted(files, isHtml); }
+    });
+    el.addEventListener('dragover', (e) => e.preventDefault());
+    el.addEventListener('drop', (e) => {
+      const files = grabFiles(e.dataTransfer?.files);
+      if (files.length) { e.preventDefault(); addPasted(files, isHtml); }
+    });
+  });
+
   // 아코디언 열기 = 요소 활성화
   $$('.ea').forEach((a) => {
     a.querySelector('.ea-head').onclick = () => {
@@ -773,6 +941,7 @@ function bindEditor() {
         if (a.id === 'ea-gallery') egCfg();
         if (a.id === 'ea-music') emCfg();
         if (a.id === 'ea-sticker') eskCfg();
+        if (a.id === 'ea-banner') ebCfg();
         fillElementForms();
       }
     };
@@ -803,6 +972,25 @@ function bindEditor() {
     renderStkChips();
   });
   $('#esk-ins').onclick = () => { insertAt(ta(), '\n[스티커]\n'); eskCfg(); $('#esk-st').textContent = '배치됨'; };
+  // 배너
+  $('#eb-addh').onclick = async () => {
+    const inp = $('#eb-hin');
+    const h = (inp.value || '').trim().toLowerCase().replace(/^@/, '');
+    if (!/^[a-z0-9]{2,20}$/.test(h)) { toast('핸들 형식이 아니에요 (영문 소문자·숫자)'); return; }
+    if (h === st.handle) { toast('내 핸들은 추가할 수 없어요'); return; }
+    const ex = await getDoc(doc(db, 'tsites', h));
+    if (!ex.exists()) { toast('@' + h + ' — 존재하지 않는 러브인포예요'); return; }
+    ebCfg().items.push({ h });
+    delete bannerCache[h];
+    inp.value = '';
+    renderBnChips();
+  };
+  $('#eb-up').onclick = () => uploadMulti((urls) => {
+    const b = ebCfg();
+    b.items = (b.items || []).concat(urls.map((u) => ({ img: u, url: '' })));
+    renderBnChips();
+  });
+  $('#eb-ins').onclick = () => { insertAt(ta(), '\n[배너]\n'); ebCfg(); $('#eb-st').textContent = '배치됨'; };
 
   $('#es-ok').onclick = confirmChapterEdit;
 }
@@ -834,6 +1022,7 @@ function confirmChapterEdit() {
     st.site.chapters.push(work);
     st.cur = st.site.chapters.length - 1;
   }
+  localStorage.removeItem('li_draft_' + st.handle);
   st.dirty = true;
   closeEditSheet();
   renderChapter();
@@ -860,6 +1049,7 @@ function openDeco() {
   $('#dc-bgdim').value = parseInt(t.bgDim) || 84;
   $('#dc-bgdimv').textContent = (parseInt(t.bgDim) || 84) + '%';
   $('#dc-valign').value = t.valign || '';
+  $('#dc-cardc').value = t.cardC || CARDC[t.preset || 'white'] || '#FFFFFF';
   const hd = st.site.head;
   $('#dc-head').value = hd.mode || 'text';
   $('#dc-over').value = hd.over || '';
@@ -889,7 +1079,7 @@ function bindDeco() {
     c.onclick = () => {
       if (!confirm('프리셋을 적용하면 현재 색 설정을 프리셋 기본값으로 덮어씁니다. 적용할까요?')) return;
       t().preset = c.dataset.p;
-      t().bg = ''; t().tx = ''; t().pri = '';
+      t().bg = ''; t().tx = ''; t().pri = ''; t().cardC = '';
       st.dirty = true;
       applyTheme();
       renderChapter();
@@ -905,6 +1095,45 @@ function bindDeco() {
   $('#dc-corner').onchange = (e) => { t().corner = e.target.value; st.dirty = true; applyTheme(); };
   $('#dc-cardop').onchange = (e) => { t().cardop = e.target.value; st.dirty = true; applyTheme(); };
   $('#dc-valign').onchange = (e) => { t().valign = e.target.value; st.dirty = true; applyTheme(); };
+  $('#dc-cardc').oninput = (e) => { t().cardC = e.target.value; st.dirty = true; applyTheme(); };
+  $('#dc-cardc-del').onclick = () => { t().cardC = ''; st.dirty = true; applyTheme(); $('#dc-cardc').value = CARDC[t().preset || 'white'] || '#FFFFFF'; toast('카드 색을 프리셋 기본으로'); };
+  $('#dc-mybn-up').onclick = () => uploadOne((url) => { st.site.myBanner = url; st.dirty = true; toast('내 배너 설정 — 저장을 눌러 주세요'); });
+  $('#dc-mybn-del').onclick = () => { st.site.myBanner = ''; st.dirty = true; toast('내 배너 제거'); };
+  $('#dc-backup').onclick = () => {
+    const data = JSON.stringify(st.site, null, 2);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+    a.download = 'luvinfo-' + st.handle + '-' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  $('#dc-restore').onclick = () => {
+    const fi = $('#file-json');
+    fi.value = '';
+    fi.onchange = () => {
+      const f = fi.files[0];
+      if (!f) return;
+      const rd = new FileReader();
+      rd.onload = () => {
+        try {
+          const data = JSON.parse(rd.result);
+          if (!data.chapters) { toast('러브인포 백업 파일이 아니에요'); return; }
+          if (!confirm('백업으로 복원하면 지금 내용을 덮어씁니다. 계속할까요?')) return;
+          data.ownerUid = st.site.ownerUid;
+          data.heart = st.site.heart || 0;
+          st.site = data;
+          st.dirty = true;
+          st.cur = 0;
+          applyTheme();
+          renderChapter();
+          renderFoot();
+          toast('복원했어요 — ✓ 저장을 눌러야 서버에 반영돼요');
+        } catch (e) { console.log('[LUVINFO] restore err', e); toast('파일을 읽을 수 없어요'); }
+      };
+      rd.readAsText(f);
+    };
+    fi.click();
+  };
   $('#dc-bgdim').oninput = (e) => { t().bgDim = parseInt(e.target.value); $('#dc-bgdimv').textContent = e.target.value + '%'; st.dirty = true; applyTheme(); };
   $('#dc-head').onchange = (e) => { st.site.head.mode = e.target.value; st.dirty = true; applyTheme(); };
   $('#dc-over').oninput = (e) => { st.site.head.over = e.target.value; st.dirty = true; applyTheme(); };

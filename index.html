@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Serif+KR:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Gowun+Batang&family=Nanum+Myeongjo&family=IBM+Plex+Sans+KR:wght@400;600&family=Gaegu&family=Noto+Serif+KR:wght@400;600&display=swap" rel="stylesheet">
 <style>
   /* ═══ 프리셋 ═══ */
   body[data-preset="white"] {
@@ -502,6 +502,19 @@
   .stk { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 20px 0; }
   .stk img { display: block; }
 
+  .banners { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; margin: 20px 0; }
+  .banners a { display: block; border: 1px solid var(--line); border-radius: calc(var(--radius) * .6); overflow: hidden; transition: border-color .2s; position: relative; }
+  .banners a:hover { border-color: var(--pri); }
+  .banners img { display: block; max-width: 220px; max-height: 60px; }
+  .banners .tb {
+    display: flex; align-items: center; justify-content: center;
+    width: 200px; height: 52px;
+    background: rgba(var(--cardbase), var(--cardop));
+    color: var(--dim); font-size: 12px; letter-spacing: .1em;
+    padding: 0 12px; text-align: center;
+  }
+  .banners .mut { position: absolute; top: 2px; right: 5px; font-size: 10px; color: var(--pri); text-shadow: 0 0 4px rgba(var(--cardbase), .9); }
+
   .adj-bg { display: none; position: fixed; inset: 0; background: #00000040; z-index: 300; }
   .adj-bg.on { display: block; }
   .adj {
@@ -719,6 +732,22 @@
         <div class="f-note">칩의 숫자 = 크기(px)·기울기(도). 눌러서 수정할 수 있어요.</div>
       </div>
     </div>
+
+    <div class="ea" id="ea-banner">
+      <div class="ea-head"><span><b>배너</b> — 러브인포끼리 맞배너 ♥</span><span class="st" id="eb-st"></span></div>
+      <div class="ea-body">
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input type="text" id="eb-hin" placeholder="러브인포 핸들 (예: jeste)" style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--tx);font-size:12px;padding:8px 10px;font-family:inherit;">
+          <button class="mini-btn" id="eb-addh">핸들로 추가</button>
+        </div>
+        <div class="ea-btns">
+          <button class="mini-btn" id="eb-up">외부 배너 이미지 추가</button>
+          <button class="mini-btn" id="eb-ins">본문에 배치 [배너]</button>
+        </div>
+        <div class="imgchips" id="eb-imgs"></div>
+        <div class="f-note">핸들로 추가하면 상대 배너가 자동으로 걸리고, 서로 추가한 사이면 ♥가 붙어요. 내 배너 이미지는 🎨 꾸미기에서 올려요.</div>
+      </div>
+    </div>
   </div>
   <div class="f-row" id="es-htmlrow" style="display:none;">
     <label>HTML 코드</label>
@@ -790,6 +819,10 @@
         <option value="'Pretendard'">Pretendard (고딕)</option>
         <option value="'Noto Serif KR', serif">Noto Serif (세리프)</option>
         <option value="'Gowun Dodum', sans-serif">고운돋움 (둥근 고딕)</option>
+        <option value="'IBM Plex Sans KR', sans-serif">IBM Plex (모던 고딕)</option>
+        <option value="'Gowun Batang', serif">고운바탕 (부드러운 세리프)</option>
+        <option value="'Nanum Myeongjo', serif">나눔명조</option>
+        <option value="'Gaegu', cursive">개구 (손글씨)</option>
         <option value="monospace">모노스페이스</option>
       </select>
     </div>
@@ -883,8 +916,34 @@
   </div>
 
   <div class="f-row">
+    <label>내 배너 (다른 러브인포에 걸릴 이미지 — 220×60 권장)</label>
+    <div style="display:flex;gap:6px;">
+      <button class="mini-btn" id="dc-mybn-up">배너 업로드</button>
+      <button class="mini-btn" id="dc-mybn-del">제거</button>
+    </div>
+  </div>
+
+  <div class="f-row">
+    <label>카드 색 (접은글·위젯 배경)</label>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <input type="color" id="dc-cardc" style="flex:1;">
+      <button class="mini-btn" id="dc-cardc-del">기본으로</button>
+    </div>
+  </div>
+
+  <div class="f-row">
+    <label>백업</label>
+    <div style="display:flex;gap:6px;">
+      <button class="mini-btn" id="dc-backup">⬇ 백업 (JSON)</button>
+      <button class="mini-btn" id="dc-restore">복원</button>
+    </div>
+    <div class="f-note">HTML 장까지 통째로 저장돼요. 큰 수정 전에 한 번씩!</div>
+  </div>
+
+  <div class="f-row">
     <label>직접 CSS</label>
     <textarea id="dc-css" class="code" style="min-height:90px;" placeholder=".head h1 { font-size: 40px; }"></textarea>
+    <div class="f-note">CSS 실수로 화면이 깨져 편집을 못 하게 되면, 주소 뒤에 ?nocss=1 을 붙여 들어오세요.</div>
   </div>
 
   <div class="f-actions">
@@ -920,8 +979,9 @@
 <div id="toast"></div>
 <input type="file" id="file-one" accept="image/*" style="display:none;">
 <input type="file" id="file-multi" accept="image/*" multiple style="display:none;">
+<input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=13"></script>
+<script type="module" src="app.js?v=14"></script>
 </body>
 </html>
