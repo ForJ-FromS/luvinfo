@@ -190,6 +190,8 @@
     border-bottom: 1px solid var(--line);
   }
   body[data-head="none"] .head, body[data-head="none"] .head-img { display: none; }
+  body[data-chhead="off"] .head, body[data-chhead="off"] .head-img { display: none; }
+  .chk-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--sub); cursor: pointer; }
   body[data-head="text"] .head-img { display: none; }
   body[data-head="img"] .head { display: none; }
 
@@ -878,10 +880,13 @@
   <div class="f-row" id="es-htmlrow" style="display:none;">
     <label>HTML 코드</label>
     <textarea id="es-html" class="tall code" placeholder="<div>…</div> — 페이지 코드를 통째로 붙여넣으세요."></textarea>
-    <div style="display:flex;gap:6px;margin-top:8px;">
+    <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+      <button class="mini-btn" id="es-htmlfile">📄 HTML 파일 불러오기</button>
       <button class="mini-btn" id="es-htmlphoto">📷 사진 올려서 주소 넣기</button>
     </div>
-    <div class="f-note">이미지·iframe은 화면 폭에 자동으로 맞춰져요. 용량은 저장 시 안내됩니다.</div>
+    <input type="file" id="es-htmlfile-input" accept=".html,.htm,text/html" style="display:none;">
+    <label class="chk-row" style="margin-top:10px;"><input type="checkbox" id="es-showhead"> 이 장에서도 위 머리글 보이기</label>
+    <div class="f-note">HTML 장은 기본으로 머리글 없이 페이지만 통째로 보여요. 이미지·iframe은 화면 폭에 자동으로 맞춰져요.</div>
   </div>
   <div class="f-actions" style="align-items:center;gap:12px;">
     <span style="font-size:10.5px;color:var(--mute);margin-right:auto;">확인 = 화면 반영 · 하단 <b style="color:var(--pri);">✓ 저장</b> = 서버 저장</span>
@@ -1087,6 +1092,6 @@
 <input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=19"></script>
+<script type="module" src="app.js?v=20"></script>
 </body>
 </html>

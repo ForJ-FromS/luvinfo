@@ -27,7 +27,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v19 로드');
+console.log('[LUVINFO] app.js v20 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -293,6 +293,7 @@ function renderChapter() {
     renderPager();
     return;
   }
+  document.body.dataset.chhead = (ch.type === 'html' && !ch.showHead) ? 'off' : 'on';
   if (ch.type === 'html') {
     let body = ch.body || '';
     if (!body && ch.bodyRef) {
@@ -300,9 +301,11 @@ function renderChapter() {
         body = htmlCache[ch.id];
       } else {
         bodyEl.innerHTML = '<p style="text-align:center;color:var(--mute);font-size:11px;letter-spacing:.24em;padding:60px 0;">LOADING…</p>';
-        fetch(ch.bodyRef)
+        const refAt = ch.bodyRef;
+        fetch(refAt)
           .then((r) => r.text())
           .then((t) => {
+            if (ch.bodyRef !== refAt || ch.body) return; // 그 사이 새 내용이 생겼으면 옛 응답 폐기
             htmlCache[ch.id] = t;
             if ((st.site.chapters || [])[st.cur] === ch) renderChapter();
           })
@@ -850,14 +853,17 @@ function openChapterEdit(ch, type) {
   $('#bl-edit').style.display = 'none';
   $('#es-htmlrow').style.display = isHtml ? 'block' : 'none';
   if (isHtml) {
+    $('#es-showhead').checked = !!work.showHead;
     const cached = work.body || htmlCache[work.id];
     if (!cached && work.bodyRef) {
       $('#es-html').value = '불러오는 중…';
       const wid = work.id;
-      fetch(work.bodyRef).then((r) => r.text()).then((t) => {
+      const refAt = work.bodyRef;
+      fetch(refAt).then((r) => r.text()).then((t) => {
+        if (!work || work.id !== wid || work.bodyRef !== refAt || work.body) return;
         htmlCache[wid] = t;
-        if (work && work.id === wid) $('#es-html').value = t;
-      }).catch(() => { $('#es-html').value = ''; toast('본문을 불러오지 못했어요'); });
+        if ($('#es-html').value === '불러오는 중…') $('#es-html').value = t;
+      }).catch(() => { if (work && work.id === wid) { $('#es-html').value = ''; toast('본문을 불러오지 못했어요'); } });
     } else {
       $('#es-html').value = cached || '';
     }
@@ -1142,6 +1148,21 @@ function bindEditor() {
   };
   $('#es-body').addEventListener('input', saveDraft);
   $('#es-htmlphoto').onclick = () => uploadOne((url) => insertAt($('#es-html'), '<img src="' + url + '">'));
+  $('#es-htmlfile').onclick = () => $('#es-htmlfile-input').click();
+  $('#es-htmlfile-input').onchange = (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      const cur = $('#es-html').value.trim();
+      if (cur && cur !== '불러오는 중…' && !confirm('지금 있는 코드를 이 파일 내용으로 바꿀까요?')) return;
+      $('#es-html').value = String(rd.result || '');
+      toast('파일을 불러왔어요 — 확인 후 ✓ 저장!');
+    };
+    rd.onerror = () => toast('파일을 읽지 못했어요');
+    rd.readAsText(f);
+  };
 
   // 붙여넣기·끌어넣기
   const grabFiles = (list) => Array.from(list || []).filter((f) => f.type && f.type.startsWith('image/'));
@@ -1243,6 +1264,7 @@ function confirmChapterEdit() {
   work.pw = $('#es-pw').value.trim();
   if (work.type === 'html') {
     work.body = $('#es-html').value;
+    work.showHead = $('#es-showhead').checked;
   } else {
     work.bstyle = {
       card: $('#ebs-card').value,
