@@ -696,15 +696,19 @@
 <!-- 랜딩 -->
 <div id="landing">
   <div>
-    <h1>LUVINFO</h1>
-    <p class="lsub" style="margin-top:12px;">TASTE ARCHIVE</p>
+    <p class="lsub" style="letter-spacing:.34em;font-size:10px;">TASTE · ARCHIVE · DREAM</p>
+    <h1 style="margin-top:10px;">LUVINFO</h1>
+    <p class="lsub" style="margin-top:12px;">나를 담는 한 권의 성향글</p>
   </div>
-  <p class="desc">깔끔한 기본 틀에 쓰기만 해도 되고,<br>HTML을 통째로 부어도 되는 성향글 페이지.</p>
-  <button class="btn solid" id="btn-start">시작하기 (Google 로그인)</button>
-  <div id="landing-my" style="display:none;">
-    <button class="btn" id="btn-myhome">내 성향글로 이동 →</button>
+  <p class="desc">깔끔한 기본 틀에 쓰기만 해도 되고,<br>HTML을 통째로 부어도 되는 성향글 페이지.<br><span style="font-size:11.5px;color:var(--mute);">모바일에서 예쁘게 · 장 넘김 · 비밀 장 · 맞배너</span></p>
+  <div style="display:flex;flex-direction:column;gap:10px;align-items:center;">
+    <button class="btn solid" id="btn-start">시작하기 (Google 로그인)</button>
+    <div id="landing-my" style="display:none;">
+      <button class="btn" id="btn-myhome">내 성향글로 이동 →</button>
+    </div>
+    <button class="btn" id="btn-logout" style="display:none;font-size:11px;padding:8px 18px;">로그아웃</button>
   </div>
-  <p class="lnote">LUVINFO</p>
+  <p class="lnote" style="line-height:1.8;">가입에는 초대 코드가 필요해요<br>LUVINFO · <a href="#" id="landing-inq" style="color:inherit;">문의</a></p>
 </div>
 
 <!-- 게이트 -->
@@ -720,6 +724,7 @@
   <button class="fab" id="fab-my" style="display:none;">MY ⌂</button>
   <button class="fab" id="fab-login" style="display:none;">로그인</button>
   <button class="fab" id="fab-view" style="display:none;">📱</button>
+  <button class="fab" id="fab-ops" style="display:none;">⚙ 운영</button>
   <button class="fab" id="fab-edit" style="display:none;">✎ 편집</button>
 </div>
 
@@ -768,18 +773,38 @@
   <button class="ob save" id="ob-save">✓ 저장</button>
 </div>
 
-<!-- 초대 코드 발급 (운영자) -->
-<div class="sheet-bg" id="codes-bg"></div>
-<div class="sheet" id="codes-sheet" style="width:min(480px,94vw);">
-  <h3><span>🎟 초대 코드</span><button id="codes-close">✕</button></h3>
+<!-- ⚙ 운영 (jeste) -->
+<div class="sheet-bg" id="ops-bg"></div>
+<div class="sheet" id="ops-sheet">
+  <h3><span>⚙ 운영</span><button id="ops-close">✕</button></h3>
+
   <div class="f-row">
-    <div style="display:flex;gap:6px;">
-      <input type="text" id="codes-new" placeholder="직접 입력 (비우고 만들기 = 자동 생성)" style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--tx);font-size:12px;padding:8px 10px;font-family:inherit;">
-      <button class="mini-btn" id="codes-add">＋ 만들기</button>
+    <label>초대코드 만들기</label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <input type="text" id="ops-prefix" placeholder="접두어 (예: wave)" style="flex:1.2;min-width:110px;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--tx);font-size:12px;padding:8px 10px;font-family:inherit;">
+      <input type="number" id="ops-count" value="10" min="1" max="50" style="width:64px;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--tx);font-size:12px;padding:8px 10px;font-family:inherit;">
+      <select id="ops-kind" style="flex:1;min-width:140px;">
+        <option value="once">1회용 코드 여러 개</option>
+        <option value="multi">다회용 코드 1개</option>
+      </select>
+      <button class="mini-btn" id="ops-make">만들기</button>
     </div>
-    <div class="f-note">코드는 목록에 있는 동안 계속 유효해요(다회용). 유출됐으면 🗑 하고 새로 만들면 돼요.</div>
+    <textarea id="ops-out" class="code" style="min-height:90px;margin-top:8px;" placeholder="만든 코드가 여기 떠요 — 복사해서 나눠주세요" readonly></textarea>
+    <div style="display:flex;gap:6px;margin-top:6px;">
+      <button class="mini-btn" id="ops-copy">전체 복사</button>
+    </div>
+    <div class="f-note">1회용 = 한 명 가입하면 소진 · 다회용 = 목록에서 지울 때까지 계속 유효</div>
   </div>
-  <div id="codes-list"><p style="color:var(--mute);font-size:12px;">불러오는 중…</p></div>
+
+  <div class="f-row">
+    <label>다회용 코드 목록</label>
+    <div id="codes-list"><p style="color:var(--mute);font-size:12px;">불러오는 중…</p></div>
+  </div>
+
+  <div class="f-row">
+    <label>문의함</label>
+    <div id="inqbox-list"><p style="color:var(--mute);font-size:12px;">불러오는 중…</p></div>
+  </div>
 </div>
 
 <!-- 문의 작성 시트 -->
@@ -791,13 +816,7 @@
     <div class="f-note">보낸 문의는 운영자만 볼 수 있어요. 로그인한 계정으로 접수돼요.</div>
   </div>
   <div class="f-actions"><button class="f-ok" id="inq-send">보내기</button></div>
-</div>
-
-<!-- 문의함 (운영자) -->
-<div class="sheet-bg" id="inqbox-bg"></div>
-<div class="sheet" id="inqbox-sheet">
-  <h3><span>📮 문의함</span><button id="inqbox-close">✕</button></h3>
-  <div id="inqbox-list"><p style="color:var(--mute);font-size:12px;">불러오는 중…</p></div>
+  <div id="inq-mine"></div>
 </div>
 
 <!-- 장 편집 시트 -->
@@ -1203,6 +1222,6 @@
 <input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=35"></script>
+<script type="module" src="app.js?v=36"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged
+  getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, increment, getDocs, collection, deleteDoc
@@ -35,7 +35,7 @@ function gid(i) { return document.getElementById(i); }
 const SIGNUP = { mode: 'invite', code: '' }; // invite = config/tsignup 목록의 러브인포 전용 코드 / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v35 로드');
+console.log('[LUVINFO] app.js v36 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -129,6 +129,12 @@ async function route() {
       $('#landing-my').style.display = 'block';
       $('#btn-myhome').onclick = () => { location.href = homeUrl(st.myHandle); };
     }
+    if (st.user) {
+      $('#btn-start').textContent = st.myHandle ? '다른 계정으로 시작하기' : '핸들 만들기 (계속)';
+      gid('btn-logout').style.display = '';
+    }
+    gid('btn-logout').onclick = doLogout;
+    if (gid('landing-inq')) gid('landing-inq').onclick = (e) => { e.preventDefault(); if (st.myHandle === 'jeste') openOps(); else openInq(); };
     $('#landing').classList.add('show');
     $('#btn-start').onclick = login;
     return;
@@ -181,6 +187,11 @@ function showGate(g) {
 }
 
 // ═══════════ 로그인 / 가입 ═══════════
+async function doLogout() {
+  try { await signOut(auth); toast('로그아웃했어요'); setTimeout(() => location.href = BASE, 600); }
+  catch (e) { console.log('[LUVINFO] logout err', e); toast('로그아웃 실패'); }
+}
+
 async function login() {
   try {
     const r = await signInWithPopup(auth, new GoogleAuthProvider());
@@ -207,16 +218,26 @@ function openClaim(user) {
       if (c === null) return;
       if (c.trim() !== SIGNUP.code) { toast('초대 코드가 달라요'); return; }
     }
+    let onceCode = null;
     if (SIGNUP.mode === 'invite') {
       const c = prompt('초대 코드를 입력해 주세요');
       if (c === null) return;
       const code = c.trim().toLowerCase();
       if (!code) { toast('초대 코드를 입력해 주세요'); return; }
       try {
-        // 러브인포 전용 코드 목록 — config/tsignup { list: [...] } (러브로그 invites와 무관)
-        const iv = await getDoc(doc(db, 'config', 'tsignup'));
-        const codes = (iv.exists() ? (iv.data().list || []) : []).map((x) => String(x).trim().toLowerCase());
-        if (!codes.includes(code)) { toast('초대 코드가 달라요'); return; }
+        // ①다회용: config/tsignup 목록 ②1회용: invites/{코드} (svc=luvinfo, 미사용)
+        const [ts, iv] = await Promise.all([
+          getDoc(doc(db, 'config', 'tsignup')),
+          getDoc(doc(db, 'invites', code))
+        ]);
+        const codes = (ts.exists() ? (ts.data().list || []) : []).map((x) => String(x).trim().toLowerCase());
+        const ivd = iv.exists() ? (iv.data() || {}) : null;
+        const onceOk = ivd && ivd.svc === 'luvinfo' && ivd.used !== true;
+        if (!codes.includes(code) && !onceOk) {
+          toast(ivd && ivd.svc === 'luvinfo' ? '이미 사용된 코드예요' : '초대 코드가 달라요');
+          return;
+        }
+        if (!codes.includes(code) && onceOk) onceCode = code;
       } catch (e) {
         console.log('[LUVINFO] invite check err', e);
         toast('코드 확인에 실패했어요 — 잠시 후 다시 시도해 주세요');
@@ -253,6 +274,10 @@ function openClaim(user) {
         joined: new Date().toISOString().slice(0, 10),
         ts: Date.now()
       });
+      if (onceCode) {
+        try { await setDoc(doc(db, 'invites', onceCode), { used: true, usedBy: user.uid, usedAt: Date.now() }, { merge: true }); }
+        catch (e) { console.log('[LUVINFO] invite consume err', e); }
+      }
       location.href = homeUrl(h);
     } catch (e) {
       console.log('[LUVINFO] claim err', e);
@@ -328,6 +353,10 @@ function showSite() {
     $('#fab-edit').style.display = 'block';
     $('#fab-view').style.display = 'block';
     $('#fab-edit').onclick = toggleEdit;
+    if (st.myHandle === 'jeste' && gid('fab-ops')) {
+      gid('fab-ops').style.display = 'block';
+      gid('fab-ops').onclick = openOps;
+    }
     if (st.site._migrated) toast('새 구조로 새 출발이에요 — ✎ 편집으로 채워보세요');
   } else if (!st.user) {
     $('#fab-login').style.display = 'block';
@@ -851,41 +880,78 @@ async function saveCodes() {
     toast('저장 실패 — config/tsignup 쓰기 규칙이 게시됐는지 확인해 주세요');
   }
 }
-async function openCodes() {
-  gid('codes-bg').classList.add('on');
-  gid('codes-sheet').classList.add('on');
-  gid('codes-new').value = '';
+async function openOps() {
+  gid('ops-bg').classList.add('on');
+  gid('ops-sheet').classList.add('on');
+  gid('ops-out').value = '';
   gid('codes-list').innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오는 중…</p>';
   try { await loadCodes(); renderCodes(); }
   catch (e) { gid('codes-list').innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오기 실패</p>'; }
+  renderInqBox();
 }
-function closeCodes() {
-  gid('codes-bg').classList.remove('on');
-  gid('codes-sheet').classList.remove('on');
+function closeOps() {
+  gid('ops-bg').classList.remove('on');
+  gid('ops-sheet').classList.remove('on');
 }
-function genCode() {
+function genCode(prefix) {
   const words = ['star', 'wave', 'luna', 'nova', 'echo', 'aqua', 'iris', 'onyx', 'mint', 'fern'];
-  const w = words[Math.floor(Math.random() * words.length)];
+  const w = prefix || words[Math.floor(Math.random() * words.length)];
   const n = Math.random().toString(36).slice(2, 6);
-  return 'li-' + w + '-' + n;
+  return (w + '-' + n).toLowerCase();
 }
-async function addCode() {
-  let c = gid('codes-new').value.trim().toLowerCase();
-  if (!c) c = genCode();
-  if (c.length > 40) { toast('40자 이내로 해주세요'); return; }
-  if (!codesCache) { try { await loadCodes(); } catch (e) { codesCache = []; } }
-  if (codesCache.includes(c)) { toast('이미 있는 코드예요'); return; }
-  codesCache.unshift(c);
-  gid('codes-new').value = '';
-  await saveCodes();
-  navigator.clipboard?.writeText(c).then(() => toast('새 코드 복사됨: ' + c)).catch(() => {});
+async function opsMake() {
+  const prefix = gid('ops-prefix').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  const kind = gid('ops-kind').value;
+  let count = Math.min(50, Math.max(1, parseInt(gid('ops-count').value) || 1));
+  const made = [];
+  try {
+    if (kind === 'multi') {
+      if (!codesCache) { try { await loadCodes(); } catch (e) { codesCache = []; } }
+      let c;
+      do { c = genCode(prefix); } while (codesCache.includes(c));
+      codesCache.unshift(c);
+      await setDoc(doc(db, 'config', 'tsignup'), { list: codesCache });
+      renderCodes();
+      made.push(c);
+    } else {
+      for (let i = 0; i < count; i++) {
+        const c = genCode(prefix);
+        await setDoc(doc(db, 'invites', c), { svc: 'luvinfo', used: false, at: Date.now() });
+        made.push(c);
+      }
+    }
+    gid('ops-out').value = made.join('\n');
+    toast(made.length + '개 만들었어요 ✓');
+  } catch (e) {
+    console.log('[LUVINFO] ops make err', e);
+    toast('코드 생성 실패 — 규칙이 게시됐는지 확인해 주세요');
+  }
 }
 
-function openInq() {
+async function openInq() {
   if (!st.user) { toast('문의는 로그인 후 보낼 수 있어요'); return; }
   gid('inq-body').value = '';
   gid('inq-bg').classList.add('on');
   gid('inq-sheet').classList.add('on');
+  const mine = gid('inq-mine');
+  if (mine) {
+    mine.innerHTML = '';
+    try {
+      const qs = await getDocs(collection(db, 'tinquiries'));
+      const rows = [];
+      qs.forEach((s) => { const d = s.data(); if (d.uid === st.user.uid) rows.push(d); });
+      rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      if (rows.length) {
+        mine.innerHTML = '<label style="display:block;font-size:11px;letter-spacing:.06em;color:var(--dim);margin:14px 0 8px;">내가 보낸 문의</label>' +
+          rows.map((r) =>
+            '<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:12px;">' +
+            '<div style="color:var(--dim);font-size:10.5px;margin-bottom:4px;">' + esc(r.date || '') + '</div>' +
+            '<div style="white-space:pre-wrap;word-break:break-word;">' + esc(r.body || '') + '</div>' +
+            (r.reply ? '<div style="margin-top:8px;padding:8px 10px;border-left:2px solid var(--pri);background:rgba(127,127,127,.06);white-space:pre-wrap;word-break:break-word;">' + esc(r.reply) + '</div>' : '<div style="margin-top:6px;color:var(--mute);font-size:10.5px;">답변 대기 중</div>') +
+            '</div>').join('');
+      }
+    } catch (e) { /* 본인 read 실패 시 조용히 */ }
+  }
 }
 function closeInq() {
   gid('inq-bg').classList.remove('on');
@@ -911,10 +977,9 @@ async function sendInq() {
     toast('전송 실패 — 규칙이 아직 없을 수 있어요 (운영자에게 알려주세요)');
   }
 }
-async function openInqBox() {
-  gid('inqbox-bg').classList.add('on');
-  gid('inqbox-sheet').classList.add('on');
+async function renderInqBox() {
   const box = gid('inqbox-list');
+  if (!box) return;
   box.innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오는 중…</p>';
   try {
     const qs = await getDocs(collection(db, 'tinquiries'));
@@ -924,15 +989,26 @@ async function openInqBox() {
     if (!rows.length) { box.innerHTML = '<p style="color:var(--mute);font-size:12px;">아직 문의가 없어요.</p>'; return; }
     box.innerHTML = rows.map((r) =>
       '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;">' +
-      '<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">' + esc(r.date || '') + ' · @' + esc(r.handle || '?') + (r.email ? ' · ' + esc(r.email) : '') +
+      '<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">' + esc(r.date || '') + ' · @' + esc(r.handle || '?') + (r.email ? ' · ' + esc(r.email) : '') + (r.reply ? ' · ✓ 답변함' : '') +
       ' <i data-inqdel="' + esc(r.id) + '" style="float:right;cursor:pointer;font-style:normal;color:var(--mute);">🗑</i></div>' +
-      '<div style="font-size:12.5px;white-space:pre-wrap;word-break:break-word;">' + esc(r.body || '') + '</div></div>'
+      '<div style="font-size:12.5px;white-space:pre-wrap;word-break:break-word;">' + esc(r.body || '') + '</div>' +
+      '<textarea data-inqre="' + esc(r.id) + '" class="code" style="min-height:64px;margin-top:8px;width:100%;box-sizing:border-box;" placeholder="답변 쓰기 — 문의한 사람이 ✉ 문의 창에서 보게 돼요">' + esc(r.reply || '') + '</textarea>' +
+      '<div style="margin-top:6px;"><button class="mini-btn" data-inqsave="' + esc(r.id) + '">답변 저장</button></div></div>'
     ).join('');
     box.querySelectorAll('[data-inqdel]').forEach((x) => {
       x.onclick = async () => {
         if (!confirm('이 문의를 지울까요?')) return;
-        try { await deleteDoc(doc(db, 'tinquiries', x.dataset.inqdel)); x.closest('div[style]').remove(); toast('지웠어요'); }
+        try { await deleteDoc(doc(db, 'tinquiries', x.dataset.inqdel)); renderInqBox(); toast('지웠어요'); }
         catch (e) { toast('삭제 실패'); }
+      };
+    });
+    box.querySelectorAll('[data-inqsave]').forEach((x) => {
+      x.onclick = async () => {
+        const ta = box.querySelector('[data-inqre="' + x.dataset.inqsave + '"]');
+        try {
+          await setDoc(doc(db, 'tinquiries', x.dataset.inqsave), { reply: ta.value, repliedAt: Date.now() }, { merge: true });
+          toast('답변 저장 ✓');
+        } catch (e) { console.log('[LUVINFO] reply err', e); toast('저장 실패 — 규칙에 update 허용이 있는지 확인해 주세요'); }
       };
     });
   } catch (e) {
@@ -981,21 +1057,23 @@ function bindShell() {
   $('#foot-brand').onclick = (e) => { e.preventDefault(); location.href = BASE; };
   if (gid('foot-inq')) gid('foot-inq').onclick = (e) => {
     e.preventDefault();
-    if (st.myHandle === 'jeste') openInqBox();
+    if (st.myHandle === 'jeste') openOps();
     else openInq();
   };
   if (gid('inq-close')) gid('inq-close').onclick = closeInq;
   if (gid('inq-bg')) gid('inq-bg').onclick = closeInq;
   if (gid('inq-send')) gid('inq-send').onclick = sendInq;
-  if (gid('inqbox-close')) gid('inqbox-close').onclick = () => { gid('inqbox-bg').classList.remove('on'); gid('inqbox-sheet').classList.remove('on'); };
-  if (gid('inqbox-bg')) gid('inqbox-bg').onclick = () => { gid('inqbox-bg').classList.remove('on'); gid('inqbox-sheet').classList.remove('on'); };
 
-  // 주인 바
-  if (gid('ob-codes')) gid('ob-codes').onclick = openCodes;
-  if (gid('codes-close')) gid('codes-close').onclick = closeCodes;
-  if (gid('codes-bg')) gid('codes-bg').onclick = closeCodes;
-  if (gid('codes-add')) gid('codes-add').onclick = addCode;
-  if (gid('codes-new')) gid('codes-new').onkeydown = (e) => { if (e.key === 'Enter') addCode(); };
+  // 운영
+  if (gid('ob-codes')) gid('ob-codes').onclick = openOps;
+  if (gid('ops-close')) gid('ops-close').onclick = closeOps;
+  if (gid('ops-bg')) gid('ops-bg').onclick = closeOps;
+  if (gid('ops-make')) gid('ops-make').onclick = opsMake;
+  if (gid('ops-copy')) gid('ops-copy').onclick = () => {
+    const v = gid('ops-out').value.trim();
+    if (!v) { toast('복사할 코드가 없어요'); return; }
+    navigator.clipboard?.writeText(v).then(() => toast('전체 복사!')).catch(() => toast('복사 실패'));
+  };
   $('#ob-add').onclick = () => openChapterEdit(null, 'cell');
   $('#ob-addhtml').onclick = () => openChapterEdit(null, 'html');
   $('#ob-deco').onclick = openDeco;
