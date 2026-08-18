@@ -27,7 +27,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v22 로드');
+console.log('[LUVINFO] app.js v23 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -75,6 +75,19 @@ function defaultSite(ownerUid, handle) {
 }
 
 // ═══════════ 라우팅 ═══════════
+function homeUrl(h) { return BASE + encodeURIComponent(h); }
+function beautifyUrl() {
+  // ?h=핸들 → /핸들 로 주소창 정리 (다른 쿼리가 있으면 건드리지 않음)
+  try {
+    const sp = new URLSearchParams(location.search);
+    const keys = [...sp.keys()];
+    if (!st.handle) return;
+    if (keys.length && !(keys.length === 1 && keys[0] === 'h')) return;
+    const want = new URL(homeUrl(st.handle)).pathname;
+    if (location.pathname === want && !location.search) return;
+    history.replaceState(null, '', homeUrl(st.handle));
+  } catch (e) { /* 무시 */ }
+}
 function targetHandle() {
   const saved = sessionStorage.getItem('sh_route');
   if (saved) { sessionStorage.removeItem('sh_route'); history.replaceState(null, '', saved); }
@@ -106,13 +119,14 @@ async function route() {
   if (!h) {
     if (st.myHandle) {
       $('#landing-my').style.display = 'block';
-      $('#btn-myhome').onclick = () => { location.href = BASE + '?h=' + st.myHandle; };
+      $('#btn-myhome').onclick = () => { location.href = homeUrl(st.myHandle); };
     }
     $('#landing').classList.add('show');
     $('#btn-start').onclick = login;
     return;
   }
   st.handle = h;
+  beautifyUrl();
   let d;
   try { d = await getDoc(doc(db, 'tsites', h)); }
   catch (e) { console.log('[LUVINFO] load err', e); toast('불러오기 실패'); return; }
@@ -163,7 +177,7 @@ async function login() {
     const r = await signInWithPopup(auth, new GoogleAuthProvider());
     const ud = await getDoc(doc(db, 'tusers', r.user.uid));
     if (!ud.exists()) openClaim(r.user);
-    else location.href = BASE + '?h=' + ud.data().handle;
+    else location.href = homeUrl(ud.data().handle);
   } catch (e) {
     console.log('[LUVINFO] login err', e);
     toast('로그인에 실패했어요');
@@ -182,7 +196,7 @@ function openClaim(user) {
     try {
       await setDoc(doc(db, 'tsites', h), defaultSite(user.uid, h));
       await setDoc(doc(db, 'tusers', user.uid), { handle: h });
-      location.href = BASE + '?h=' + h;
+      location.href = homeUrl(h);
     } catch (e) {
       console.log('[LUVINFO] claim err', e);
       toast('생성 실패 — 잠시 후 다시 시도해 주세요');
@@ -253,7 +267,7 @@ function showSite() {
     $('#fab-login').onclick = login;
   } else if (st.myHandle && st.myHandle !== st.handle) {
     $('#fab-my').style.display = 'block';
-    $('#fab-my').onclick = () => { location.href = BASE + '?h=' + st.myHandle; };
+    $('#fab-my').onclick = () => { location.href = homeUrl(st.myHandle); };
   }
   bindShell();
 }
@@ -601,7 +615,7 @@ function buildBanner(bn) {
   const d = document.createElement('div');
   d.className = 'banners';
   d.innerHTML = (bn.items || []).map((it) => {
-    if (it.h) return '<a data-bh="' + esc(it.h) + '" href="' + BASE + '?h=' + esc(it.h) + '"><span class="tb">@' + esc(it.h) + '</span></a>';
+    if (it.h) return '<a data-bh="' + esc(it.h) + '" href="' + esc(homeUrl(it.h)) + '"><span class="tb">@' + esc(it.h) + '</span></a>';
     return '<a href="' + esc(it.url || '#') + '" target="_blank" rel="noopener"><img src="' + esc(it.img) + '" alt=""></a>';
   }).join('');
   d.querySelectorAll('[data-bh]').forEach(async (a) => {
@@ -762,7 +776,7 @@ function bindShell() {
     catch (e) { console.log('[LUVINFO] heart err', e); }
   };
   $('#copy-link').onclick = () => {
-    navigator.clipboard?.writeText(BASE + '?h=' + st.handle)
+    navigator.clipboard?.writeText(homeUrl(st.handle))
       .then(() => toast('링크를 복사했어요 ✓'))
       .catch(() => toast('복사에 실패했어요'));
   };
