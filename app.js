@@ -32,7 +32,7 @@ const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const SIGNUP = { mode: 'open', code: '' };
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v27 로드');
+console.log('[LUVINFO] app.js v28 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -283,8 +283,21 @@ function applyTheme() {
   $('#h-sub').textContent = hd.sub || '';
   $('#h-sub').style.display = hd.sub ? '' : 'none';
   const hi = $('#head-img');
-  if (hd.img) hi.style.backgroundImage = 'url("' + hd.img + '")';
-  else hi.style.backgroundImage = 'linear-gradient(150deg, var(--line), var(--card))';
+  hi.style.height = (parseInt(hd.h) || 200) + 'px';
+  if (hd.img) {
+    hi.style.backgroundImage = 'url("' + hd.img + '")';
+    if (hd.z) {
+      hi.style.backgroundSize = (parseInt(hd.z) || 100) + '% auto';
+      hi.style.backgroundPosition = (hd.x ?? 50) + '% ' + (hd.y ?? 50) + '%';
+    } else {
+      hi.style.backgroundSize = 'cover';
+      hi.style.backgroundPosition = 'center';
+    }
+  } else {
+    hi.style.backgroundImage = 'linear-gradient(150deg, var(--line), var(--card))';
+    hi.style.backgroundSize = '';
+    hi.style.backgroundPosition = '';
+  }
   document.title = (hd.title || st.handle) + ' — LUVINFO';
 }
 
@@ -1413,6 +1426,8 @@ function openDeco() {
   $('#dc-valign').value = t.valign || '';
   $('#dc-cardc').value = t.cardC || CARDC[t.preset || 'white'] || '#FFFFFF';
   const hd = st.site.head;
+  $('#dc-hh').value = parseInt(hd.h) || 200;
+  $('#dc-hhv').textContent = (parseInt(hd.h) || 200) + 'px';
   $('#dc-head').value = hd.mode || 'text';
   $('#dc-over').value = hd.over || '';
   $('#dc-title').value = hd.title || '';
@@ -1517,7 +1532,16 @@ function bindDeco() {
     setDirty();
     applyTheme();
   });
-  $('#dc-himg-del').onclick = () => { st.site.head.img = ''; setDirty(); applyTheme(); };
+  $('#dc-himg-del').onclick = () => { st.site.head.img = ''; delete st.site.head.z; setDirty(); applyTheme(); };
+  $('#dc-himg-adj').onclick = () => {
+    if (!st.site.head.img) { toast('먼저 머리글 이미지를 올려주세요'); return; }
+    openAdjust(st.site.head, () => { setDirty(); applyTheme(); });
+  };
+  $('#dc-hh').oninput = (e) => {
+    st.site.head.h = parseInt(e.target.value) || 200;
+    $('#dc-hhv').textContent = st.site.head.h + 'px';
+    setDirty(); applyTheme();
+  };
   $('#dc-fav-up').onclick = () => uploadOne((url) => { st.site.favicon = url; setDirty(); applyTheme(); toast('파비콘 적용!'); });
   $('#dc-fav-del').onclick = () => { st.site.favicon = ''; setDirty(); applyTheme(); };
   $('#dc-bimg-up').onclick = () => uploadOne((url) => { st.site.theme.bgImg = url; setDirty(); applyTheme(); toast('배경 이미지 설정'); });

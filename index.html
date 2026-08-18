@@ -1047,7 +1047,14 @@
     <label>머리글 이미지</label>
     <div style="display:flex;gap:6px;">
       <button class="mini-btn" id="dc-himg-up">이미지 업로드</button>
+      <button class="mini-btn" id="dc-himg-adj">사진 조정</button>
       <button class="mini-btn" id="dc-himg-del">제거</button>
+    </div>
+    <div class="f-note">권장: 가로 1200px 이상, 비율 3:1쯤 (예: 1200×400) — 사진 조정에서 확대·위아래 위치를 맞출 수 있어요</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+      <label style="flex-shrink:0;font-size:11px;letter-spacing:.06em;color:var(--dim);">머리글 높이</label>
+      <input type="range" id="dc-hh" min="120" max="340" step="10" style="flex:1;">
+      <span id="dc-hhv" style="font-size:11px;color:var(--dim);width:44px;text-align:right;">200px</span>
     </div>
   </div>
 
@@ -1145,6 +1152,6 @@
 <input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=27"></script>
+<script type="module" src="app.js?v=28"></script>
 </body>
 </html>
