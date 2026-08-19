@@ -34,8 +34,9 @@ function gid(i) { return document.getElementById(i); }
 // 코드제로 바꾸려면: mode를 'code'로, code에 원하는 초대 코드를 넣고 재배포
 const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 러브인포 코드(횟수제) / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
+const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 장·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v50 로드');
+console.log('[LUVINFO] app.js v52 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -326,7 +327,7 @@ function applyTheme() {
   if (t.tx) b.setProperty('--tx', t.tx); else b.removeProperty('--tx');
   if (t.pri) b.setProperty('--pri', t.pri); else b.removeProperty('--pri');
   b.setProperty('--font', t.font || "'Pretendard'");
-  const nocss = new URLSearchParams(location.search).get('nocss') === '1';
+  const nocss = new URLSearchParams(location.search).get('nocss') === '1' || SAFE_MODE;
   $('#usercss').textContent = nocss ? '' : (t.css || '');
   if (t.corner) document.body.dataset.corner = t.corner; else delete document.body.dataset.corner;
   if (t.valign) document.body.dataset.valign = t.valign; else delete document.body.dataset.valign;
@@ -450,6 +451,11 @@ function renderChapter() {
     return;
   }
   document.body.dataset.chhead = (ch.type === 'html' && !ch.showHead) ? 'off' : 'on';
+  if (ch.type === 'html' && SAFE_MODE) {
+    bodyEl.innerHTML = '<div style="border:1px dashed var(--line);border-radius:12px;padding:40px 20px;text-align:center;color:var(--mute);font-size:12.5px;line-height:1.9;">🛟 안전 모드 — 이 장의 HTML은 표시하지 않아요.<br>✎ 편집에서 코드를 고치거나 장을 삭제한 뒤,<br>주소의 <code>?safe=1</code>을 지우고 다시 접속하세요.</div>';
+    renderPager();
+    return;
+  }
   if (ch.type === 'html') {
     let body = ch.body || '';
     if (!body && ch.bodyRef) {
@@ -2018,6 +2024,19 @@ function bindDeco() {
   };
   if (gid('dc-fav-up')) gid('dc-fav-up').onclick = () => uploadOne((url) => { st.site.favicon = url; setDirty(); applyTheme(); toast('파비콘 적용!'); });
   if (gid('dc-fav-del')) gid('dc-fav-del').onclick = () => { st.site.favicon = ''; setDirty(); applyTheme(); };
+  if (gid('dc-reset-home')) gid('dc-reset-home').onclick = async () => {
+    const typed = prompt('홈을 처음 상태로 되돌리려면 핸들(' + st.handle + ')을 그대로 입력해 주세요.\n장·꾸미기·대문이 전부 사라지고 되돌릴 수 없어요. (핸들·계정·하트는 그대로)');
+    if (typed === null) return;
+    if (typed.trim().toLowerCase() !== st.handle) { toast('핸들이 달라요 — 초기화 취소'); return; }
+    try {
+      const fresh = defaultSite(st.site.ownerUid || (st.user && st.user.uid), st.handle);
+      fresh.heart = st.site.heart || 0;          // 받은 하트는 보존
+      fresh.updated = Date.now();
+      await setDoc(doc(db, 'tsites', st.handle), fresh);
+      toast('홈을 처음 상태로 되돌렸어요 ✓');
+      setTimeout(() => location.reload(), 900);
+    } catch (e) { console.log('[LUVINFO] reset home err', e); toast('초기화 실패 — 잠시 후 다시 시도해 주세요'); }
+  };
   if (gid('dc-del-home')) gid('dc-del-home').onclick = async () => {
     const typed = prompt('정말 삭제하려면 핸들(' + st.handle + ')을 그대로 입력해 주세요.\n장·사진·설정이 전부 사라지고 되돌릴 수 없어요.');
     if (typed === null) return;

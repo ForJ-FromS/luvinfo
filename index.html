@@ -1107,8 +1107,11 @@
       </select>
     </div>
     <div class="f-row" style="border-top:1px solid var(--line);padding-top:14px;margin-top:6px;">
-      <label style="color:#c96;">홈 삭제 (되돌릴 수 없어요)</label>
-      <button class="mini-btn" id="dc-del-home" style="color:#c96;border-color:#c9664d55;">이 성향글 홈을 완전히 삭제</button>
+      <label style="color:#c96;">홈 초기화 · 삭제</label>
+      <button class="mini-btn" id="dc-reset-home" style="color:#c96;border-color:#c9664d55;">홈 초기화 — 처음 상태로 되돌리기</button>
+      <div class="f-note">장·꾸미기·대문이 전부 새 홈 상태로 돌아가요. 핸들과 계정은 그대로예요 (하트 수도 유지).</div>
+      <button class="mini-btn" id="dc-del-home" style="color:#c96;border-color:#c9664d55;margin-top:10px;">이 성향글 홈을 완전히 삭제</button>
+      <div class="f-note">계정 연결까지 지워지고 되돌릴 수 없어요.</div>
     </div>
     <div class="f-row">
       <label>맨 아래 표시 요소</label>
@@ -1298,6 +1301,6 @@
 <input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=50"></script>
+<script type="module" src="app.js?v=52"></script>
 </body>
 </html>
