@@ -35,7 +35,7 @@ function gid(i) { return document.getElementById(i); }
 const SIGNUP = { mode: 'invite', code: '' }; // invite = config/tsignup 목록의 러브인포 전용 코드 / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v47 로드');
+console.log('[LUVINFO] app.js v48 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -83,10 +83,25 @@ function defaultSite(ownerUid, handle) {
 }
 
 // ═══════════ 라우팅 ═══════════
-function homeUrl(h) { return BASE + encodeURIComponent(h); }
+const SUB_ROOT = 'luvinfo.me';
+function subHandle() {
+  const h = location.hostname.toLowerCase();
+  if (h.endsWith('.' + SUB_ROOT)) {
+    const s = h.slice(0, -('.'.length + SUB_ROOT.length));
+    if (s && s !== 'www') return s;
+  }
+  return null;
+}
+function homeUrl(h) {
+  // 서브도메인에서 봐도 다른 홈 링크는 본 주소로 (로그인·저장이 되는 곳)
+  const root = subHandle() ? 'https://' + SUB_ROOT + '/' : BASE;
+  return root + encodeURIComponent(h);
+}
+function subUrl(h) { return 'https://' + encodeURIComponent(h) + '.' + SUB_ROOT; }
 function beautifyUrl() {
   // ?h=핸들 → /핸들 로 주소창 정리 (다른 쿼리가 있으면 건드리지 않음)
   try {
+    if (subHandle()) return; // 핸들.luvinfo.me — 이미 예쁜 주소
     const sp = new URLSearchParams(location.search);
     const keys = [...sp.keys()];
     if (!st.handle) return;
@@ -97,6 +112,8 @@ function beautifyUrl() {
   } catch (e) { /* 무시 */ }
 }
 function targetHandle() {
+  const sub = subHandle();
+  if (sub) return sub;
   const saved = sessionStorage.getItem('sh_route');
   if (saved) { sessionStorage.removeItem('sh_route'); history.replaceState(null, '', saved); }
   const seg = (location.pathname.match(/[^/]+$/) || [''])[0];
@@ -200,6 +217,11 @@ async function doLogout() {
 }
 
 async function login() {
+  if (subHandle()) {
+    toast('로그인은 luvinfo.me에서 해요 — 이동할게요');
+    setTimeout(() => { location.href = homeUrl(subHandle()); }, 700);
+    return;
+  }
   try {
     const r = await signInWithPopup(auth, new GoogleAuthProvider());
     const ud = await getDoc(doc(db, 'tusers', r.user.uid));
@@ -1177,8 +1199,8 @@ function bindShell() {
     catch (e) { console.log('[LUVINFO] heart err', e); }
   };
   $('#copy-link').onclick = () => {
-    navigator.clipboard?.writeText(homeUrl(st.handle))
-      .then(() => toast('링크를 복사했어요 ✓'))
+    navigator.clipboard?.writeText(subUrl(st.handle))
+      .then(() => toast('링크를 복사했어요 ✓ — ' + st.handle + '.luvinfo.me'))
       .catch(() => toast('복사에 실패했어요'));
   };
   $('#foot-brand').onclick = (e) => { e.preventDefault(); location.href = BASE; };
