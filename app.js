@@ -35,7 +35,7 @@ function gid(i) { return document.getElementById(i); }
 const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 러브인포 코드(횟수제) / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v49 로드');
+console.log('[LUVINFO] app.js v49.1 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -914,6 +914,10 @@ async function openOps() {
   try { const n = await getDoc(doc(db, 'config', 'tnotice')); if (gid('ops-notice')) gid('ops-notice').value = (n.exists() && n.data().text) || ''; } catch (e) { /* */ }
   markOpsSeen();
   renderInqBox();
+}
+function closeOps() {
+  gid('ops-bg').classList.remove('on');
+  gid('ops-sheet').classList.remove('on');
 }
 function markOpsSeen() {
   localStorage.setItem('li_ops_seen', String(Date.now()));
