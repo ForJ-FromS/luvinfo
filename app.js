@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 장·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v52 로드');
+console.log('[LUVINFO] app.js v53 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -328,7 +328,7 @@ function applyTheme() {
   if (t.pri) b.setProperty('--pri', t.pri); else b.removeProperty('--pri');
   b.setProperty('--font', t.font || "'Pretendard'");
   const nocss = new URLSearchParams(location.search).get('nocss') === '1' || SAFE_MODE;
-  $('#usercss').textContent = nocss ? '' : (t.css || '');
+  $('#usercss').textContent = nocss ? '' : tameCSS(t.css || '');
   if (t.corner) document.body.dataset.corner = t.corner; else delete document.body.dataset.corner;
   if (t.valign) document.body.dataset.valign = t.valign; else delete document.body.dataset.valign;
   if (t.cardC && /^#[0-9a-fA-F]{6}$/.test(t.cardC)) {
@@ -505,7 +505,22 @@ function runScripts(root) {
 }
 
 // HTML 장 격리: <style>이 페이지 크롬을 오염시키지 않게 셀렉터에 스코프를 접두
+// 앱의 주인용 UI 클래스 — 유저 CSS가 이걸 건드리면 편집·저장이 막히므로 규칙째 제거
+const UI_CLASSES = new Set(['fab-row', 'fab', 'fabs', 'owner-bar', 'ob-btn', 'sheet', 'sheet-bg', 'pop', 'adj-bg', 'toast']);
+function hitsUI(sel) {
+  const classes = (String(sel).match(/\.[A-Za-z_-][\w-]*/g) || []).map((c) => c.slice(1));
+  return classes.some((c) => UI_CLASSES.has(c));
+}
+// 유저 CSS 순화: 화면 덮개(fixed)·과도한 z-index 무력화 + 앱 UI 겨냥 규칙 제거
+function tameCSS(css) {
+  let out = String(css || '')
+    .replace(/position\s*:\s*fixed/gi, 'position:absolute')
+    .replace(/z-index\s*:\s*(\d+)/gi, (m, n) => 'z-index:' + Math.min(parseInt(n) || 0, 500));
+  out = out.replace(/([^{}]+)\{([^{}]*)\}/g, (m, sel) => (hitsUI(sel) ? '' : m));
+  return out;
+}
 function scopeCSS(css, scope) {
+  css = tameCSS(css);
   return css.replace(/(^|[{}])([^{}@;]+)\{/g, (m, boundary, sel) => {
     const scoped = sel.split(',').map((s) => {
       s = s.trim();
