@@ -35,7 +35,7 @@ function gid(i) { return document.getElementById(i); }
 const SIGNUP = { mode: 'invite', code: '' }; // invite = config/tsignup 목록의 러브인포 전용 코드 / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v44 로드');
+console.log('[LUVINFO] app.js v46 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -152,6 +152,14 @@ async function route() {
   }
   st.site = migrate(d.data());
   st.mine = !!(st.user && st.site.ownerUid === st.user.uid);
+  if (st.site.priv && !st.mine) {
+    // 비공개 홈 — 방문자에게는 없는 페이지처럼
+    $('#landing').classList.add('show');
+    $('#landing .desc').textContent = '@' + h + ' — 존재하지 않는 페이지예요.';
+    $('#btn-start').onclick = login;
+    return;
+  }
+  if (st.site.priv && st.mine) setTimeout(() => toast('🔒 비공개 상태예요 — 나만 볼 수 있어요'), 400);
   const g = st.site.gate || {};
   if (g.on && !st.mine && sessionStorage.getItem('sh_gate_' + h) !== '1') {
     showGate(g);
@@ -762,6 +770,7 @@ async function bannerInfo(h) {
     const d = await getDoc(doc(db, 'tsites', h));
     if (!d.exists()) return (bannerCache[h] = null);
     const s = d.data();
+    if (s.priv) return (bannerCache[h] = null);
     let mut = false;
     (s.chapters || []).forEach((c) => {
       // 현행: 블록 스택(v17~) / 하위 호환: 옛 el.bn 구조
@@ -1122,6 +1131,26 @@ function renderFoot() {
   $('#heart .h').textContent = liked ? '♥' : '♡';
   const d = new Date(st.site.updated || Date.now());
   $('#upd-date').textContent = d.getFullYear() + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0');
+  const ft = gid('foot-txt');
+  if (ft) {
+    const txt = (st.site.footTxt || '').trim();
+    ft.textContent = txt;
+    ft.style.display = txt ? '' : 'none';
+  }
+  const lv = (st.site.luvlog || '').trim();
+  if (gid('foot-lv')) {
+    gid('foot-lv').style.display = lv ? '' : 'none';
+    if (lv && gid('foot-luvlog')) gid('foot-luvlog').href = 'https://' + lv + '.luvlog.me';
+  }
+  const f = st.site.foot || {};
+  const showEl = (id, on) => { const el = gid(id); if (el) el.style.display = on === false ? 'none' : ''; };
+  showEl('heart', f.heart);
+  const cp = document.querySelector('.copy-btn'); if (cp) cp.style.display = f.copy === false ? 'none' : '';
+  showEl('foot-guide', f.guide);
+  const gi = gid('foot-guide'); const gdot = gi && gi.nextElementSibling; if (gdot && gdot.tagName === 'I') gdot.style.display = (f.guide === false || f.inq === false) ? 'none' : '';
+  showEl('foot-inq', f.inq);
+  showEl('upd-date', f.date);
+  const hl = document.querySelector('.heart-line'); if (hl) hl.style.display = (f.heart === false && f.copy === false) ? 'none' : '';
 }
 
 let shellBound = false;
@@ -1153,11 +1182,6 @@ function bindShell() {
       .catch(() => toast('복사에 실패했어요'));
   };
   $('#foot-brand').onclick = (e) => { e.preventDefault(); location.href = BASE; };
-  const lv = (st.site.luvlog || '').trim();
-  if (gid('foot-lv')) {
-    gid('foot-lv').style.display = lv ? '' : 'none';
-    if (lv && gid('foot-luvlog')) gid('foot-luvlog').href = 'https://' + lv + '.luvlog.me';
-  }
   if (gid('foot-inq')) gid('foot-inq').onclick = (e) => {
     e.preventDefault();
     if (st.myHandle === 'jeste') openOps();
@@ -1794,6 +1818,12 @@ function openDeco() {
   if (gid('dc-chtitle')) gid('dc-chtitle').value = t.chtitle || '';
   if (gid('dc-css')) gid('dc-css').value = t.css || '';
   if (gid('dc-luvlog')) gid('dc-luvlog').value = st.site.luvlog || '';
+  if (gid('dc-foottxt')) gid('dc-foottxt').value = st.site.footTxt || '';
+  if (gid('dc-priv')) gid('dc-priv').value = st.site.priv ? '1' : '';
+  const ff = st.site.foot || {};
+  [['df-heart', 'heart'], ['df-copy', 'copy'], ['df-guide', 'guide'], ['df-inq', 'inq'], ['df-date', 'date']].forEach(([id, key]) => {
+    if (gid(id)) gid(id).checked = ff[key] !== false;
+  });
   $('#dc-corner').value = t.corner || '';
   $('#dc-cardop').value = t.cardop || '';
   $('#dc-bgdim').value = parseInt(t.bgDim) || 84;
@@ -1850,6 +1880,22 @@ function bindDeco() {
   $('#dc-num').onchange = (e) => { t().num = e.target.value; setDirty(); renderChapter(); };
   if (gid('dc-chtitle')) gid('dc-chtitle').onchange = (e) => { t().chtitle = e.target.value; setDirty(); applyTheme(); };
   if (gid('dc-css')) gid('dc-css').oninput = (e) => { t().css = e.target.value; setDirty(); applyTheme(); };
+  [['df-heart', 'heart'], ['df-copy', 'copy'], ['df-guide', 'guide'], ['df-inq', 'inq'], ['df-date', 'date']].forEach(([id, key]) => {
+    if (gid(id)) gid(id).onchange = (e) => {
+      st.site.foot = st.site.foot || {};
+      st.site.foot[key] = e.target.checked;
+      setDirty(); renderFoot();
+    };
+  });
+  if (gid('dc-priv')) gid('dc-priv').onchange = (e) => {
+    st.site.priv = e.target.value === '1';
+    setDirty();
+    toast(st.site.priv ? '비공개로 설정 — ✓ 저장해야 적용돼요' : '공개로 설정 — ✓ 저장해야 적용돼요');
+  };
+  if (gid('dc-foottxt')) gid('dc-foottxt').oninput = (e) => {
+    st.site.footTxt = e.target.value.slice(0, 200);
+    setDirty(); renderFoot();
+  };
   if (gid('dc-luvlog')) gid('dc-luvlog').oninput = (e) => {
     st.site.luvlog = e.target.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
     setDirty(); renderFoot();

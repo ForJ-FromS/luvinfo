@@ -283,9 +283,17 @@
   }
   .pg-pill.on { background: var(--pri); border-color: var(--pri); color: var(--bg); font-weight: 600; }
 
-  .foot { text-align: center; margin-top: 56px; font-size: 9px; letter-spacing: .3em; color: var(--mute); }
-  .foot a { color: var(--mute); text-decoration: none; }
-  .foot .heart-line { margin-bottom: 18px; }
+  .foot { text-align: center; margin-top: 56px; color: var(--mute); }
+  .foot .heart-line { margin-bottom: 22px; }
+  .foot-hair { width: 34px; height: 1px; background: var(--line); margin: 0 auto 18px; }
+  .foot-txt { margin: 0 0 12px; font-size: 11.5px; letter-spacing: .1em; line-height: 1.9; color: var(--dim); white-space: pre-wrap; word-break: break-word; }
+  .foot-links { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 10.5px; letter-spacing: .08em; margin-bottom: 14px; }
+  .foot-links a { color: var(--dim); text-decoration: none; transition: color .2s; }
+  .foot-links a:hover { color: var(--pri); }
+  .foot-links i { font-style: normal; color: var(--line); }
+  .foot-links #foot-lv { display: inline-flex; align-items: center; gap: 10px; }
+  .foot-sys { margin: 0; font-size: 8.5px; letter-spacing: .34em; color: var(--mute); opacity: .75; }
+  .foot-sys a { color: var(--mute); text-decoration: none; }
   .heart-btn {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 9px 22px; border-radius: 999px;
@@ -768,7 +776,10 @@
         <button class="heart-btn" id="heart"><span class="h">♡</span><span id="hcount">0</span></button>
         <button class="copy-btn" id="copy-link">링크 복사</button>
       </div>
-      <span id="upd-date"></span><span id="foot-lv" style="display:none;"> · <a href="#" id="foot-luvlog" target="_blank" rel="noopener">러브로그 홈 ↗</a></span> · <a href="guide.html" id="foot-guide">가이드</a> · <a href="#" id="foot-inq">✉ 문의</a> · <a href="#" id="foot-brand">LUVINFO</a>
+      <div class="foot-hair"></div>
+      <p id="foot-txt" class="foot-txt" style="display:none;"></p>
+      <div class="foot-links"><span id="foot-lv" style="display:none;"><a href="#" id="foot-luvlog" target="_blank" rel="noopener">러브로그 홈 ↗</a><i>·</i></span><a href="guide.html" id="foot-guide">가이드</a><i>·</i><a href="#" id="foot-inq">✉ 문의</a></div>
+      <p class="foot-sys"><a href="#" id="foot-brand">LUVINFO</a> · <span id="upd-date"></span></p>
     </div>
   </div>
 </div>
@@ -1117,6 +1128,28 @@
       <div class="f-note">잘못 넣어 화면이 깨지면 주소 뒤에 ?nocss=1 을 붙여 들어와 지울 수 있어요</div>
     </div>
     <div class="f-row">
+      <label>맨 아래 표시 요소</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px 16px;">
+        <label class="chk-row"><input type="checkbox" id="df-heart" checked> ♥ 하트</label>
+        <label class="chk-row"><input type="checkbox" id="df-copy" checked> 링크 복사</label>
+        <label class="chk-row"><input type="checkbox" id="df-guide" checked> 가이드</label>
+        <label class="chk-row"><input type="checkbox" id="df-inq" checked> ✉ 문의</label>
+        <label class="chk-row"><input type="checkbox" id="df-date" checked> 날짜</label>
+      </div>
+      <div class="f-note">러브로그 홈 링크는 아래 "내 러브로그 홈 연결"에 핸들을 넣으면 떠요</div>
+    </div>
+    <div class="f-row">
+      <label>홈 비공개</label>
+      <select id="dc-priv">
+        <option value="">공개 — 주소를 아는 누구나 볼 수 있어요</option>
+        <option value="1">비공개 — 나에게만 보이고, 방문자에겐 "존재하지 않는 페이지"</option>
+      </select>
+    </div>
+    <div class="f-row">
+      <label>맨 아래 문구 (선택)</label>
+      <textarea id="dc-foottxt" style="min-height:52px;" placeholder="예: since 2026 · 별바다에서 — 원하는 문구를 홈 맨 아래에"></textarea>
+    </div>
+    <div class="f-row">
       <label>내 러브로그 홈 연결 (선택)</label>
       <input type="text" id="dc-luvlog" placeholder="러브로그 핸들 — 홈 아래에 「러브로그 홈 ↗」이 떠요" autocomplete="off">
     </div>
@@ -1282,6 +1315,6 @@
 <input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=44"></script>
+<script type="module" src="app.js?v=46"></script>
 </body>
 </html>
