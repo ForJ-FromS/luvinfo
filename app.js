@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 장·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v55 로드');
+console.log('[LUVINFO] app.js v56 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -359,6 +359,7 @@ function applyTheme() {
   $('#h-title').textContent = hd.title || '';
   $('#h-sub').textContent = hd.sub || '';
   $('#h-sub').style.display = hd.sub ? '' : 'none';
+  if ($('#h-rule')) $('#h-rule').style.display = hd.rule === false ? 'none' : '';
   const hi = $('#head-img');
   hi.style.height = (parseInt(hd.h) || 200) + 'px';
   if (hd.img) {
@@ -1828,7 +1829,13 @@ function openDeco() {
   $('#dc-valign').value = t.valign || '';
   $('#dc-cardc').value = t.cardC || CARDC[t.preset || 'white'] || '#FFFFFF';
   const hd = st.site.head;
+  if (gid('dc-hdrule')) gid('dc-hdrule').onchange = () => {
+    st.site.head = st.site.head || {};
+    st.site.head.rule = gid('dc-hdrule').checked;
+    setDirty(); renderHd();
+  };
   if (gid('dc-hh')) { gid('dc-hh').value = parseInt(hd.h) || 200; gid('dc-hhv').textContent = (parseInt(hd.h) || 200) + 'px'; }
+  if (gid('dc-hdrule')) gid('dc-hdrule').checked = (st.site.head || {}).rule !== false;
   if (gid('dc-hy')) gid('dc-hy').value = parseInt(hd.py ?? 50);
   if (gid('dc-hz')) { gid('dc-hz').value = Math.max(100, parseInt(hd.sc) || 100); if (gid('dc-hzv')) gid('dc-hzv').textContent = (Math.max(100, parseInt(hd.sc) || 100)) + '%'; }
   $('#dc-head').value = hd.mode || 'text';
