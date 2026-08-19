@@ -35,7 +35,7 @@ function gid(i) { return document.getElementById(i); }
 const SIGNUP = { mode: 'invite', code: '' }; // invite = config/tsignup 목록의 러브인포 전용 코드 / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v46 로드');
+console.log('[LUVINFO] app.js v47 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1816,7 +1816,6 @@ function openDeco() {
   $('#dc-nav').value = t.nav || 'dot';
   $('#dc-num').value = t.num || 'on';
   if (gid('dc-chtitle')) gid('dc-chtitle').value = t.chtitle || '';
-  if (gid('dc-css')) gid('dc-css').value = t.css || '';
   if (gid('dc-luvlog')) gid('dc-luvlog').value = st.site.luvlog || '';
   if (gid('dc-foottxt')) gid('dc-foottxt').value = st.site.footTxt || '';
   if (gid('dc-priv')) gid('dc-priv').value = st.site.priv ? '1' : '';
@@ -1879,7 +1878,6 @@ function bindDeco() {
   $('#dc-nav').onchange = (e) => { t().nav = e.target.value; setDirty(); renderPager(); };
   $('#dc-num').onchange = (e) => { t().num = e.target.value; setDirty(); renderChapter(); };
   if (gid('dc-chtitle')) gid('dc-chtitle').onchange = (e) => { t().chtitle = e.target.value; setDirty(); applyTheme(); };
-  if (gid('dc-css')) gid('dc-css').oninput = (e) => { t().css = e.target.value; setDirty(); applyTheme(); };
   [['df-heart', 'heart'], ['df-copy', 'copy'], ['df-guide', 'guide'], ['df-inq', 'inq'], ['df-date', 'date']].forEach(([id, key]) => {
     if (gid(id)) gid(id).onchange = (e) => {
       st.site.foot = st.site.foot || {};
