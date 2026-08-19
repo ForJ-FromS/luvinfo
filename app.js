@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 장·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v54 로드');
+console.log('[LUVINFO] app.js v55 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1540,14 +1540,24 @@ function renderBnChips() {
   const box = $('#eb-imgs');
   if (!box) return;
   const items = editingBlk?.data.items || [];
+  const mv = (i) => '<i data-bnmv="' + i + ',-1" style="cursor:pointer;font-style:normal;color:var(--mute);">◀</i><i data-bnmv="' + i + ',1" style="cursor:pointer;font-style:normal;color:var(--mute);">▶</i>';
   box.innerHTML = items.map((it, i) => {
-    if (it.h) return '<div class="imgchip"><b style="color:var(--pri);">@' + esc(it.h) + '</b><i data-bnrm="' + i + '">✕</i></div>';
-    return '<div class="imgchip"><img src="' + esc(it.img) + '" alt="">' +
+    if (it.h) return '<div class="imgchip">' + mv(i) + '<b style="color:var(--pri);">@' + esc(it.h) + '</b><i data-bnrm="' + i + '">✕</i></div>';
+    return '<div class="imgchip">' + mv(i) + '<img src="' + esc(it.img) + '" alt="">' +
       '<input type="text" data-bnurl="' + i + '" value="' + esc(it.url || '') + '" placeholder="연결 URL" style="width:120px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--tx);font-size:10.5px;padding:4px 6px;font-family:inherit;">' +
       '<i data-bnrm="' + i + '">✕</i></div>';
   }).join('');
   box.querySelectorAll('[data-bnrm]').forEach((x) => {
     x.onclick = () => { items.splice(parseInt(x.dataset.bnrm), 1); renderBnChips(); };
+  });
+  box.querySelectorAll('[data-bnmv]').forEach((x) => {
+    x.onclick = () => {
+      const [i, d] = x.dataset.bnmv.split(',').map(Number);
+      const j = i + d;
+      if (j < 0 || j >= items.length) return;
+      [items[i], items[j]] = [items[j], items[i]];
+      renderBnChips();
+    };
   });
   box.querySelectorAll('[data-bnurl]').forEach((x) => {
     x.oninput = () => { items[parseInt(x.dataset.bnurl)].url = x.value.trim(); };
