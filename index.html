@@ -802,17 +802,15 @@
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
       <input type="text" id="ops-prefix" placeholder="접두어 (예: wave)" style="flex:1.2;min-width:110px;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--tx);font-size:12px;padding:8px 10px;font-family:inherit;">
       <input type="number" id="ops-count" value="10" min="1" max="50" style="width:64px;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--tx);font-size:12px;padding:8px 10px;font-family:inherit;">
-      <select id="ops-kind" style="flex:1;min-width:140px;">
-        <option value="once">1회용 코드 여러 개</option>
-        <option value="multi">다회용 코드 1개</option>
-      </select>
+      <input type="number" id="ops-max" value="1" min="1" max="99" title="코드당 사용 가능 인원" style="width:64px;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--tx);font-size:12px;padding:8px 10px;font-family:inherit;">
       <button class="mini-btn" id="ops-make">만들기</button>
     </div>
     <textarea id="ops-out" class="code" style="min-height:90px;margin-top:8px;" placeholder="만든 코드가 여기 떠요 — 복사해서 나눠주세요" readonly></textarea>
     <div style="display:flex;gap:6px;margin-top:6px;">
       <button class="mini-btn" id="ops-copy">전체 복사</button>
+      <button class="mini-btn" id="ops-clear">지우기</button>
     </div>
-    <div class="f-note">1회용 = 한 명 가입하면 소진 · 다회용 = 목록에서 지울 때까지 계속 유효</div>
+    <div class="f-note">왼쪽부터 접두어 · 만들 개수 · 코드당 쓸 수 있는 인원. 정한 인원이 다 가입하면 그 코드는 자동 소진돼요.</div>
   </div>
 
   <div class="f-row">
@@ -825,17 +823,7 @@
   </div>
 
   <div class="f-row">
-    <label>다회용 코드 목록</label>
-    <div id="codes-list"><p style="color:var(--mute);font-size:12px;">불러오는 중…</p></div>
-  </div>
-
-  <div class="f-row">
-    <label>1회용 코드 현황 <button class="mini-btn" id="once-refresh" style="margin-left:6px;">↻</button></label>
-    <div id="once-list"><p style="color:var(--mute);font-size:12px;">불러오는 중…</p></div>
-  </div>
-
-  <div class="f-row">
-    <label>문의함</label>
+    <label>문의함 <button class="mini-btn" id="ops-noti-reset" style="margin-left:6px;">🔔 알림 초기화</button></label>
     <div id="inqbox-list"><p style="color:var(--mute);font-size:12px;">불러오는 중…</p></div>
   </div>
 </div>
@@ -1310,6 +1298,6 @@
 <input type="file" id="file-json" accept="application/json,.json" style="display:none;">
 <style id="usercss"></style>
 
-<script type="module" src="app.js?v=48"></script>
+<script type="module" src="app.js?v=49"></script>
 </body>
 </html>

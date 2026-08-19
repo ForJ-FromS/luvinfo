@@ -7,7 +7,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
-  getFirestore, doc, getDoc, setDoc, updateDoc, increment, getDocs, collection, deleteDoc
+  getFirestore, doc, getDoc, setDoc, updateDoc, increment, getDocs, collection, deleteDoc, query, where
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import {
   getStorage, ref as sref, uploadBytes, getDownloadURL
@@ -32,10 +32,10 @@ function gid(i) { return document.getElementById(i); }
 // ═══ 가입 설정 ═══
 // mode: 'open' = 누구나 가입 / 'code' = 초대 코드 입력해야 가입
 // 코드제로 바꾸려면: mode를 'code'로, code에 원하는 초대 코드를 넣고 재배포
-const SIGNUP = { mode: 'invite', code: '' }; // invite = config/tsignup 목록의 러브인포 전용 코드 / open = 자유 가입 / code = 고정 코드
+const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 러브인포 코드(횟수제) / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 
-console.log('[LUVINFO] app.js v48 로드');
+console.log('[LUVINFO] app.js v49 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -252,24 +252,19 @@ function openClaim(user) {
       const c = (gid('claim-code') ? gid('claim-code').value : '').trim();
       if (c !== SIGNUP.code) { toast('초대 코드가 달라요'); return; }
     }
-    let onceCode = null;
+    let claimCode = null, claimUses = 0, claimMax = 1;
     if (SIGNUP.mode === 'invite') {
       const code = (gid('claim-code') ? gid('claim-code').value : '').trim().toLowerCase();
       if (!code) { toast('초대 코드를 입력해 주세요'); return; }
       try {
-        // ①다회용: config/tsignup 목록 ②1회용: invites/{코드} (svc=luvinfo, 미사용)
-        const [ts, iv] = await Promise.all([
-          getDoc(doc(db, 'config', 'tsignup')),
-          getDoc(doc(db, 'invites', code))
-        ]);
-        const codes = (ts.exists() ? (ts.data().list || []) : []).map((x) => String(x).trim().toLowerCase());
-        const ivd = iv.exists() ? (iv.data() || {}) : null;
-        const onceOk = ivd && ivd.svc === 'luvinfo' && ivd.used !== true;
-        if (!codes.includes(code) && !onceOk) {
-          toast(ivd && ivd.svc === 'luvinfo' ? '이미 사용된 코드예요' : '초대 코드가 달라요');
-          return;
-        }
-        if (!codes.includes(code) && onceOk) onceCode = code;
+        const iv = await getDoc(doc(db, 'invites', code));
+        const d = iv.exists() ? (iv.data() || {}) : null;
+        const spent = d && (d.used === true || (d.uses || 0) >= (d.max || 1));
+        if (!d || d.svc !== 'luvinfo') { toast('초대 코드가 달라요'); return; }
+        if (spent) { toast('이미 사용이 끝난 코드예요'); return; }
+        claimCode = code;
+        claimUses = d.uses || 0;
+        claimMax = d.max || 1;
       } catch (e) {
         console.log('[LUVINFO] invite check err', e);
         toast('코드 확인에 실패했어요 — 잠시 후 다시 시도해 주세요');
@@ -306,9 +301,13 @@ function openClaim(user) {
         joined: new Date().toISOString().slice(0, 10),
         ts: Date.now()
       });
-      if (onceCode) {
-        try { await setDoc(doc(db, 'invites', onceCode), { used: true, usedBy: user.uid, usedAt: Date.now() }, { merge: true }); }
-        catch (e) { console.log('[LUVINFO] invite consume err', e); }
+      if (claimCode) {
+        try {
+          const nowUses = claimUses + 1;
+          await setDoc(doc(db, 'invites', claimCode), {
+            uses: nowUses, used: nowUses >= claimMax, usedBy: user.uid, usedAt: Date.now()
+          }, { merge: true });
+        } catch (e) { console.log('[LUVINFO] invite consume err', e); }
       }
       location.href = homeUrl(h);
     } catch (e) {
@@ -379,6 +378,7 @@ function showSite() {
   $('#site').style.display = 'block';
   $('#fabs').style.display = 'flex';
   checkNotice();
+  checkMyReplies();
   if (gid('fab-logout')) {
     gid('fab-logout').style.display = st.user ? 'block' : 'none';
     gid('fab-logout').onclick = doLogout;
@@ -393,6 +393,7 @@ function showSite() {
     if (st.myHandle === 'jeste' && gid('fab-ops')) {
       gid('fab-ops').style.display = 'block';
       gid('fab-ops').onclick = openOps;
+      checkOpsNoti();
     }
     if (st.site._migrated) toast('새 구조로 새 출발이에요 — ✎ 편집으로 채워보세요');
   } else if (!st.user) {
@@ -906,57 +907,18 @@ function go(i) {
   window.scrollTo({ top: 0 });
 }
 
-let codesCache = null;
-async function loadCodes() {
-  const s = await getDoc(doc(db, 'config', 'tsignup'));
-  codesCache = s.exists() ? (s.data().list || []).map(String) : [];
-  return codesCache;
-}
-function renderCodes() {
-  const box = gid('codes-list');
-  if (!box) return;
-  if (!codesCache || !codesCache.length) {
-    box.innerHTML = '<p style="color:var(--mute);font-size:12px;">코드가 없어요 — 위에서 만들면 바로 가입에 쓸 수 있어요.<br>⚠ 코드가 하나도 없으면 아무도 가입 못 해요.</p>';
-    return;
-  }
-  box.innerHTML = codesCache.map((c, i) =>
-    '<div style="display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:8px;">' +
-    '<code style="flex:1;font-size:13px;letter-spacing:.04em;">' + esc(c) + '</code>' +
-    '<button class="mini-btn" data-ccopy="' + i + '">복사</button>' +
-    '<i data-cdel="' + i + '" style="cursor:pointer;font-style:normal;color:var(--mute);">🗑</i></div>'
-  ).join('');
-  box.querySelectorAll('[data-ccopy]').forEach((x) => {
-    x.onclick = () => navigator.clipboard?.writeText(codesCache[parseInt(x.dataset.ccopy)]).then(() => toast('복사!')).catch(() => toast('복사 실패'));
-  });
-  box.querySelectorAll('[data-cdel]').forEach((x) => {
-    x.onclick = async () => {
-      const i = parseInt(x.dataset.cdel);
-      if (!confirm('코드 「' + codesCache[i] + '」를 폐기할까요? 이 코드로는 더 이상 가입할 수 없어요.')) return;
-      codesCache.splice(i, 1);
-      await saveCodes();
-    };
-  });
-}
-async function saveCodes() {
-  try {
-    await setDoc(doc(db, 'config', 'tsignup'), { list: codesCache });
-    renderCodes();
-    toast('저장했어요 ✓');
-  } catch (e) {
-    console.log('[LUVINFO] codes err', e);
-    toast('저장 실패 — config/tsignup 쓰기 규칙이 게시됐는지 확인해 주세요');
-  }
-}
 async function openOps() {
   gid('ops-bg').classList.add('on');
   gid('ops-sheet').classList.add('on');
   gid('ops-out').value = '';
   try { const n = await getDoc(doc(db, 'config', 'tnotice')); if (gid('ops-notice')) gid('ops-notice').value = (n.exists() && n.data().text) || ''; } catch (e) { /* */ }
-  gid('codes-list').innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오는 중…</p>';
-  try { await loadCodes(); renderCodes(); }
-  catch (e) { gid('codes-list').innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오기 실패</p>'; }
-  renderOnceList();
+  markOpsSeen();
   renderInqBox();
+}
+function markOpsSeen() {
+  localStorage.setItem('li_ops_seen', String(Date.now()));
+  const f = gid('fab-ops');
+  if (f) f.textContent = '⚙ 운영';
 }
 async function checkNotice() {
   try {
@@ -979,48 +941,6 @@ async function checkNotice() {
   } catch (e) { /* 공지는 실패해도 조용히 */ }
 }
 
-async function renderOnceList() {
-  const box = gid('once-list');
-  if (!box) return;
-  box.innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오는 중…</p>';
-  try {
-    const qs = await getDocs(collection(db, 'invites'));
-    const mineOnce = [];
-    qs.forEach((s) => { const d = s.data() || {}; if (d.svc === 'luvinfo') mineOnce.push({ id: s.id, ...d }); });
-    mineOnce.sort((a, b) => (b.at || 0) - (a.at || 0));
-    const fresh = mineOnce.filter((c) => c.used !== true);
-    const spent = mineOnce.length - fresh.length;
-    if (!mineOnce.length) { box.innerHTML = '<p style="color:var(--mute);font-size:12px;">아직 만든 1회용 코드가 없어요.</p>'; return; }
-    box.innerHTML =
-      (fresh.length ? fresh.map((c) =>
-        '<div style="display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:6px;">' +
-        '<code style="flex:1;font-size:12.5px;">' + esc(c.id) + '</code>' +
-        '<button class="mini-btn" data-ocopy="' + esc(c.id) + '">복사</button>' +
-        '<i data-okill="' + esc(c.id) + '" style="cursor:pointer;font-style:normal;color:var(--mute);" title="폐기">🗑</i></div>'
-      ).join('') : '<p style="color:var(--mute);font-size:12px;">미사용 코드가 없어요.</p>') +
-      (spent ? '<p style="color:var(--mute);font-size:11px;margin-top:4px;">사용·폐기됨 ' + spent + '개</p>' : '');
-    box.querySelectorAll('[data-ocopy]').forEach((x) => {
-      x.onclick = () => navigator.clipboard?.writeText(x.dataset.ocopy).then(() => toast('복사!')).catch(() => toast('복사 실패'));
-    });
-    box.querySelectorAll('[data-okill]').forEach((x) => {
-      x.onclick = async () => {
-        if (!confirm('코드 「' + x.dataset.okill + '」를 폐기할까요? 이 코드로는 가입할 수 없게 돼요.')) return;
-        try {
-          await setDoc(doc(db, 'invites', x.dataset.okill), { used: true, usedAt: Date.now(), revoked: true }, { merge: true });
-          renderOnceList();
-          toast('폐기했어요');
-        } catch (e) { console.log('[LUVINFO] revoke err', e); toast('폐기 실패'); }
-      };
-    });
-  } catch (e) {
-    console.log('[LUVINFO] once list err', e);
-    box.innerHTML = '<p style="color:var(--mute);font-size:12px;">불러오기 실패</p>';
-  }
-}
-function closeOps() {
-  gid('ops-bg').classList.remove('on');
-  gid('ops-sheet').classList.remove('on');
-}
 function genCode(prefix) {
   const words = ['star', 'wave', 'luna', 'nova', 'echo', 'aqua', 'iris', 'onyx', 'mint', 'fern'];
   const w = prefix || words[Math.floor(Math.random() * words.length)];
@@ -1029,28 +949,17 @@ function genCode(prefix) {
 }
 async function opsMake() {
   const prefix = gid('ops-prefix').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-  const kind = gid('ops-kind').value;
-  let count = Math.min(50, Math.max(1, parseInt(gid('ops-count').value) || 1));
+  const count = Math.min(50, Math.max(1, parseInt(gid('ops-count').value) || 1));
+  const max = Math.min(99, Math.max(1, parseInt(gid('ops-max').value) || 1));
   const made = [];
   try {
-    if (kind === 'multi') {
-      if (!codesCache) { try { await loadCodes(); } catch (e) { codesCache = []; } }
-      let c;
-      do { c = genCode(prefix); } while (codesCache.includes(c));
-      codesCache.unshift(c);
-      await setDoc(doc(db, 'config', 'tsignup'), { list: codesCache });
-      renderCodes();
+    for (let i = 0; i < count; i++) {
+      const c = genCode(prefix);
+      await setDoc(doc(db, 'invites', c), { svc: 'luvinfo', max, uses: 0, used: false, at: Date.now() });
       made.push(c);
-    } else {
-      for (let i = 0; i < count; i++) {
-        const c = genCode(prefix);
-        await setDoc(doc(db, 'invites', c), { svc: 'luvinfo', used: false, at: Date.now() });
-        made.push(c);
-      }
     }
     gid('ops-out').value = made.join('\n');
-    toast(made.length + '개 만들었어요 ✓');
-    if (kind === 'once') renderOnceList();
+    toast(made.length + '개 만들었어요 ✓ (코드당 ' + max + '명)');
   } catch (e) {
     console.log('[LUVINFO] ops make err', e);
     toast('코드 생성 실패 — 규칙이 게시됐는지 확인해 주세요');
@@ -1066,10 +975,12 @@ async function openInq() {
   if (mine) {
     mine.innerHTML = '';
     try {
-      const qs = await getDocs(collection(db, 'tinquiries'));
+      const qs = await getDocs(query(collection(db, 'tinquiries'), where('uid', '==', st.user.uid)));
       const rows = [];
-      qs.forEach((s) => { const d = s.data(); if (d.uid === st.user.uid) rows.push(d); });
+      qs.forEach((s) => rows.push(s.data()));
       rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      const latest = rows.reduce((m, r) => Math.max(m, r.repliedAt || 0), 0);
+      if (latest) localStorage.setItem('li_inq_seen', String(latest));
       if (rows.length) {
         mine.innerHTML = '<label style="display:block;font-size:11px;letter-spacing:.06em;color:var(--dim);margin:14px 0 8px;">내가 보낸 문의</label>' +
           rows.map((r) =>
@@ -1106,6 +1017,35 @@ async function sendInq() {
     toast('전송 실패 — 규칙이 아직 없을 수 있어요 (운영자에게 알려주세요)');
   }
 }
+async function checkOpsNoti() {
+  // jeste: 마지막 확인 이후 새 문의 → ⚙ 배지
+  try {
+    const seen = parseInt(localStorage.getItem('li_ops_seen') || '0');
+    const qs = await getDocs(collection(db, 'tinquiries'));
+    let n = 0;
+    qs.forEach((s) => { const d = s.data() || {}; if ((d.ts || 0) > seen) n++; });
+    if (n > 0 && gid('fab-ops')) {
+      gid('fab-ops').textContent = '⚙ 운영 ●' + n;
+      toast('📮 새 문의 ' + n + '건이 있어요');
+    }
+  } catch (e) { /* 조용히 */ }
+}
+
+async function checkMyReplies() {
+  // 일반 유저: 내 문의에 새 답변 → 알림
+  if (!st.user || !st.myHandle || st.myHandle === 'jeste') return;
+  try {
+    const seen = parseInt(localStorage.getItem('li_inq_seen') || '0');
+    const qs = await getDocs(query(collection(db, 'tinquiries'), where('uid', '==', st.user.uid)));
+    let n = 0;
+    qs.forEach((s) => {
+      const d = s.data() || {};
+      if (d.reply && (d.repliedAt || 0) > seen) n++;
+    });
+    if (n > 0) toast('📮 문의에 답변이 도착했어요 — 맨 아래 ✉ 문의에서 확인하세요');
+  } catch (e) { /* 조용히 */ }
+}
+
 async function renderInqBox() {
   const box = gid('inqbox-list');
   if (!box) return;
@@ -1217,7 +1157,6 @@ function bindShell() {
   if (gid('ops-close')) gid('ops-close').onclick = closeOps;
   if (gid('ops-bg')) gid('ops-bg').onclick = closeOps;
   if (gid('ops-make')) gid('ops-make').onclick = opsMake;
-  if (gid('once-refresh')) gid('once-refresh').onclick = renderOnceList;
   if (gid('ops-notice-save')) gid('ops-notice-save').onclick = async () => {
     const text = gid('ops-notice').value.trim();
     if (!text) { toast('공지 내용을 적어주세요'); return; }
@@ -1231,6 +1170,8 @@ function bindShell() {
     try { await setDoc(doc(db, 'config', 'tnotice'), { text: '', id: 0 }); gid('ops-notice').value = ''; toast('공지 내렸어요'); }
     catch (e) { toast('실패'); }
   };
+  if (gid('ops-clear')) gid('ops-clear').onclick = () => { gid('ops-out').value = ''; };
+  if (gid('ops-noti-reset')) gid('ops-noti-reset').onclick = () => { markOpsSeen(); toast('알림을 초기화했어요'); };
   if (gid('ops-copy')) gid('ops-copy').onclick = () => {
     const v = gid('ops-out').value.trim();
     if (!v) { toast('복사할 코드가 없어요'); return; }
