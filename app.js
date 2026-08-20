@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 장·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v63 로드');
+console.log('[LUVINFO] app.js v65 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -373,7 +373,7 @@ function applyTheme() {
     hi.innerHTML = '';
     hi.style.backgroundImage = 'linear-gradient(150deg, var(--line), var(--card))';
   }
-  document.title = (hd.title || st.handle) + ' — LUVINFO';
+  document.title = hd.title || st.handle; // 홈은 홈 이름만(v65)
 }
 
 function showSite() {
