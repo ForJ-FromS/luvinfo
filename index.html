@@ -165,10 +165,6 @@
 
   /* ═══ 본문 ═══ */
   .wrap { max-width: 620px; margin: 0 auto; padding: 72px 24px 120px; }
-  /* HTML 장(머리글 숨김)은 자체 액자가 있으므로 앱 여백 압축 */
-  body[data-chhead="off"] .wrap { padding: 72px 16px 40px; }
-  body[data-chhead="off"] .ch-title { margin-bottom: 16px; }
-  body[data-chhead="off"] .pager { margin-top: 26px; }
 
   .head { text-align: center; margin-bottom: 56px; position: relative; }
   .head .over { font-size: 10px; letter-spacing: .34em; color: var(--mute); margin-bottom: 16px; }
@@ -723,6 +719,10 @@
     max-width: 88vw; text-align: center;
   }
   #toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* HTML 장(머리글 숨김) 여백 — 시트 맨 끝: 세로 가운데(valign) 규칙보다 뒤라서 항상 우선 */
+  body[data-chhead="off"] .wrap { padding-top: 72px; padding-bottom: 40px; }
+  body[data-chhead="off"] .ch-title { margin-bottom: 16px; }
+  body[data-chhead="off"] .pager { margin-top: 26px; }
 </style>
 </head>
 <body data-preset="white" data-head="text">
@@ -1329,6 +1329,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=62"></script>
+<script type="module" src="app.js?v=63"></script>
 </body>
 </html>
