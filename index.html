@@ -166,8 +166,7 @@
   /* ═══ 본문 ═══ */
   .wrap { max-width: 620px; margin: 0 auto; padding: 72px 24px 120px; }
   /* HTML 장(머리글 숨김)은 자체 액자가 있으므로 앱 여백 압축 */
-  body[data-chhead="off"] .wrap { padding: 24px 16px 40px; }
-  body[data-chhead="off"] .ch-title { margin-bottom: 16px; }
+  body[data-chhead="off"] .wrap { padding: 72px 16px 40px; }
   body[data-chhead="off"] .pager { margin-top: 26px; }
 
   .head { text-align: center; margin-bottom: 56px; position: relative; }
@@ -798,8 +797,8 @@
       </div>
       <div class="foot-hair"></div>
       <p id="foot-txt" class="foot-txt" style="display:none;"></p>
-      <div class="foot-links"><span id="foot-lv" style="display:none;"><a href="#" id="foot-luvlog" target="_blank" rel="noopener">러브로그 홈 ↗</a><i>·</i></span><a href="guide.html" id="foot-guide">가이드</a><i>·</i><a href="#" id="foot-inq">✉ 문의</a></div>
-      <p class="foot-sys"><a href="#" id="foot-brand">LUVINFO</a> · <span id="upd-date"></span></p>
+      <div class="foot-links" id="foot-links"><span id="foot-lv" style="display:none;"><a href="#" id="foot-luvlog" target="_blank" rel="noopener">러브로그 홈 ↗</a><i id="foot-lvdot">·</i></span><a href="guide.html" id="foot-guide">가이드</a><i id="foot-gdot">·</i><a href="#" id="foot-inq">✉ 문의</a></div>
+      <p class="foot-sys"><a href="#" id="foot-brand">LUVINFO</a><i id="foot-sysdot" style="font-style:normal;"> · </i><span id="upd-date"></span></p>
     </div>
   </div>
 </div>
@@ -1329,6 +1328,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=58"></script>
+<script type="module" src="app.js?v=59"></script>
 </body>
 </html>

@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 장·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v58 로드');
+console.log('[LUVINFO] app.js v59 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1131,13 +1131,19 @@ function renderFoot() {
     if (lv && gid('foot-luvlog')) gid('foot-luvlog').href = 'https://' + lv + '.luvlog.me';
   }
   const f = st.site.foot || {};
-  const showEl = (id, on) => { const el = gid(id); if (el) el.style.display = on === false ? 'none' : ''; };
-  showEl('heart', f.heart);
+  const showEl = (id, on) => { const el = gid(id); if (el) el.style.display = on ? '' : 'none'; };
+  showEl('heart', f.heart !== false);
   const cp = document.querySelector('.copy-btn'); if (cp) cp.style.display = f.copy === false ? 'none' : '';
-  showEl('foot-guide', f.guide);
-  const gi = gid('foot-guide'); const gdot = gi && gi.nextElementSibling; if (gdot && gdot.tagName === 'I') gdot.style.display = (f.guide === false || f.inq === false) ? 'none' : '';
-  showEl('foot-inq', f.inq);
-  showEl('upd-date', f.date);
+  // 링크 줄: 보이는 항목 사이에만 구분점 (꼬리·머리 구분점 금지)
+  const hasLv = !!lv, hasGuide = f.guide !== false, hasInq = f.inq !== false;
+  showEl('foot-guide', hasGuide);
+  showEl('foot-inq', hasInq);
+  showEl('foot-lvdot', hasLv && (hasGuide || hasInq));
+  showEl('foot-gdot', hasGuide && hasInq);
+  showEl('foot-links', hasLv || hasGuide || hasInq);
+  // 시스템 줄: 날짜 끄면 가운뎃점도 함께
+  showEl('upd-date', f.date !== false);
+  showEl('foot-sysdot', f.date !== false);
   const hl = document.querySelector('.heart-line'); if (hl) hl.style.display = (f.heart === false && f.copy === false) ? 'none' : '';
 }
 
