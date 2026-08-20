@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v68 로드');
+console.log('[LUVINFO] app.js v69 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -696,6 +696,7 @@ function buildProfile(p) {
   const d = document.createElement('div');
   d.className = 'pf';
   d.dataset.pos = p.pos || 'left';
+  if (p.nobox) d.dataset.nobox = '1';
   const imgStyle = (p.img ? imgVars({ u: p.img, z: p.z, x: p.x, y: p.y }) : '') + '--psize:' + (parseInt(p.size) || 64) + 'px;';
   d.innerHTML =
     '<div class="pf-img" data-shape="' + esc(p.shape || 'circle') + '" style="' + imgStyle + '">' + (p.img ? '' : '✦') + '</div>' +
@@ -1424,6 +1425,7 @@ function openBlockEdit(blk) {
     $('#ep-shape').value = d.shape || 'circle';
     $('#ep-size').value = parseInt(d.size) || 64;
     $('#ep-sizev').textContent = (parseInt(d.size) || 64) + 'px';
+    if (gid('ep-nobox')) gid('ep-nobox').checked = !!d.nobox;
   } else if (blk.kind === 'gal') {
     $('#eg-layout').value = d.layout || '3';
     renderGalChips();
@@ -1462,6 +1464,7 @@ function saveBlockFields() {
     d.pos = $('#ep-pos').value;
     d.shape = $('#ep-shape').value;
     d.size = parseInt($('#ep-size').value) || 64;
+    d.nobox = gid('ep-nobox') && gid('ep-nobox').checked ? 1 : 0;
   } else if (editingBlk.kind === 'gal') {
     d.layout = $('#eg-layout').value;
   } else if (editingBlk.kind === 'mu') {

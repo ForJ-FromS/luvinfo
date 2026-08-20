@@ -10,6 +10,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Gowun+Batang&family=Nanum+Myeongjo&family=IBM+Plex+Sans+KR:wght@400;600&family=Gaegu&family=Noto+Serif+KR:wght@400;600&display=swap" rel="stylesheet">
 <style>
+@font-face { font-family: 'Paperlogy'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-4Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Paperlogy'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-7Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+</style>
+<style>
   /* ═══ 프리셋 ═══ */
   body[data-preset="white"] {
     --bg: #FDFDFC; --tx: #1F1E1C; --dim: #8A867E; --mute: #C4C1BA;
@@ -534,6 +538,7 @@
     position: relative; overflow: hidden;
     margin: 20px 0;
   }
+  .pf[data-nobox="1"] { background: none; border: none; padding: 6px 0; }
   .pf[data-pos="right"] { flex-direction: row-reverse; }
   .pf[data-pos="top"] { flex-direction: column; text-align: center; padding: 26px 20px 24px; }
   .pf[data-pos="none"] .pf-img { display: none; }
@@ -599,7 +604,7 @@
     background: rgba(var(--cardbase), var(--cardop));
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: 14px 16px; max-width: 420px;
+    padding: 14px 16px; width: 100%;
     margin: 20px 0;
   }
   .m-disc {
@@ -957,6 +962,7 @@
         </div>
       </div>
       <div class="f-row"><label>사진 크기 <span id="ep-sizev"></span></label><input type="range" id="ep-size" min="48" max="120" style="width:100%;accent-color:var(--pri);"></div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);cursor:pointer;margin-bottom:10px;"><input type="checkbox" id="ep-nobox"> 상자(테두리·배경) 없이 내용만 보이기</label>
       <div class="ea-btns">
         <button class="mini-btn" id="ep-up">📷 사진 업로드</button>
         <button class="mini-btn" id="ep-adj">🔍 사진 조정</button>
@@ -1085,6 +1091,7 @@
         <option value="'Gowun Batang', serif">고운바탕 (부드러운 세리프)</option>
         <option value="'Nanum Myeongjo', serif">나눔명조</option>
         <option value="'Gaegu', cursive">개구 (손글씨)</option>
+        <option value="'Paperlogy', sans-serif">페이퍼로지 (또렷 고딕)</option>
         <option value="monospace">모노스페이스</option>
       </select>
     </div>
@@ -1331,6 +1338,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=68"></script>
+<script type="module" src="app.js?v=69"></script>
 </body>
 </html>
