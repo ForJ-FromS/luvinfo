@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v67 로드');
+console.log('[LUVINFO] app.js v68 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -130,6 +130,7 @@ async function boot() {
       try {
         const ud = await getDoc(doc(db, 'tusers', u.uid));
         st.myHandle = ud.exists() ? ud.data().handle : null;
+        if (st.myHandle === 'jeste') checkOpsNoti();   // 어느 화면이든 로그인만 하면 검사
       } catch (e) { console.log('[LUVINFO] tusers err', e); }
     } else {
       st.myHandle = null;
@@ -255,6 +256,16 @@ function openClaim(user) {
   }
   $('#claim-cancel').onclick = () => { $('#claim').classList.remove('on'); $('#landing').classList.add('show'); };
   $('#claim-ok').onclick = async () => {
+    // 이미 홈이 있는 계정은 새 가입 차단 — 남의 기기에서 가입 진행돼 소유권 꼬이는 사고 방지
+    if (st.user) {
+      try {
+        const mine = await getDoc(doc(db, 'tusers', st.user.uid));
+        if (mine.exists() && mine.data().handle) {
+          toast('이 구글 계정엔 이미 @' + mine.data().handle + ' 홈이 있어요 — 로그아웃 후 본인 계정으로 가입해 주세요');
+          return;
+        }
+      } catch (e) { /* 조회 실패 시 기존 흐름 유지 */ }
+    }
     if (SIGNUP.mode === 'code') {
       const c = (gid('claim-code') ? gid('claim-code').value : '').trim();
       if (c !== SIGNUP.code) { toast('초대 코드가 달라요'); return; }
@@ -1061,8 +1072,8 @@ async function checkOpsNoti() {
     const qs = await getDocs(collection(db, 'tinquiries'));
     let n = 0;
     qs.forEach((s) => { const d = s.data() || {}; if ((d.ts || 0) > seen) n++; });
-    if (n > 0 && gid('fab-ops')) {
-      gid('fab-ops').textContent = '⚙ 운영 ●' + n;
+    if (n > 0) {
+      if (gid('fab-ops')) gid('fab-ops').textContent = '⚙ 운영 ●' + n;
       toast('📮 새 문의 ' + n + '건이 있어요');
     }
   } catch (e) { /* 조용히 */ }
