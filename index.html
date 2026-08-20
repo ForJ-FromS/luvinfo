@@ -225,7 +225,7 @@
     margin-bottom: 38px;
   }
 
-  /* 보통 장 본문 */
+  /* 보통 페이지 본문 */
   .cellbody { font-size: 14px; line-height: 2.1; }
   @media (max-width: 640px) {
     input[type="text"], input[type="password"], input[type="number"], input[type="url"], textarea, select { font-size: 16px !important; }
@@ -261,7 +261,7 @@
   .fold-body-in { padding: 2px 12px 18px; font-size: 13px; line-height: 2.05; }
   body[data-preset="white"] .fold-body-in, body[data-preset="dark"] .fold-body-in { padding: 2px 2px 18px; }
 
-  /* HTML 장 */
+  /* HTML 페이지 */
   /* 유저 HTML 격리층: 내부 z-index를 이 상자 안에 봉인(isolation), position:fixed도 이 상자 기준으로 강등(transform) */
   .htmlblk {
     max-width: 100%; overflow-x: auto;
@@ -272,7 +272,7 @@
   /* 유저 HTML이 화면을 덮지 못하게 — fixed는 상자 기준 absolute처럼, 층수도 상자 안에서만 */
   .htmlblk [style*="position:fixed"], .htmlblk [style*="position: fixed"] { position: absolute !important; }
 
-  /* ═══ 장 넘김 3종 ═══ */
+  /* ═══ 페이지 넘김 3종 ═══ */
   .pager { display: flex; align-items: center; justify-content: center; gap: 20px; margin-top: 64px; flex-wrap: wrap; }
   .pg-arrow {
     background: none; border: none;
@@ -719,7 +719,7 @@
     max-width: 88vw; text-align: center;
   }
   #toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
-  /* HTML 장(머리글 숨김) 여백 — 시트 맨 끝: 세로 가운데(valign) 규칙보다 뒤라서 항상 우선 */
+  /* HTML 페이지(머리글 숨김) 여백 — 시트 맨 끝: 세로 가운데(valign) 규칙보다 뒤라서 항상 우선 */
   body[data-chhead="off"] .wrap { padding-top: 72px; padding-bottom: 40px; }
   body[data-chhead="off"] .ch-title { margin-bottom: 16px; }
   body[data-chhead="off"] .pager { margin-top: 26px; }
@@ -736,7 +736,7 @@
     <h1 style="margin-top:10px;">LUVINFO</h1>
     <p class="lsub" style="margin-top:12px;">나를 담는 한 권의 성향글</p>
   </div>
-  <p class="desc">깔끔한 기본 틀에 쓰기만 해도 되고,<br>HTML을 통째로 부어도 되는 성향글 페이지.<br><span style="font-size:11.5px;color:var(--mute);">모바일에서 예쁘게 · 장 넘김 · 비밀 장 · 맞배너</span></p>
+  <p class="desc">깔끔한 기본 틀에 쓰기만 해도 되고,<br>HTML을 통째로 부어도 되는 성향글 페이지.<br><span style="font-size:11.5px;color:var(--mute);">모바일에서 예쁘게 · 페이지 넘김 · 비밀 페이지 · 맞배너</span></p>
   <div style="display:flex;flex-direction:column;gap:10px;align-items:center;">
     <button class="btn solid" id="btn-start">시작하기 (Google 로그인)</button>
     <div id="landing-my" style="display:none;">
@@ -778,7 +778,7 @@
     </div>
 
     <div class="ch-tools" id="ch-tools">
-      <button class="ct" id="ct-edit" title="이 장 수정">✎</button>
+      <button class="ct" id="ct-edit" title="이 페이지 수정">✎</button>
       <button class="ct" id="ct-up" title="앞으로">↑</button>
       <button class="ct" id="ct-down" title="뒤로">↓</button>
       <button class="ct del" id="ct-del" title="삭제">🗑</button>
@@ -806,8 +806,8 @@
 
 <!-- 주인 하단 바 -->
 <div class="owner-bar">
-  <button class="ob" id="ob-add">＋ 새 장</button>
-  <button class="ob" id="ob-addhtml">＋ HTML 장</button>
+  <button class="ob" id="ob-add">＋ 새 페이지</button>
+  <button class="ob" id="ob-addhtml">＋ HTML 페이지</button>
   <button class="ob" id="ob-deco">🎨 꾸미기</button>
   <button class="ob save" id="ob-save">✓ 저장</button>
 </div>
@@ -868,35 +868,35 @@
   <div id="inq-mine"></div>
 </div>
 
-<!-- 장 편집 시트 -->
+<!-- 페이지 편집 시트 -->
 <div class="sheet-bg" id="edit-bg"></div>
 <div class="sheet" id="edit-sheet">
-  <h3><span id="es-title">장 편집</span><button id="es-close">✕</button></h3>
+  <h3><span id="es-title">페이지 편집</span><button id="es-close">✕</button></h3>
   <div class="f-2col">
     <div class="f-row">
-      <label>장 제목 (비우면 표시 안 함)</label>
+      <label>페이지 제목 (비우면 표시 안 함)</label>
       <input type="text" id="es-name" placeholder="예: 기본, 드림, 페어…">
     </div>
     <div class="f-row">
-      <label>이 장 비밀번호 (비우면 공개)</label>
-      <input type="text" id="es-pw" placeholder="이 장만 잠그기" autocomplete="off">
+      <label>이 페이지 비밀번호 (비우면 공개)</label>
+      <input type="text" id="es-pw" placeholder="이 페이지만 잠그기" autocomplete="off">
     </div>
   </div>
   <div class="f-row">
-    <label>장 제목 꾸미기 이미지 (선택)</label>
+    <label>페이지 제목 꾸미기 이미지 (선택)</label>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
       <button class="mini-btn" id="es-timg-up">이미지 올리기</button>
       <button class="mini-btn" id="es-timg-del">삭제</button>
       <select id="es-timgpos" style="flex:0 0 auto;">
         <option value="top">제목 위에</option>
-        <option value="bot">장 맨 아래에</option>
+        <option value="bot">페이지 맨 아래에</option>
       </select>
       <span id="es-timg-chip" style="font-size:11px;color:var(--dim);"></span>
     </div>
   </div>
   <div class="f-row" id="es-cellrow">
     <div class="f-row">
-      <label>이 장 디자인 — 블록 전체에 한 번에 적용 (블록마다 재수정 가능)</label>
+      <label>이 페이지 디자인 — 블록 전체에 한 번에 적용 (블록마다 재수정 가능)</label>
       <div class="f-3col">
         <select id="ebs-card"><option value="">블록 카드: 끔</option><option value="on">블록 카드: 켬</option></select>
         <select id="ebs-corner"><option value="">모서리: 프리셋</option><option value="round">둥글게</option><option value="soft">살짝</option><option value="sharp">각지게</option></select>
@@ -1016,11 +1016,11 @@
     </div>
 
     <div class="f-row" style="margin-top:14px;">
-      <label>이 블록 디자인 (장 설정과 다르게)</label>
+      <label>이 블록 디자인 (페이지 설정과 다르게)</label>
       <div class="f-3col">
-        <select id="bs-card"><option value="">카드: 장 설정</option><option value="on">켬</option><option value="off">끔</option></select>
-        <select id="bs-corner"><option value="">모서리: 장 설정</option><option value="round">둥글게</option><option value="soft">살짝</option><option value="sharp">각지게</option></select>
-        <select id="bs-op"><option value="">투명도: 장 설정</option><option value="solid">불투명</option><option value="half">반투명</option><option value="clear">투명</option></select>
+        <select id="bs-card"><option value="">카드: 페이지 설정</option><option value="on">켬</option><option value="off">끔</option></select>
+        <select id="bs-corner"><option value="">모서리: 페이지 설정</option><option value="round">둥글게</option><option value="soft">살짝</option><option value="sharp">각지게</option></select>
+        <select id="bs-op"><option value="">투명도: 페이지 설정</option><option value="solid">불투명</option><option value="half">반투명</option><option value="clear">투명</option></select>
       </div>
     </div>
     <div class="f-actions">
@@ -1037,8 +1037,8 @@
       <button class="mini-btn" id="es-htmlphoto">📷 사진 올려서 주소 넣기</button>
     </div>
     <input type="file" id="es-htmlfile-input" accept=".html,.htm,text/html" style="display:none;">
-    <label class="chk-row" style="margin-top:10px;"><input type="checkbox" id="es-showhead"> 이 장에서도 위 머리글 보이기</label>
-    <div class="f-note">HTML 장은 기본으로 머리글 없이 페이지만 통째로 보여요. 이미지·iframe은 화면 폭에 자동으로 맞춰져요.</div>
+    <label class="chk-row" style="margin-top:10px;"><input type="checkbox" id="es-showhead"> 이 페이지에서도 위 머리글 보이기</label>
+    <div class="f-note">HTML 페이지는 기본으로 머리글 없이 내용만 통째로 보여요. 이미지·iframe은 화면 폭에 자동으로 맞춰져요.</div>
   </div>
   <div class="f-actions" style="align-items:center;gap:12px;">
     <span style="font-size:10.5px;color:var(--mute);margin-right:auto;">확인 = 화면 반영 · 하단 <b style="color:var(--pri);">✓ 저장</b> = 서버 저장</span>
@@ -1089,7 +1089,7 @@
       </select>
     </div>
     <div class="f-row">
-      <label>장 넘김</label>
+      <label>페이지 넘김</label>
       <select id="dc-nav">
         <option value="dot">점 + 화살표</option>
         <option value="arrow">화살표 (1 / 3)</option>
@@ -1121,7 +1121,7 @@
     <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--dim);cursor:pointer;"><input type="checkbox" id="dc-hdrule" checked> 머리글 밑줄 장식(—) 표시</label>
     </div>
     <div class="f-row">
-      <label>장 번호 (01 표기)</label>
+      <label>페이지 번호 (01 표기)</label>
       <select id="dc-num">
         <option value="on">표시</option>
         <option value="off">숨김</option>
@@ -1130,7 +1130,7 @@
     <div class="f-row" style="border-top:1px solid var(--line);padding-top:14px;margin-top:6px;">
       <label style="color:#c96;">홈 초기화 · 삭제</label>
       <button class="mini-btn" id="dc-reset-home" style="color:#c96;border-color:#c9664d55;">홈 초기화 — 처음 상태로 되돌리기</button>
-      <div class="f-note">장·꾸미기·대문이 전부 새 홈 상태로 돌아가요. 핸들과 계정은 그대로예요 (하트 수도 유지).</div>
+      <div class="f-note">페이지·꾸미기·대문이 전부 새 홈 상태로 돌아가요. 핸들과 계정은 그대로예요 (하트 수도 유지).</div>
       <button class="mini-btn" id="dc-del-home" style="color:#c96;border-color:#c9664d55;margin-top:10px;">이 성향글 홈을 완전히 삭제</button>
       <div class="f-note">계정 연결까지 지워지고 되돌릴 수 없어요.</div>
     </div>
@@ -1176,7 +1176,7 @@
       </div>
     </div>
     <div class="f-row">
-      <label>장 제목 디자인</label>
+      <label>페이지 제목 디자인</label>
       <select id="dc-chtitle">
         <option value="">기본</option>
         <option value="underline">밑줄</option>
@@ -1275,7 +1275,7 @@
       <button class="mini-btn" id="dc-backup">⬇ 백업 (JSON)</button>
       <button class="mini-btn" id="dc-restore">복원</button>
     </div>
-    <div class="f-note">HTML 장까지 통째로 저장돼요. 큰 수정 전에 한 번씩!</div>
+    <div class="f-note">HTML 페이지까지 통째로 저장돼요. 큰 수정 전에 한 번씩!</div>
   </div>
 
   <div class="f-row">
@@ -1296,6 +1296,8 @@
     <div class="f-row">
       <label>초대 코드</label>
     <input type="text" id="claim-code" placeholder="받은 초대 코드를 입력해 주세요" autocomplete="off" style="margin-bottom:14px;">
+    <label>초대해 준 분 (필수)</label>
+    <input type="text" id="claim-ref" placeholder="코드를 준 분의 닉네임 또는 핸들" autocomplete="off" style="margin-bottom:14px;">
     <label>핸들 (영문 소문자·숫자, 2~20자)</label>
       <input type="text" id="claim-h" placeholder="예: jeste" autocomplete="off">
       <div class="f-note">주소가 됩니다. 나중에 바꾸기 어려우니 신중히!</div>
@@ -1329,6 +1331,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=65"></script>
+<script type="module" src="app.js?v=67"></script>
 </body>
 </html>

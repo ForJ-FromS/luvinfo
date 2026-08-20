@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-// LUVINFO — app.js v9 (신판: 장 2종 + 프리셋 4종)
+// LUVINFO — app.js v9 (신판: 페이지 2종 + 프리셋 4종)
 // luvlog(lovelog-cc579)와 같은 Firebase, 별도 컬렉션(tsites/tusers)
 // ═══════════════════════════════════════════════
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
@@ -34,9 +34,9 @@ function gid(i) { return document.getElementById(i); }
 // 코드제로 바꾸려면: mode를 'code'로, code에 원하는 초대 코드를 넣고 재배포
 const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 러브인포 코드(횟수제) / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
-const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 장·커스텀CSS 미렌더 탈출구
+const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v65 로드');
+console.log('[LUVINFO] app.js v67 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -75,7 +75,7 @@ function defaultSite(ownerUid, handle) {
     gate: { on: false, msg: '', pw: '', img: '' },
     chapters: [{
       id: uid(), title: '기본', type: 'cell',
-      body: '첫 장이에요. 하단 ✎ 편집을 눌러 자유롭게 고쳐보세요.\n\n빈 줄로 문단을 나누고, 사진과 접은 글도 넣을 수 있어요.\n\n{접기:접은 글은 이렇게}\n눌러서 펼치는 내용이 여기 들어가요.\n{접기끝}',
+      body: '첫 페이지예요. 하단 ✎ 편집을 눌러 자유롭게 고쳐보세요.\n\n빈 줄로 문단을 나누고, 사진과 접은 글도 넣을 수 있어요.\n\n{접기:접은 글은 이렇게}\n눌러서 펼치는 내용이 여기 들어가요.\n{접기끝}',
       imgs: []
     }],
     heart: 0,
@@ -247,6 +247,12 @@ function openClaim(user) {
     gid('claim-code').style.display = needCode ? '' : 'none';
     gid('claim-code').previousElementSibling.style.display = needCode ? '' : 'none';
   }
+  if (gid('claim-ref')) {
+    gid('claim-ref').value = '';
+    const needRef = SIGNUP.mode === 'invite';
+    gid('claim-ref').style.display = needRef ? '' : 'none';
+    gid('claim-ref').previousElementSibling.style.display = needRef ? '' : 'none';
+  }
   $('#claim-cancel').onclick = () => { $('#claim').classList.remove('on'); $('#landing').classList.add('show'); };
   $('#claim-ok').onclick = async () => {
     if (SIGNUP.mode === 'code') {
@@ -254,9 +260,13 @@ function openClaim(user) {
       if (c !== SIGNUP.code) { toast('초대 코드가 달라요'); return; }
     }
     let claimCode = null, claimUses = 0, claimMax = 1;
+    let claimRef = '';
     if (SIGNUP.mode === 'invite') {
       const code = (gid('claim-code') ? gid('claim-code').value : '').trim().toLowerCase();
       if (!code) { toast('초대 코드를 입력해 주세요'); return; }
+      claimRef = (gid('claim-ref') ? gid('claim-ref').value : '').trim();
+      if (!claimRef) { toast('초대해 준 분의 닉네임이나 핸들을 적어 주세요'); return; }
+      if (claimRef.length > 40) { toast('초대해 준 분 칸이 너무 길어요 (40자 이내)'); return; }
       try {
         const iv = await getDoc(doc(db, 'invites', code));
         const d = iv.exists() ? (iv.data() || {}) : null;
@@ -299,6 +309,7 @@ function openClaim(user) {
       await setDoc(doc(db, 'tusers', user.uid), {
         handle: h,
         email: user.email || '',
+        ref: claimRef || '',
         joined: new Date().toISOString().slice(0, 10),
         ts: Date.now()
       });
@@ -306,7 +317,7 @@ function openClaim(user) {
         try {
           const nowUses = claimUses + 1;
           await setDoc(doc(db, 'invites', claimCode), {
-            uses: nowUses, used: nowUses >= claimMax, usedBy: user.uid, usedAt: Date.now()
+            uses: nowUses, used: nowUses >= claimMax, usedBy: user.uid, usedRef: claimRef || '', usedAt: Date.now()
           }, { merge: true });
         } catch (e) { console.log('[LUVINFO] invite consume err', e); }
       }
@@ -427,7 +438,7 @@ function renderChapter() {
     titleEl.style.display = 'none';
     $('#ch-timg-top').innerHTML = '';
     $('#ch-timg-bot').innerHTML = '';
-    bodyEl.innerHTML = '<p style="text-align:center;color:var(--mute);font-size:12.5px;letter-spacing:.1em;padding:40px 0;">아직 장이 없어요' + (st.mine ? ' — ✎ 편집으로 시작' : '') + '</p>';
+    bodyEl.innerHTML = '<p style="text-align:center;color:var(--mute);font-size:12.5px;letter-spacing:.1em;padding:40px 0;">아직 페이지가 없어요' + (st.mine ? ' — ✎ 편집으로 시작' : '') + '</p>';
     renderPager();
     return;
   }
@@ -438,7 +449,7 @@ function renderChapter() {
   $('#ch-timg-top').innerHTML = (tImg && (ch.timgPos || 'top') === 'top') ? tImg : '';
   $('#ch-timg-bot').innerHTML = (tImg && ch.timgPos === 'bot') ? tImg : '';
   if (ch.pw && !st.mine && sessionStorage.getItem('li_chpw_' + st.handle + '_' + ch.id) !== '1') {
-    bodyEl.innerHTML = '<div class="ch-lock"><div class="lk">🔒</div><p>이 장은 비밀번호가 있어요</p>' +
+    bodyEl.innerHTML = '<div class="ch-lock"><div class="lk">🔒</div><p>이 페이지는 비밀번호가 있어요</p>' +
       '<input type="password" id="chpw-in" autocomplete="off" placeholder="PASSWORD"><button class="mini-btn" id="chpw-ok">입장</button></div>';
     const tryPw = () => {
       if ($('#chpw-in').value === ch.pw) {
@@ -453,7 +464,7 @@ function renderChapter() {
   }
   document.body.dataset.chhead = (ch.type === 'html' && !ch.showHead) ? 'off' : 'on';
   if (ch.type === 'html' && SAFE_MODE) {
-    bodyEl.innerHTML = '<div style="border:1px dashed var(--line);border-radius:12px;padding:40px 20px;text-align:center;color:var(--mute);font-size:12.5px;line-height:1.9;">🛟 안전 모드 — 이 장의 HTML은 표시하지 않아요.<br>✎ 편집에서 코드를 고치거나 장을 삭제한 뒤,<br>주소의 <code>?safe=1</code>을 지우고 다시 접속하세요.</div>';
+    bodyEl.innerHTML = '<div style="border:1px dashed var(--line);border-radius:12px;padding:40px 20px;text-align:center;color:var(--mute);font-size:12.5px;line-height:1.9;">🛟 안전 모드 — 이 페이지의 HTML은 표시하지 않아요.<br>✎ 편집에서 코드를 고치거나 페이지를 삭제한 뒤,<br>주소의 <code>?safe=1</code>을 지우고 다시 접속하세요.</div>';
     renderPager();
     return;
   }
@@ -474,7 +485,7 @@ function renderChapter() {
           })
           .catch((e) => {
             console.log('[LUVINFO] html fetch err', e);
-            bodyEl.innerHTML = '<p style="text-align:center;color:var(--mute);font-size:12px;padding:60px 0;">이 장을 불러오지 못했어요 — 새로고침해 주세요</p>';
+            bodyEl.innerHTML = '<p style="text-align:center;color:var(--mute);font-size:12px;padding:60px 0;">이 페이지를 불러오지 못했어요 — 새로고침해 주세요</p>';
           });
         renderPager();
         return;
@@ -492,10 +503,10 @@ function renderChapter() {
   renderPager();
 }
 
-// 대용량 HTML 장 본문 캐시 (Storage 오프로드용)
+// 대용량 HTML 페이지 본문 캐시 (Storage 오프로드용)
 const htmlCache = {};
 
-// HTML 장 스크립트 실행: innerHTML로 넣은 <script>는 죽어 있으므로 재생성
+// HTML 페이지 스크립트 실행: innerHTML로 넣은 <script>는 죽어 있으므로 재생성
 function runScripts(root) {
   root.querySelectorAll('script').forEach((old) => {
     const s = document.createElement('script');
@@ -505,7 +516,7 @@ function runScripts(root) {
   });
 }
 
-// HTML 장 격리: <style>이 페이지 크롬을 오염시키지 않게 셀렉터에 스코프를 접두
+// HTML 페이지 격리: <style>이 페이지 크롬을 오염시키지 않게 셀렉터에 스코프를 접두
 // 앱의 주인용 UI 클래스 — 유저 CSS가 이걸 건드리면 편집·저장이 막히므로 규칙째 제거
 const UI_CLASSES = new Set(['fab-row', 'fab', 'fabs', 'owner-bar', 'ob-btn', 'sheet', 'sheet-bg', 'pop', 'adj-bg', 'toast']);
 function hitsUI(sel) {
@@ -536,7 +547,7 @@ function scopeHtml(html, scope) {
   return html.replace(/<style([^>]*)>([\s\S]*?)<\/style>/gi, (m, attrs, css) => '<style' + attrs + '>' + scopeCSS(css, scope) + '</style>');
 }
 
-// 보통 장 본문: 빈 줄 문단 + [사진N] + {접기:제목}…{접기끝}
+// 보통 페이지 본문: 빈 줄 문단 + [사진N] + {접기:제목}…{접기끝}
 function renderCellBody(body, imgs) {
   const parts = [];
   let rest = body || '';
@@ -663,7 +674,7 @@ function migrateBlocks(ch) {
   ch.wrap = ch.wrap || { on: false };
 }
 
-// ═══════════ 장 내 요소 렌더 ═══════════
+// ═══════════ 페이지 내 요소 렌더 ═══════════
 function imgVars(o) {
   const z = parseInt(o.z) || 100;
   // 주의: style 속성이 큰따옴표라 url은 반드시 작은따옴표 (v17 사진 안 보임 사고)
@@ -1214,14 +1225,14 @@ function bindShell() {
   $('#ob-deco').onclick = openDeco;
   $('#ob-save').onclick = saveSite;
 
-  // 장 도구
+  // 페이지 도구
   $('#ct-edit').onclick = () => { const ch = st.site.chapters[st.cur]; if (ch) openChapterEdit(ch, ch.type); };
   $('#ct-up').onclick = () => moveChapter(-1);
   $('#ct-down').onclick = () => moveChapter(1);
   $('#ct-del').onclick = () => {
     const chs = st.site.chapters;
     if (!chs[st.cur]) return;
-    if (!confirm('이 장을 삭제할까요?')) return;
+    if (!confirm('이 페이지를 삭제할까요?')) return;
     chs.splice(st.cur, 1);
     setDirty();
     if (st.cur >= chs.length) st.cur = Math.max(0, chs.length - 1);
@@ -1270,7 +1281,7 @@ function toggleEdit() {
   }
 }
 
-// ── 장 편집 시트 (블록 스택) ──
+// ── 페이지 편집 시트 (블록 스택) ──
 let work = null;
 let isNewCh = false;
 let editingBlk = null;
@@ -1309,7 +1320,7 @@ function openChapterEdit(ch, type) {
   isNewCh = !ch;
   editingBlk = null;
   if (type === 'cell') { migrateBlocks(work); work.bstyle = work.bstyle || {}; work.wrap = work.wrap || { on: false }; }
-  $('#es-title').textContent = ch ? '장 수정' : (type === 'html' ? '새 HTML 장' : '새 장');
+  $('#es-title').textContent = ch ? '페이지 수정' : (type === 'html' ? '새 HTML 페이지' : '새 페이지');
   $('#es-name').value = work.title || '';
   $('#es-pw').value = work.pw || '';
   if (gid('es-timgpos')) gid('es-timgpos').value = work.timgPos || 'top';
@@ -2063,7 +2074,7 @@ function bindDeco() {
   if (gid('dc-fav-up')) gid('dc-fav-up').onclick = () => uploadOne((url) => { st.site.favicon = url; setDirty(); applyTheme(); toast('파비콘 적용!'); });
   if (gid('dc-fav-del')) gid('dc-fav-del').onclick = () => { st.site.favicon = ''; setDirty(); applyTheme(); };
   if (gid('dc-reset-home')) gid('dc-reset-home').onclick = async () => {
-    const typed = prompt('홈을 처음 상태로 되돌리려면 핸들(' + st.handle + ')을 그대로 입력해 주세요.\n장·꾸미기·대문이 전부 사라지고 되돌릴 수 없어요. (핸들·계정·하트는 그대로)');
+    const typed = prompt('홈을 처음 상태로 되돌리려면 핸들(' + st.handle + ')을 그대로 입력해 주세요.\n페이지·꾸미기·대문이 전부 사라지고 되돌릴 수 없어요. (핸들·계정·하트는 그대로)');
     if (typed === null) return;
     if (typed.trim().toLowerCase() !== st.handle) { toast('핸들이 달라요 — 초기화 취소'); return; }
     try {
@@ -2076,7 +2087,7 @@ function bindDeco() {
     } catch (e) { console.log('[LUVINFO] reset home err', e); toast('초기화 실패 — 잠시 후 다시 시도해 주세요'); }
   };
   if (gid('dc-del-home')) gid('dc-del-home').onclick = async () => {
-    const typed = prompt('정말 삭제하려면 핸들(' + st.handle + ')을 그대로 입력해 주세요.\n장·사진·설정이 전부 사라지고 되돌릴 수 없어요.');
+    const typed = prompt('정말 삭제하려면 핸들(' + st.handle + ')을 그대로 입력해 주세요.\n페이지·사진·설정이 전부 사라지고 되돌릴 수 없어요.');
     if (typed === null) return;
     if (typed.trim().toLowerCase() !== st.handle) { toast('핸들이 달라요 — 삭제 취소'); return; }
     try {
@@ -2164,14 +2175,14 @@ async function saveSite() {
   try { await offloadBigHtml(); }
   catch (e) {
     console.log('[LUVINFO] offload err', e);
-    toast('큰 HTML 장 보관에 실패했어요 — 다시 시도해 주세요');
+    toast('큰 HTML 페이지 보관에 실패했어요 — 다시 시도해 주세요');
     return;
   }
   // undefined 필드는 Firestore가 거부하므로 저장 직전 전부 제거 (배열 속은 null로)
   const payload = JSON.parse(JSON.stringify(st.site));
   const size = new Blob([JSON.stringify(payload)]).size;
   if (size > 950000) {
-    toast('용량 초과에 가까워요 (' + Math.round(size / 1024) + 'KB / 최대 약 1MB) — HTML 장을 줄여 주세요');
+    toast('용량 초과에 가까워요 (' + Math.round(size / 1024) + 'KB / 최대 약 1MB) — HTML 페이지을 줄여 주세요');
     if (size > 1000000) return;
   }
   try {
