@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v71 로드');
+console.log('[LUVINFO] app.js v74 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -197,9 +197,35 @@ function migrate(data) {
   return fresh;
 }
 
+function closeGatePv(el, pvbar) {
+  document.body.classList.remove('gatepv-mo');
+  el.classList.remove('show');
+  if (pvbar) pvbar.style.display = 'none';
+  toast('미리보기 끝 — 저장해야 방문자에게 적용돼요');
+}
+
 function showGate(g, preview) {
   const el = $('#gate');
   el.classList.add('show');
+  const pvbar = gid('gate-pvbar');
+  const applyPvVars = (mobile) => {
+    // 모바일 미리보기는 좁은 틀이라 @media가 안 걸림 — 모바일 조정값을 PC 변수 자리에 직접 주입
+    const pz = mobile ? (g.mz ?? g.z) : g.z, px = mobile ? (g.mx ?? g.x) : g.x, py = mobile ? (g.my ?? g.y) : g.y;
+    [['--gpz', pz], ['--gpx', px, '%'], ['--gpy', py, '%']].forEach(([k, v, u]) => {
+      if (v != null && v !== '') el.style.setProperty(k, v + (u || '')); else el.style.removeProperty(k);
+    });
+  };
+  if (preview && pvbar) {
+    pvbar.style.display = 'flex';
+    document.body.classList.remove('gatepv-mo');
+    const mark = (mo) => { gid('gate-pv-pc').dataset.on = mo ? '' : '1'; gid('gate-pv-mo').dataset.on = mo ? '1' : ''; };
+    gid('gate-pv-pc').onclick = () => { document.body.classList.remove('gatepv-mo'); applyPvVars(false); mark(false); };
+    gid('gate-pv-mo').onclick = () => { document.body.classList.add('gatepv-mo'); applyPvVars(true); mark(true); };
+    gid('gate-pv-x').onclick = () => closeGatePv(el, pvbar);
+    const esc = (ev) => { if (ev.key === 'Escape') { closeGatePv(el, pvbar); document.removeEventListener('keydown', esc); } };
+    document.addEventListener('keydown', esc);
+    mark(false);
+  } else if (pvbar) { pvbar.style.display = 'none'; }
   el.dataset.style = g.style === 'full' ? 'full' : 'card';
   el.dataset.grad = g.grad === false ? 'off' : 'on';
   if (g.btnc) el.style.setProperty('--gbc', g.btnc); else el.style.removeProperty('--gbc');
@@ -210,11 +236,11 @@ function showGate(g, preview) {
   else { $('#gate-img').style.display = 'none'; }
   $('#gate-over').textContent = g.over || '';
   $('#gate-over').style.display = g.over ? 'block' : 'none';
-  $('#gate-enter').textContent = g.btn || '입장';
+  $('#gate-enter').textContent = preview ? '✕ 미리보기 닫기' : (g.btn || '입장');
   $('#gate-msg').textContent = g.msg || 'WELCOME';
   $('#gate-pw').style.display = g.pw && !preview ? 'block' : 'none';
   const enter = () => {
-    if (preview) { el.classList.remove('show'); toast('미리보기 끝 — 저장해야 방문자에게 적용돼요'); return; }
+    if (preview) { closeGatePv(el, gid('gate-pvbar')); return; }
     if (g.pw && $('#gate-pw').value !== g.pw) { toast('비밀번호가 달라요'); return; }
     sessionStorage.setItem('sh_gate_' + st.handle, '1');
     el.classList.remove('show');
@@ -868,8 +894,9 @@ async function bannerInfo(h) {
 
 // ═══════════ 사진 조정 팝업 (공용) ═══════════
 let adjT = null, adjCb = null, adjDrag = null;
-function openAdjust(target, cb) {
+function openAdjust(target, cb, ratio) {
   adjT = target; adjCb = cb;
+  $('#adj-view').style.aspectRatio = ratio || '1';
   target.z = parseInt(target.z) || 100;
   target.x = target.x ?? 50;
   target.y = target.y ?? 50;
@@ -896,6 +923,11 @@ function bindAdjust() {
   $('#adj-ok').onclick = closeAdjust;
   $('#adj-bg').onclick = closeAdjust;
   $('#adj-zoom').oninput = (e) => { if (adjT) { adjT.z = parseInt(e.target.value); adjApply(); } };
+  const nudge = (dx, dy) => { if (!adjT) return; adjT.x = Math.max(0, Math.min(100, (adjT.x ?? 50) + dx)); adjT.y = Math.max(0, Math.min(100, (adjT.y ?? 50) + dy)); adjApply(); };
+  $('#adj-l').onclick = () => nudge(-5, 0);
+  $('#adj-r').onclick = () => nudge(5, 0);
+  $('#adj-u').onclick = () => nudge(0, -5);
+  $('#adj-d').onclick = () => nudge(0, 5);
   v.addEventListener('pointerdown', (e) => {
     if (!adjT) return;
     adjDrag = { cx: e.clientX, cy: e.clientY, x: adjT.x, y: adjT.y };
@@ -2153,7 +2185,8 @@ function bindDeco() {
     const g0 = st.site.gate = st.site.gate || {};
     if (!g0.img) { toast('먼저 대문 이미지를 올려 주세요'); return; }
     const t = { u: g0.img, z: g0[pre + 'z'] ?? g0.z, x: g0[pre + 'x'] ?? g0.x, y: g0[pre + 'y'] ?? g0.y };
-    openAdjust(t, () => { g0[pre + 'z'] = t.z; g0[pre + 'x'] = t.x; g0[pre + 'y'] = t.y; setDirty(); toast(pre ? '모바일 대문 사진 조정 저장 대기' : '대문 사진 조정 저장 대기'); });
+    const ratio = pre ? '9 / 19' : (Math.max(window.innerWidth, 900) / Math.max(window.innerHeight, 500)).toFixed(3);
+    openAdjust(t, () => { g0[pre + 'z'] = t.z; g0[pre + 'x'] = t.x; g0[pre + 'y'] = t.y; setDirty(); toast(pre ? '모바일 대문 사진 조정 저장 대기' : '대문 사진 조정 저장 대기'); }, ratio);
   };
   $('#dc-gadj').onclick = () => gateAdj('');
   $('#dc-gadj-m').onclick = () => gateAdj('m');
