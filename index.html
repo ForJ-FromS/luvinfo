@@ -174,7 +174,8 @@
   #gate[data-style="full"] .g-over, #gate[data-style="full"] .g-msg, #gate[data-style="full"] input, #gate[data-style="full"] .btn { position: relative; z-index: 2; }
   #gate[data-style="full"] .g-msg { color: #F2F0EA; font-size: 15px; text-shadow: 0 1px 14px #000000AA; }
   #gate[data-style="full"] .g-over { color: #E5E2DACC; text-shadow: 0 1px 10px #000000AA; }
-  #gate .btn { background: var(--gbc, var(--pri)); border-color: var(--gbc, var(--pri)); color: var(--gbt, inherit); letter-spacing: .2em; padding: 12px 40px; }
+  /* 기본 버튼색 = 홈 테마 강조색(--pri, applyTheme가 대문 전에 주입) — 비상 폴백만 구체값 */
+  #gate .btn { background: var(--gbc, var(--pri, #C9A96E)); border-color: var(--gbc, var(--pri, #C9A96E)); color: var(--gbt, #111111); letter-spacing: .2em; padding: 12px 40px; }
   #gate.show { display: flex; }
   #gate img { max-width: min(420px, 86vw); max-height: 46vh; border-radius: var(--radius); border: 1px solid var(--line); object-fit: cover; }
   #gate .g-msg { font-size: 13px; color: var(--dim); text-align: center; line-height: 1.9; white-space: pre-line; letter-spacing: .06em; }
@@ -1400,6 +1401,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=86"></script>
+<script type="module" src="app.js?v=88"></script>
 </body>
 </html>

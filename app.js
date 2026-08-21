@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v86 로드');
+console.log('[LUVINFO] app.js v88 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -181,6 +181,7 @@ async function route() {
   if (st.site.priv && st.mine) setTimeout(() => toast('🔒 비공개 상태예요 — 나만 볼 수 있어요'), 400);
   const g = st.site.gate || {};
   if (g.on && !st.mine && sessionStorage.getItem('sh_gate_' + h) !== '1') {
+    applyTheme();  // 대문보다 먼저 테마 주입 — 기본 버튼색이 홈 테마 강조색을 따름
     showGate(g);
     return;
   }
