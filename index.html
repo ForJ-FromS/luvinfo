@@ -162,10 +162,11 @@
   body.gatepv-mo #gate .g-msg { font-size: 13.5px; }
   #gate-pvbar .mini-btn[data-on="1"] { border-color: var(--pri); color: var(--pri); }
   #gate .g-over { font-size: 10px; letter-spacing: .34em; color: var(--mute); text-align: center; }
-  #gate[data-style="full"] img#gate-img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; border: none; border-radius: 0; z-index: 0;
-    object-position: var(--gpx, 50%) var(--gpy, 50%); transform: scale(calc(var(--gpz, 100) / 100)); transform-origin: var(--gpx, 50%) var(--gpy, 50%); }
+  /* full 대문 배경: 조정 팝업과 동일한 수학(background-size z% auto + position) — 팝업=실화면 보장 */
+  #gate[data-style="full"] img#gate-img { display: none !important; }
+  #gate[data-style="full"] { background-repeat: no-repeat; background-size: var(--gbs, cover); background-position: var(--gbp, center); }
   @media (max-width: 640px) {
-    #gate[data-style="full"] img#gate-img { object-position: var(--gmx, var(--gpx, 50%)) var(--gmy, var(--gpy, 50%)); transform: scale(calc(var(--gmz, var(--gpz, 100)) / 100)); transform-origin: var(--gmx, var(--gpx, 50%)) var(--gmy, var(--gpy, 50%)); }
+    #gate[data-style="full"] { background-size: var(--gbsm, var(--gbs, cover)); background-position: var(--gbpm, var(--gbp, center)); }
   }
   #gate[data-style="full"]::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, #00000022 0%, #000000B3 78%, #000000E6 100%); z-index: 1; pointer-events: none; opacity: 0; }
   #gate[data-style="full"][data-grad="on"]::after { opacity: 1; }
@@ -1361,12 +1362,12 @@
   <h3>사진 조정</h3>
   <div class="adj-view" id="adj-view"></div>
   <div class="adj-row">확대 <input type="range" id="adj-zoom" min="100" max="260" value="100">
-  <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;">
-    <span style="font-size:11px;color:var(--mute);margin-right:4px;">사진을 끌어서 이동 · 또는</span>
-    <button class="mini-btn" id="adj-l" style="padding:4px 10px;">◀</button>
-    <button class="mini-btn" id="adj-u" style="padding:4px 10px;">▲</button>
-    <button class="mini-btn" id="adj-d" style="padding:4px 10px;">▼</button>
-    <button class="mini-btn" id="adj-r" style="padding:4px 10px;">▶</button>
+  <div style="text-align:center;font-size:11px;color:var(--mute);margin-top:10px;white-space:nowrap;">사진을 끌어서 옮길 수도 있어요</div>
+  <div style="display:flex;justify-content:center;gap:8px;margin-top:8px;">
+    <button class="mini-btn" id="adj-l" style="padding:5px 13px;">◀</button>
+    <button class="mini-btn" id="adj-u" style="padding:5px 13px;">▲</button>
+    <button class="mini-btn" id="adj-d" style="padding:5px 13px;">▼</button>
+    <button class="mini-btn" id="adj-r" style="padding:5px 13px;">▶</button>
   </div></div>
   <button class="adj-ok" id="adj-ok">완료</button>
 </div>
@@ -1385,6 +1386,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=74"></script>
+<script type="module" src="app.js?v=76"></script>
 </body>
 </html>

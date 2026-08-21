@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v74 로드');
+console.log('[LUVINFO] app.js v76 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -210,10 +210,10 @@ function showGate(g, preview) {
   const pvbar = gid('gate-pvbar');
   const applyPvVars = (mobile) => {
     // 모바일 미리보기는 좁은 틀이라 @media가 안 걸림 — 모바일 조정값을 PC 변수 자리에 직접 주입
-    const pz = mobile ? (g.mz ?? g.z) : g.z, px = mobile ? (g.mx ?? g.x) : g.x, py = mobile ? (g.my ?? g.y) : g.y;
-    [['--gpz', pz], ['--gpx', px, '%'], ['--gpy', py, '%']].forEach(([k, v, u]) => {
-      if (v != null && v !== '') el.style.setProperty(k, v + (u || '')); else el.style.removeProperty(k);
-    });
+    const z = mobile ? (g.mz ?? g.z) : g.z, x = mobile ? (g.mx ?? g.x) : g.x, y = mobile ? (g.my ?? g.y) : g.y;
+    const pair = z == null || z === '' ? null : [z + '% auto', (x ?? 50) + '% ' + (y ?? 50) + '%'];
+    if (pair) { el.style.setProperty('--gbs', pair[0]); el.style.setProperty('--gbp', pair[1]); }
+    else { el.style.removeProperty('--gbs'); el.style.removeProperty('--gbp'); }
   };
   if (preview && pvbar) {
     pvbar.style.display = 'flex';
@@ -230,8 +230,15 @@ function showGate(g, preview) {
   el.dataset.grad = g.grad === false ? 'off' : 'on';
   if (g.btnc) el.style.setProperty('--gbc', g.btnc); else el.style.removeProperty('--gbc');
   if (g.btnt) el.style.setProperty('--gbt', g.btnt); else el.style.removeProperty('--gbt');
-  const gv = [['--gpz', g.z], ['--gpx', g.x, '%'], ['--gpy', g.y, '%'], ['--gmz', g.mz], ['--gmx', g.mx, '%'], ['--gmy', g.my, '%']];
-  gv.forEach(([k, v, u]) => { if (v != null && v !== '') el.style.setProperty(k, v + (u || '')); else el.style.removeProperty(k); });
+  const bgOf = (z, x, y) => z == null || z === '' ? null : [z + '% auto', (x ?? 50) + '% ' + (y ?? 50) + '%'];
+  const setBg = (sk, pk, pair) => {
+    if (pair) { el.style.setProperty(sk, pair[0]); el.style.setProperty(pk, pair[1]); }
+    else { el.style.removeProperty(sk); el.style.removeProperty(pk); }
+  };
+  if (g.style === 'full' && g.img) el.style.backgroundImage = "url('" + g.img + "')";
+  else el.style.backgroundImage = '';
+  setBg('--gbs', '--gbp', bgOf(g.z, g.x, g.y));
+  setBg('--gbsm', '--gbpm', bgOf(g.mz ?? g.z, g.mx ?? g.x, g.my ?? g.y));
   if (g.img) { $('#gate-img').src = g.img; $('#gate-img').style.display = 'block'; }
   else { $('#gate-img').style.display = 'none'; }
   $('#gate-over').textContent = g.over || '';
