@@ -579,6 +579,7 @@
   .pf-nm { font-size: 15px; font-weight: 600; }
   .pf-acc { display: inline-block; font-size: 10.5px; color: var(--pri); letter-spacing: .14em; margin-top: 4px; }
   .pf[data-pos="left"] .pf-acc, .pf[data-pos="right"] .pf-acc { margin-left: 12px; margin-top: 0; }
+  .pf[data-pos="none"] .pf-acc { margin-left: 10px; margin-top: 0; }
   .pf-ds { font-size: 12.5px; color: var(--dim); margin-top: 6px; line-height: 1.75; }
 
   .gal { margin: 20px 0; }
@@ -958,6 +959,7 @@
   </div>
 
   <div id="bl-edit" style="display:none;">
+      <input type="text" id="ble-label" placeholder="블록 관리용 이름 (선택 — 편집 목록에서 나만 봄)" style="margin-bottom:10px;">
     <div id="ble-txt" style="display:none;">
       <div class="f-row">
         <label>글</label>
@@ -1391,6 +1393,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=81"></script>
+<script type="module" src="app.js?v=82"></script>
 </body>
 </html>

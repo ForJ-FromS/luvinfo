@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v81 로드');
+console.log('[LUVINFO] app.js v82 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1229,7 +1229,13 @@ function bindShell() {
   // 접은 글 · 사진 라이트박스 (위임)
   $('#ch-body').addEventListener('click', (e) => {
     const fh = e.target.closest('.fold-head');
-    if (fh) { fh.parentElement.classList.toggle('open'); return; }
+    if (fh) {
+      const f = fh.parentElement, fb = f.querySelector('.fold-body');
+      const opening = !f.classList.contains('open');
+      f.classList.toggle('open');
+      if (fb) fb.style.maxHeight = opening ? fb.scrollHeight + 'px' : '';
+      return;
+    }
     const img = e.target.closest('.cellbody img');
     if (img) { $('#lb-img').src = img.src; $('#lightbox').classList.add('on'); }
   });
@@ -1429,7 +1435,7 @@ function renderBlockList() {
     return;
   }
   box.innerHTML = blocks.map((blk, i) =>
-    '<div class="blrow"><span class="kind">' + KIND_LABEL[blk.kind] + '</span>' +
+    '<div class="blrow"><span class="kind">' + KIND_LABEL[blk.kind] + (blk.label ? ' · <b style="color:var(--tx);font-weight:600;">' + esc(blk.label) + '</b>' : '') + '</span>' +
     '<span class="sum">' + esc(blkSummary(blk)) + '</span>' +
     '<button class="ct" data-bmv="' + i + ',-1" title="위로">↑</button>' +
     '<button class="ct" data-bmv="' + i + ',1" title="아래로">↓</button>' +
@@ -1459,6 +1465,7 @@ function renderBlockList() {
 
 function openBlockEdit(blk) {
   editingBlk = blk;
+  if (gid('ble-label')) gid('ble-label').value = blk.label || '';
   $('#es-cellrow').style.display = 'none';
   $('#bl-edit').style.display = 'block';
   ['txt', 'pf', 'gal', 'mu', 'stk', 'bn', 'lnk', 'quo', 'dd'].forEach((k) => {
@@ -1506,6 +1513,7 @@ function openBlockEdit(blk) {
 
 function saveBlockFields() {
   if (!editingBlk) return;
+  if (gid('ble-label')) editingBlk.label = gid('ble-label').value.trim().slice(0, 30);
   const d = editingBlk.data;
   if (editingBlk.kind === 'txt') {
     d.body = $('#es-body').value;
@@ -1915,7 +1923,7 @@ function openDeco() {
   if (gid('dc-hdrule')) gid('dc-hdrule').onchange = () => {
     st.site.head = st.site.head || {};
     st.site.head.rule = gid('dc-hdrule').checked;
-    setDirty(); renderHd();
+    setDirty(); applyTheme();
   };
   if (gid('dc-hh')) { gid('dc-hh').value = parseInt(hd.h) || 200; gid('dc-hhv').textContent = (parseInt(hd.h) || 200) + 'px'; }
   if (gid('dc-hdrule')) gid('dc-hdrule').checked = (st.site.head || {}).rule !== false;
