@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v77 로드');
+console.log('[LUVINFO] app.js v80 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -235,8 +235,8 @@ function showGate(g, preview) {
     if (pair) { el.style.setProperty(sk, pair[0]); el.style.setProperty(pk, pair[1]); }
     else { el.style.removeProperty(sk); el.style.removeProperty(pk); }
   };
-  if (g.style === 'full' && g.img) el.style.backgroundImage = "url('" + g.img + "')";
-  else el.style.backgroundImage = '';
+  if (g.style === 'full' && g.img) el.style.setProperty('--gimg', "url('" + g.img + "')");
+  else el.style.removeProperty('--gimg');
   setBg('--gbs', '--gbp', bgOf(g.z, g.x, g.y));
   setBg('--gbsm', '--gbpm', bgOf(g.mz ?? g.z, g.mx ?? g.x, g.my ?? g.y));
   if (g.img) { $('#gate-img').src = g.img; $('#gate-img').style.display = 'block'; }
@@ -908,7 +908,8 @@ function openAdjust(target, cb, ratio) {
   target.x = target.x ?? 50;
   target.y = target.y ?? 50;
   const v = $('#adj-view');
-  v.style.backgroundImage = 'url("' + (target.u || target.img || '') + '")';
+  v.style.backgroundImage = 'none';
+  v.style.setProperty('--aju', "url('" + (target.u || target.img || '') + "')");
   $('#adj-zoom').value = target.z;
   adjApply();
   $('#adj-bg').classList.add('on');
@@ -916,8 +917,8 @@ function openAdjust(target, cb, ratio) {
 }
 function adjApply() {
   const v = $('#adj-view');
-  v.style.backgroundSize = adjT.z + '% auto';
-  v.style.backgroundPosition = adjT.x + '% ' + adjT.y + '%';
+  v.style.setProperty('--ajs', adjT.z + '% auto');
+  v.style.setProperty('--ajp', adjT.x + '% ' + adjT.y + '%');
 }
 function closeAdjust() {
   $('#adj-bg').classList.remove('on');
@@ -2192,7 +2193,9 @@ function bindDeco() {
     const g0 = st.site.gate = st.site.gate || {};
     if (!g0.img) { toast('먼저 대문 이미지를 올려 주세요'); return; }
     const t = { u: g0.img, z: g0[pre + 'z'] ?? g0.z, x: g0[pre + 'x'] ?? g0.x, y: g0[pre + 'y'] ?? g0.y };
-    const ratio = pre ? '9 / 19' : (Math.max(window.innerWidth, 900) / Math.max(window.innerHeight, 500)).toFixed(3);
+    const ratio = pre
+      ? (window.innerWidth <= 640 ? (window.innerWidth / window.innerHeight).toFixed(3) : '390 / 695')
+      : (Math.max(window.innerWidth, 900) / Math.max(window.innerHeight, 500)).toFixed(3);
     openAdjust(t, () => { g0[pre + 'z'] = t.z; g0[pre + 'x'] = t.x; g0[pre + 'y'] = t.y; setDirty(); toast(pre ? '모바일 대문 사진 조정 저장 대기' : '대문 사진 조정 저장 대기'); }, ratio);
   };
   $('#dc-gadj').onclick = () => gateAdj('');

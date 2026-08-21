@@ -158,18 +158,19 @@
   /* ═══ 게이트 ═══ */
   #gate { display: none; position: fixed; inset: 0; z-index: 9100; background-color: var(--bg); align-items: center; justify-content: center; flex-direction: column; gap: 20px; padding: 30px 20px; overflow: auto; }
   /* 모바일 미리보기: 폰 틀 안에 대문을 가둠 (미디어쿼리는 뷰포트 기준이라, 모바일 조정값은 JS가 주입) */
-  body.gatepv-mo #gate { inset: auto; top: 58px; left: 50%; transform: translateX(-50%); width: min(390px, 94vw); height: min(780px, calc(100dvh - 76px)); border: 1px solid var(--line); border-radius: 26px; box-shadow: 0 18px 60px #00000088; }
+  body.gatepv-mo #gate { inset: auto; top: 50px; left: 50%; transform: translateX(-50%); width: min(390px, 94vw); height: min(695px, calc(100dvh - 76px)); border: 1px solid var(--line); border-radius: 26px; box-shadow: 0 18px 60px #00000088; }
   body.gatepv-mo #gate .g-msg { font-size: 13.5px; }
   #gate-pvbar .mini-btn[data-on="1"] { border-color: var(--pri); color: var(--pri); }
   #gate .g-over { font-size: 10px; letter-spacing: .34em; color: var(--mute); text-align: center; }
-  /* full 대문 배경: 조정 팝업과 동일한 수학(background-size z% auto + position) — 팝업=실화면 보장 */
+  /* full 대문: ::before=같은 사진 블러로 빈 곳 채움, ::after=조정 사진(팝업과 동일 수학) */
   #gate[data-style="full"] img#gate-img { display: none !important; }
-  #gate[data-style="full"] { background-repeat: no-repeat; background-size: var(--gbs, cover); background-position: var(--gbp, center); }
+  #gate[data-style="full"]::before { content: ''; position: absolute; inset: -24px; background-image: var(--gimg); background-size: cover; background-position: center; filter: blur(22px) brightness(.62); z-index: 0; pointer-events: none; }
+  #gate[data-style="full"]::after { content: ''; position: absolute; inset: 0; background-image: var(--gimg); background-repeat: no-repeat; background-size: var(--gbs, cover); background-position: var(--gbp, center); z-index: 1; pointer-events: none; opacity: 1; }
+  #gate[data-style="full"][data-grad="on"]::after { background-image: linear-gradient(to bottom, #00000022 0%, #000000B3 78%, #000000E6 100%), var(--gimg); background-size: auto, var(--gbs, cover); background-position: center, var(--gbp, center); }
   @media (max-width: 640px) {
-    #gate[data-style="full"] { background-size: var(--gbsm, var(--gbs, cover)); background-position: var(--gbpm, var(--gbp, center)); }
+    #gate[data-style="full"]::after { background-size: var(--gbsm, var(--gbs, cover)); background-position: var(--gbpm, var(--gbp, center)); }
+    #gate[data-style="full"][data-grad="on"]::after { background-size: auto, var(--gbsm, var(--gbs, cover)); background-position: center, var(--gbpm, var(--gbp, center)); }
   }
-  #gate[data-style="full"]::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, #00000022 0%, #000000B3 78%, #000000E6 100%); z-index: 1; pointer-events: none; opacity: 0; }
-  #gate[data-style="full"][data-grad="on"]::after { opacity: 1; }
   #gate[data-style="full"] .g-over, #gate[data-style="full"] .g-msg, #gate[data-style="full"] input, #gate[data-style="full"] .btn { position: relative; z-index: 2; }
   #gate[data-style="full"] .g-msg { color: #F2F0EA; font-size: 15px; text-shadow: 0 1px 14px #000000AA; }
   #gate[data-style="full"] .g-over { color: #E5E2DACC; text-shadow: 0 1px 10px #000000AA; }
@@ -671,18 +672,22 @@
     z-index: 9301;
     box-shadow: 0 18px 60px #00000026;
     width: 320px; max-width: 92vw;
+      max-height: min(92dvh, 92vh); overflow-y: auto;
   }
   .adj.on { display: block; }
-  .adj h3 { font-size: 11px; letter-spacing: .22em; color: var(--mute); margin-bottom: 14px; }
+  .adj h3 { font-size: 11px; letter-spacing: .22em; color: var(--mute); margin: 0 0 8px; }
   .adj-view {
     width: 100%; aspect-ratio: 1;
+    max-height: min(50dvh, 50vh); margin-inline: auto;
     border: 1px solid var(--line);
     border-radius: 10px;
     background-color: var(--bg);
-    background-repeat: no-repeat;
     cursor: grab;
     touch-action: none;
+    position: relative; overflow: hidden;
   }
+  .adj-view::before { content: ''; position: absolute; inset: -18px; background-image: var(--aju); background-size: cover; background-position: center; filter: blur(16px) brightness(.62); pointer-events: none; }
+  .adj-view::after { content: ''; position: absolute; inset: 0; background-image: var(--aju); background-repeat: no-repeat; background-size: var(--ajs, cover); background-position: var(--ajp, center); pointer-events: none; }
   .adj-view.grab { cursor: grabbing; }
   .adj-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 11px; color: var(--dim); }
   .adj-row input { flex: 1; accent-color: var(--pri); }
@@ -1386,6 +1391,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=77"></script>
+<script type="module" src="app.js?v=80"></script>
 </body>
 </html>
