@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v83 로드');
+console.log('[LUVINFO] app.js v84 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -758,9 +758,8 @@ function buildHtmBlock(blk) {
   const scope = 'hb-' + blk.id;
   const w = document.createElement('div');
   w.className = 'htmlblk ' + scope;
-  // 모양 전용: <script>는 통째로 제거 (innerHTML은 원래 실행 안 하지만 이중 안전)
-  const clean = String(blk.data.body || '').replace(/<script[\s\S]*?<\/script\s*>/gi, '');
-  w.innerHTML = scopeHtml(clean, '.' + scope);
+  w.innerHTML = scopeHtml(String(blk.data.body || ''), '.' + scope);
+  runScripts(w);  // HTML 페이지와 동일하게 스크립트 허용
   return w;
 }
 
