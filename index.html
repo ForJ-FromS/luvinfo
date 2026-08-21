@@ -156,9 +156,9 @@
   #landing .lnote { font-size: 9px; letter-spacing: .28em; color: var(--mute); }
 
   /* ═══ 게이트 ═══ */
-  #gate { display: none; min-height: 100vh; align-items: center; justify-content: center; flex-direction: column; gap: 20px; padding: 30px 20px; position: relative; overflow: hidden; }
+  #gate { display: none; position: fixed; inset: 0; z-index: 9100; background-color: var(--bg); align-items: center; justify-content: center; flex-direction: column; gap: 20px; padding: 30px 20px; overflow: auto; }
   /* 모바일 미리보기: 폰 틀 안에 대문을 가둠 (미디어쿼리는 뷰포트 기준이라, 모바일 조정값은 JS가 주입) */
-  body.gatepv-mo #gate { width: min(390px, 94vw); min-height: 0; height: min(780px, calc(100dvh - 76px)); margin: 58px auto 0; border: 1px solid var(--line); border-radius: 26px; box-shadow: 0 18px 60px #00000088; }
+  body.gatepv-mo #gate { inset: auto; top: 58px; left: 50%; transform: translateX(-50%); width: min(390px, 94vw); height: min(780px, calc(100dvh - 76px)); border: 1px solid var(--line); border-radius: 26px; box-shadow: 0 18px 60px #00000088; }
   body.gatepv-mo #gate .g-msg { font-size: 13.5px; }
   #gate-pvbar .mini-btn[data-on="1"] { border-color: var(--pri); color: var(--pri); }
   #gate .g-over { font-size: 10px; letter-spacing: .34em; color: var(--mute); text-align: center; }
@@ -1386,6 +1386,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=76"></script>
+<script type="module" src="app.js?v=77"></script>
 </body>
 </html>
