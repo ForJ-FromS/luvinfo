@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v85 로드');
+console.log('[LUVINFO] app.js v86 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1177,7 +1177,7 @@ async function renderInqBox() {
       '<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">' + esc(r.date || '') + ' · @' + esc(r.handle || '?') + (r.email ? ' · ' + esc(r.email) : '') + (r.reply ? ' · ✓ 답변함' : '') +
       ' <i data-inqdel="' + esc(r.id) + '" style="float:right;cursor:pointer;font-style:normal;color:var(--mute);">🗑</i></div>' +
       '<div style="font-size:12.5px;white-space:pre-wrap;word-break:break-word;">' + esc(r.body || '') + '</div>' +
-      '<textarea data-inqre="' + esc(r.id) + '" class="code" style="min-height:64px;margin-top:8px;width:100%;box-sizing:border-box;" placeholder="답변 쓰기 — 문의한 사람이 ✉ 문의 창에서 보게 돼요">' + esc(r.reply || '') + '</textarea>' +
+      '<textarea data-inqre="' + esc(r.id) + '" style="min-height:150px;margin-top:8px;width:100%;box-sizing:border-box;font-size:13px;line-height:1.8;resize:vertical;" placeholder="답변 쓰기 — 문의한 사람이 ✉ 문의 창에서 보게 돼요">' + esc(r.reply || '') + '</textarea>' +
       '<div style="margin-top:6px;"><button class="mini-btn" data-inqsave="' + esc(r.id) + '">답변 저장</button></div></div>'
     ).join('');
     box.querySelectorAll('[data-inqdel]').forEach((x) => {

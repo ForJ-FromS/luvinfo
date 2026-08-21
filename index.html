@@ -888,7 +888,7 @@
 <div class="sheet" id="notice-pop" style="width:min(440px,92vw);">
   <h3><span>📢 업데이트 안내</span><button id="notice-close">✕</button></h3>
   <div id="notice-body" style="font-size:13px;line-height:1.85;white-space:pre-wrap;word-break:break-word;"></div>
-  <div class="f-actions"><button class="f-ok" id="notice-ok">확인</button></div>
+  <div class="f-actions"><button class="btn solid" id="notice-ok" style="min-width:120px;">확인</button></div>
 </div>
 
 <!-- 문의 작성 시트 -->
@@ -960,7 +960,7 @@
   </div>
 
   <div id="bl-edit" style="display:none;">
-      <input type="text" id="ble-label" placeholder="블록 관리용 이름 (선택 — 편집 목록에서 나만 봄)" style="margin-bottom:10px;">
+      <div class="f-row"><input type="text" id="ble-label" placeholder="블록 관리용 이름 (선택 — 편집 목록에서 나만 봄)"></div>
     <div id="ble-txt" style="display:none;">
       <div class="f-row">
         <label>글</label>
@@ -1400,6 +1400,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=85"></script>
+<script type="module" src="app.js?v=86"></script>
 </body>
 </html>
