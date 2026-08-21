@@ -156,7 +156,15 @@
   #landing .lnote { font-size: 9px; letter-spacing: .28em; color: var(--mute); }
 
   /* ═══ 게이트 ═══ */
-  #gate { display: none; min-height: 100vh; align-items: center; justify-content: center; flex-direction: column; gap: 20px; padding: 30px 20px; }
+  #gate { display: none; min-height: 100vh; align-items: center; justify-content: center; flex-direction: column; gap: 20px; padding: 30px 20px; position: relative; overflow: hidden; }
+  #gate .g-over { font-size: 10px; letter-spacing: .34em; color: var(--mute); text-align: center; }
+  #gate[data-style="full"] img#gate-img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; border: none; border-radius: 0; z-index: 0; }
+  #gate[data-style="full"]::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, #00000022 0%, #000000B3 78%, #000000E6 100%); z-index: 1; pointer-events: none; opacity: 0; }
+  #gate[data-style="full"][data-grad="on"]::after { opacity: 1; }
+  #gate[data-style="full"] .g-over, #gate[data-style="full"] .g-msg, #gate[data-style="full"] input, #gate[data-style="full"] .btn { position: relative; z-index: 2; }
+  #gate[data-style="full"] .g-msg { color: #F2F0EA; font-size: 15px; text-shadow: 0 1px 14px #000000AA; }
+  #gate[data-style="full"] .g-over { color: #E5E2DACC; text-shadow: 0 1px 10px #000000AA; }
+  #gate .btn { background: var(--gbc, var(--pri)); border-color: var(--gbc, var(--pri)); color: var(--gbt, inherit); letter-spacing: .2em; padding: 12px 40px; }
   #gate.show { display: flex; }
   #gate img { max-width: min(420px, 86vw); max-height: 46vh; border-radius: var(--radius); border: 1px solid var(--line); object-fit: cover; }
   #gate .g-msg { font-size: 13px; color: var(--dim); text-align: center; line-height: 1.9; white-space: pre-line; letter-spacing: .06em; }
@@ -755,6 +763,7 @@
 <!-- 게이트 -->
 <div id="gate">
   <img id="gate-img" style="display:none;" alt="">
+  <div class="g-over" id="gate-over" style="display:none;"></div>
   <div class="g-msg" id="gate-msg"></div>
   <input type="password" id="gate-pw" placeholder="PASSWORD" autocomplete="off">
   <button class="btn" id="gate-enter">입장</button>
@@ -1251,11 +1260,24 @@
       <option value="on">사용</option>
     </select>
     <div id="dc-gate-opts" style="display:none;">
+      <select id="dc-gate-style" style="margin-bottom:7px;">
+        <option value="card">사진 카드형 (기본)</option>
+        <option value="full">전체화면형 — 사진이 배경으로</option>
+      </select>
+      <input type="text" id="dc-gate-over" placeholder="문구 위 작은 글 (선택 — 예: PRIVATE)" style="margin-bottom:7px;">
       <input type="text" id="dc-gate-msg" placeholder="대문 문구" style="margin-bottom:7px;">
       <input type="text" id="dc-gate-pw" placeholder="비밀번호 (비우면 버튼만)" autocomplete="off" style="margin-bottom:7px;">
+      <input type="text" id="dc-gate-btn" placeholder="입장 버튼 문구 (기본: 입장 · 예: ENTER)" style="margin-bottom:7px;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:7px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:var(--dim);">버튼색</span><input type="color" id="dc-gate-btnc" value="#C9A96E" style="width:36px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;">
+        <span style="font-size:11px;color:var(--dim);">글씨색</span><input type="color" id="dc-gate-btnt" value="#111111" style="width:36px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;">
+        <button class="mini-btn" id="dc-gate-cx" style="font-size:10.5px;">기본색</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--dim);cursor:pointer;margin-left:auto;"><input type="checkbox" id="dc-gate-grad" checked> 사진 위 그라데이션</label>
+      </div>
       <div style="display:flex;gap:6px;">
         <button class="mini-btn" id="dc-gimg-up">대문 이미지 업로드</button>
         <button class="mini-btn" id="dc-gimg-del">제거</button>
+        <button class="mini-btn" id="dc-gate-pv">👁 대문 미리보기</button>
       </div>
     </div>
   </div>
@@ -1338,6 +1360,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=69"></script>
+<script type="module" src="app.js?v=70"></script>
 </body>
 </html>

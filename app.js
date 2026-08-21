@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v69 로드');
+console.log('[LUVINFO] app.js v70 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -197,15 +197,25 @@ function migrate(data) {
   return fresh;
 }
 
-function showGate(g) {
-  $('#gate').classList.add('show');
+function showGate(g, preview) {
+  const el = $('#gate');
+  el.classList.add('show');
+  el.dataset.style = g.style === 'full' ? 'full' : 'card';
+  el.dataset.grad = g.grad === false ? 'off' : 'on';
+  el.style.setProperty('--gbc', g.btnc || '');
+  el.style.setProperty('--gbt', g.btnt || '');
   if (g.img) { $('#gate-img').src = g.img; $('#gate-img').style.display = 'block'; }
+  else { $('#gate-img').style.display = 'none'; }
+  $('#gate-over').textContent = g.over || '';
+  $('#gate-over').style.display = g.over ? 'block' : 'none';
+  $('#gate-enter').textContent = g.btn || '입장';
   $('#gate-msg').textContent = g.msg || 'WELCOME';
-  $('#gate-pw').style.display = g.pw ? 'block' : 'none';
+  $('#gate-pw').style.display = g.pw && !preview ? 'block' : 'none';
   const enter = () => {
+    if (preview) { el.classList.remove('show'); toast('미리보기 끝 — 저장해야 방문자에게 적용돼요'); return; }
     if (g.pw && $('#gate-pw').value !== g.pw) { toast('비밀번호가 달라요'); return; }
     sessionStorage.setItem('sh_gate_' + st.handle, '1');
-    $('#gate').classList.remove('show');
+    el.classList.remove('show');
     showSite();
   };
   $('#gate-enter').onclick = enter;
@@ -1878,6 +1888,12 @@ function openDeco() {
   $('#dc-gate-opts').style.display = g.on ? 'block' : 'none';
   $('#dc-gate-msg').value = g.msg || '';
   $('#dc-gate-pw').value = g.pw || '';
+  $('#dc-gate-style').value = g.style === 'full' ? 'full' : 'card';
+  $('#dc-gate-over').value = g.over || '';
+  $('#dc-gate-btn').value = g.btn || '';
+  $('#dc-gate-btnc').value = g.btnc || '#C9A96E';
+  $('#dc-gate-btnt').value = g.btnt || '#111111';
+  $('#dc-gate-grad').checked = g.grad !== false;
   $('#dc-css').value = t.css || '';
   $('#deco-bg').classList.add('on');
   $('#deco-sheet').classList.add('on');
@@ -2119,8 +2135,17 @@ function bindDeco() {
     setDirty();
     $('#dc-gate-opts').style.display = st.site.gate.on ? 'block' : 'none';
   };
-  $('#dc-gate-msg').oninput = (e) => { st.site.gate.msg = e.target.value; setDirty(); };
-  $('#dc-gate-pw').oninput = (e) => { st.site.gate.pw = e.target.value; setDirty(); };
+  const gset = (k, v) => { st.site.gate = st.site.gate || {}; st.site.gate[k] = v; setDirty(); };
+  $('#dc-gate-msg').oninput = (e) => gset('msg', e.target.value);
+  $('#dc-gate-pw').oninput = (e) => gset('pw', e.target.value);
+  $('#dc-gate-style').onchange = (e) => gset('style', e.target.value);
+  $('#dc-gate-over').oninput = (e) => gset('over', e.target.value);
+  $('#dc-gate-btn').oninput = (e) => gset('btn', e.target.value.trim());
+  $('#dc-gate-btnc').oninput = (e) => gset('btnc', e.target.value);
+  $('#dc-gate-btnt').oninput = (e) => gset('btnt', e.target.value);
+  $('#dc-gate-cx').onclick = () => { gset('btnc', ''); st.site.gate.btnt = ''; $('#dc-gate-btnc').value = '#C9A96E'; $('#dc-gate-btnt').value = '#111111'; toast('버튼 기본색으로'); };
+  $('#dc-gate-grad').onchange = (e) => gset('grad', e.target.checked);
+  $('#dc-gate-pv').onclick = () => { closeDeco(); showGate(st.site.gate || {}, true); };
   $('#dc-gimg-up').onclick = () => uploadOne((url) => { st.site.gate.img = url; setDirty(); toast('대문 이미지 설정'); });
   $('#dc-gimg-del').onclick = () => { st.site.gate.img = ''; setDirty(); };
   $('#dc-css').oninput = (e) => { t().css = e.target.value; setDirty(); $('#usercss').textContent = e.target.value; };
