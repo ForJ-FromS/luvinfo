@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v70 로드');
+console.log('[LUVINFO] app.js v71 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -202,8 +202,10 @@ function showGate(g, preview) {
   el.classList.add('show');
   el.dataset.style = g.style === 'full' ? 'full' : 'card';
   el.dataset.grad = g.grad === false ? 'off' : 'on';
-  el.style.setProperty('--gbc', g.btnc || '');
-  el.style.setProperty('--gbt', g.btnt || '');
+  if (g.btnc) el.style.setProperty('--gbc', g.btnc); else el.style.removeProperty('--gbc');
+  if (g.btnt) el.style.setProperty('--gbt', g.btnt); else el.style.removeProperty('--gbt');
+  const gv = [['--gpz', g.z], ['--gpx', g.x, '%'], ['--gpy', g.y, '%'], ['--gmz', g.mz], ['--gmx', g.mx, '%'], ['--gmy', g.my, '%']];
+  gv.forEach(([k, v, u]) => { if (v != null && v !== '') el.style.setProperty(k, v + (u || '')); else el.style.removeProperty(k); });
   if (g.img) { $('#gate-img').src = g.img; $('#gate-img').style.display = 'block'; }
   else { $('#gate-img').style.display = 'none'; }
   $('#gate-over').textContent = g.over || '';
@@ -2141,11 +2143,20 @@ function bindDeco() {
   $('#dc-gate-style').onchange = (e) => gset('style', e.target.value);
   $('#dc-gate-over').oninput = (e) => gset('over', e.target.value);
   $('#dc-gate-btn').oninput = (e) => gset('btn', e.target.value.trim());
-  $('#dc-gate-btnc').oninput = (e) => gset('btnc', e.target.value);
-  $('#dc-gate-btnt').oninput = (e) => gset('btnt', e.target.value);
+  // 모바일 일부 브라우저는 색 확정 시 change만 발화 — 양쪽 다 바인딩 (v71)
+  $('#dc-gate-btnc').oninput = $('#dc-gate-btnc').onchange = (e) => gset('btnc', e.target.value);
+  $('#dc-gate-btnt').oninput = $('#dc-gate-btnt').onchange = (e) => gset('btnt', e.target.value);
   $('#dc-gate-cx').onclick = () => { gset('btnc', ''); st.site.gate.btnt = ''; $('#dc-gate-btnc').value = '#C9A96E'; $('#dc-gate-btnt').value = '#111111'; toast('버튼 기본색으로'); };
   $('#dc-gate-grad').onchange = (e) => gset('grad', e.target.checked);
   $('#dc-gate-pv').onclick = () => { closeDeco(); showGate(st.site.gate || {}, true); };
+  const gateAdj = (pre) => {
+    const g0 = st.site.gate = st.site.gate || {};
+    if (!g0.img) { toast('먼저 대문 이미지를 올려 주세요'); return; }
+    const t = { u: g0.img, z: g0[pre + 'z'] ?? g0.z, x: g0[pre + 'x'] ?? g0.x, y: g0[pre + 'y'] ?? g0.y };
+    openAdjust(t, () => { g0[pre + 'z'] = t.z; g0[pre + 'x'] = t.x; g0[pre + 'y'] = t.y; setDirty(); toast(pre ? '모바일 대문 사진 조정 저장 대기' : '대문 사진 조정 저장 대기'); });
+  };
+  $('#dc-gadj').onclick = () => gateAdj('');
+  $('#dc-gadj-m').onclick = () => gateAdj('m');
   $('#dc-gimg-up').onclick = () => uploadOne((url) => { st.site.gate.img = url; setDirty(); toast('대문 이미지 설정'); });
   $('#dc-gimg-del').onclick = () => { st.site.gate.img = ''; setDirty(); };
   $('#dc-css').oninput = (e) => { t().css = e.target.value; setDirty(); $('#usercss').textContent = e.target.value; };
