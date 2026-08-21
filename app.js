@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v84 로드');
+console.log('[LUVINFO] app.js v85 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -854,7 +854,12 @@ function buildDday(d) {
   if (!isNaN(target)) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const diff = Math.round((target - today) / 86400000);
-    txt = diff > 0 ? 'D-' + diff : (diff === 0 ? 'D-DAY' : 'D+' + (-diff));
+    if (d.one) {
+      // 당일을 1일로 세는 'n일 째' — 당일·지난 날짜에 적용, 미래는 D-n 유지
+      txt = diff > 0 ? 'D-' + diff : (-diff + 1) + '일 째';
+    } else {
+      txt = diff > 0 ? 'D-' + diff : (diff === 0 ? 'D-DAY' : 'D+' + (-diff));
+    }
   }
   w.innerHTML = '<b>' + txt + '</b>' + (d.label ? '<span>' + esc(d.label) + '</span>' : '') +
     '<i>' + esc(d.date || '') + '</i>';
@@ -1516,6 +1521,7 @@ function openBlockEdit(blk) {
   } else if (blk.kind === 'dd') {
     $('#ed-label').value = blk.data.label || '';
     $('#ed-date').value = blk.data.date || '';
+    if (gid('ed-one')) gid('ed-one').checked = !!blk.data.one;
   } else if (blk.kind === 'htm') {
     $('#eh-body').value = d.body || '';
   }
@@ -1550,6 +1556,7 @@ function saveBlockFields() {
   } else if (editingBlk.kind === 'dd') {
     d.label = $('#ed-label').value.trim();
     d.date = $('#ed-date').value.trim();
+    d.one = gid('ed-one') && gid('ed-one').checked ? 1 : 0;
   } else if (editingBlk.kind === 'htm') {
     d.body = $('#eh-body').value;
   }
