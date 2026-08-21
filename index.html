@@ -955,6 +955,7 @@
       <button class="mini-btn" data-add="lnk">＋ 링크</button>
       <button class="mini-btn" data-add="quo">＋ 인용구</button>
       <button class="mini-btn" data-add="dd">＋ 디데이</button>
+      <button class="mini-btn" data-add="htm">＋ HTML</button>
     </div>
   </div>
 
@@ -1038,6 +1039,11 @@
       <div class="f-row"><label>출처·화자 (선택)</label><input type="text" id="eq-by" placeholder="예: 제스테"></div>
     </div>
 
+    <div id="ble-htm" style="display:none;">
+      <div class="f-row"><label>HTML (모양만 — 스크립트는 실행되지 않아요)</label>
+        <textarea id="eh-body" class="tall" placeholder="&lt;style&gt;와 HTML을 붙여넣으세요. 이 블록 안에만 적용됩니다." spellcheck="false"></textarea></div>
+      <div class="f-note">움직임(스크립트)이 필요하면 HTML 페이지를 사용해 주세요.</div>
+    </div>
     <div id="ble-dd" style="display:none;">
       <div class="f-2col">
         <div class="f-row"><label>라벨</label><input type="text" id="ed-label" placeholder="예: 처음 만난 날"></div>
@@ -1393,6 +1399,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=82"></script>
+<script type="module" src="app.js?v=83"></script>
 </body>
 </html>

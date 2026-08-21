@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v82 로드');
+console.log('[LUVINFO] app.js v83 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -685,6 +685,7 @@ function renderBlocks(ch, bodyEl) {
     else if (blk.kind === 'lnk' && (d.items || []).length) div.appendChild(buildLinks(d));
     else if (blk.kind === 'quo' && d.text) div.appendChild(buildQuote(d));
     else if (blk.kind === 'dd' && d.date) div.appendChild(buildDday(d));
+    else if (blk.kind === 'htm' && d.body) div.appendChild(buildHtmBlock(blk));
     else return;
     host.appendChild(div);
   });
@@ -751,6 +752,16 @@ function buildProfile(p) {
     (p.ds ? '<div class="pf-ds">' + esc(p.ds).replace(/\n/g, '<br>') + '</div>' : '') +
     '</div>';
   return d;
+}
+
+function buildHtmBlock(blk) {
+  const scope = 'hb-' + blk.id;
+  const w = document.createElement('div');
+  w.className = 'htmlblk ' + scope;
+  // 모양 전용: <script>는 통째로 제거 (innerHTML은 원래 실행 안 하지만 이중 안전)
+  const clean = String(blk.data.body || '').replace(/<script[\s\S]*?<\/script\s*>/gi, '');
+  w.innerHTML = scopeHtml(clean, '.' + scope);
+  return w;
 }
 
 function buildGallery(g) {
@@ -1356,13 +1367,14 @@ let work = null;
 let isNewCh = false;
 let editingBlk = null;
 
-const KIND_LABEL = { txt: '글', pf: '프로필', gal: '갤러리', mu: '음악', stk: '스티커', bn: '배너', lnk: '링크', quo: '인용구', dd: '디데이' };
+const KIND_LABEL = { txt: '글', pf: '프로필', gal: '갤러리', mu: '음악', stk: '스티커', bn: '배너', lnk: '링크', quo: '인용구', dd: '디데이', htm: 'HTML' };
 
 function newBlockData(kind) {
   if (kind === 'txt') return { body: '', imgs: [] };
   if (kind === 'pf') return { img: '', z: 100, x: 50, y: 50, pos: 'left', shape: 'circle', size: 64, nm: '', acc: '', ds: '' };
   if (kind === 'gal') return { layout: '3', imgs: [] };
   if (kind === 'mu') return { title: '', artist: '', url: '' };
+  if (kind === 'htm') return { body: '' };
   if (kind === 'stk') return { items: [] };
   if (kind === 'bn') return { items: [] };
   if (kind === 'lnk') return { items: [] };
@@ -1468,7 +1480,7 @@ function openBlockEdit(blk) {
   if (gid('ble-label')) gid('ble-label').value = blk.label || '';
   $('#es-cellrow').style.display = 'none';
   $('#bl-edit').style.display = 'block';
-  ['txt', 'pf', 'gal', 'mu', 'stk', 'bn', 'lnk', 'quo', 'dd'].forEach((k) => {
+  ['txt', 'pf', 'gal', 'mu', 'stk', 'bn', 'lnk', 'quo', 'dd', 'htm'].forEach((k) => {
     $('#ble-' + k).style.display = blk.kind === k ? 'block' : 'none';
   });
   const d = blk.data;
@@ -1505,6 +1517,8 @@ function openBlockEdit(blk) {
   } else if (blk.kind === 'dd') {
     $('#ed-label').value = blk.data.label || '';
     $('#ed-date').value = blk.data.date || '';
+  } else if (blk.kind === 'htm') {
+    $('#eh-body').value = d.body || '';
   }
   $('#bs-card').value = blk.style?.card || '';
   $('#bs-corner').value = blk.style?.corner || '';
@@ -1537,6 +1551,8 @@ function saveBlockFields() {
   } else if (editingBlk.kind === 'dd') {
     d.label = $('#ed-label').value.trim();
     d.date = $('#ed-date').value.trim();
+  } else if (editingBlk.kind === 'htm') {
+    d.body = $('#eh-body').value;
   }
   editingBlk.style = {
     card: $('#bs-card').value,
