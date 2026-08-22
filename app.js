@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v88 로드');
+console.log('[LUVINFO] app.js v89 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1039,6 +1039,7 @@ function markOpsSeen() {
 }
 async function checkNotice() {
   try {
+    if (!st.user) return;  // 서비스 공지는 로그인한 이용자에게만 — 구경 온 손님에겐 안 띄움
     const s = await getDoc(doc(db, 'config', 'tnotice'));
     if (!s.exists()) return;
     const d = s.data() || {};
