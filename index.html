@@ -291,7 +291,9 @@
     position: relative; isolation: isolate; z-index: 0;
     transform: translateZ(0);
   }
-  .htmlblk img, .htmlblk video, .htmlblk iframe { max-width: 100%; height: auto; }
+  .htmlblk img, .htmlblk video { max-width: 100%; height: auto; }
+  /* iframe은 height 속성을 존중 — height:auto를 먹이면 기본 150px로 찌부됨 */
+  .htmlblk iframe { max-width: 100%; border: 0; }
   /* 유저 HTML이 화면을 덮지 못하게 — fixed는 상자 기준 absolute처럼, 층수도 상자 안에서만 */
   .htmlblk [style*="position:fixed"], .htmlblk [style*="position: fixed"] { position: absolute !important; }
 
@@ -1401,6 +1403,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=90"></script>
+<script type="module" src="app.js?v=92"></script>
 </body>
 </html>

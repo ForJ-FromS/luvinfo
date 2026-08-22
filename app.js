@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v90 로드');
+console.log('[LUVINFO] app.js v92 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -564,6 +564,23 @@ function renderChapter() {
 const htmlCache = {};
 
 // HTML 페이지 스크립트 실행: innerHTML로 넣은 <script>는 죽어 있으므로 재생성
+// 유저 HTML 다수가 window 'load'/'DOMContentLoaded'에 애니메이션 시동을 걸어둠.
+// 러브인포는 로딩이 끝난 뒤 HTML을 끼워 넣으므로 그 신호는 이미 지나감 —
+// 문서가 이미 complete면 늦게 온 대기자를 즉시 실행해 준다(앱 자체 로직에는 영향 없음).
+(function patchLateLoad() {
+  const wrap = (target) => {
+    const orig = target.addEventListener.bind(target);
+    target.addEventListener = function (type, cb, opts) {
+      if ((type === 'load' || type === 'DOMContentLoaded') && document.readyState === 'complete' && typeof cb === 'function') {
+        setTimeout(() => { try { cb.call(target, new Event(type)); } catch (e) { console.warn('[LUVINFO] late-' + type, e); } }, 0);
+        return;
+      }
+      return orig(type, cb, opts);
+    };
+  };
+  wrap(window); wrap(document);
+})();
+
 function runScripts(root) {
   root.querySelectorAll('script').forEach((old) => {
     const s = document.createElement('script');
@@ -571,6 +588,13 @@ function runScripts(root) {
     s.textContent = old.textContent;
     old.replaceWith(s);
   });
+  // window.onload = fn 직대입 방식도 회수 (load는 이미 지났으므로 직접 호출)
+  setTimeout(() => {
+    if (typeof window.onload === 'function' && document.readyState === 'complete') {
+      const fn = window.onload; window.onload = null;
+      try { fn.call(window, new Event('load')); } catch (e) { console.warn('[LUVINFO] late-onload', e); }
+    }
+  }, 0);
 }
 
 // HTML 페이지 격리: <style>이 페이지 크롬을 오염시키지 않게 셀렉터에 스코프를 접두
