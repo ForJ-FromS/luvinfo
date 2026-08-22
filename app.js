@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v89 로드');
+console.log('[LUVINFO] app.js v90 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -804,6 +804,11 @@ function initGalSlider(rootEl, imgs) {
   rootEl.querySelector('.gal-next').onclick = (e) => { e.stopPropagation(); go(cur + 1); };
 }
 
+function ytId(u) {
+  const m = String(u || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/)|music\.youtube\.com\/watch\?(?:.*&)?v=)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+
 function buildMusic(m) {
   const d = document.createElement('div');
   d.className = 'music';
@@ -813,6 +818,25 @@ function buildMusic(m) {
     '<div class="m-bar"><i></i></div></div><button class="m-btn">▶</button>';
   const btn = d.querySelector('.m-btn');
   let audio = null;
+  const yid = ytId(m.url);
+  if (yid) {
+    // 유튜브 링크: 숨은 유튜브 플레이어로 재생/정지
+    let fr = null;
+    btn.onclick = () => {
+      if (!fr) {
+        fr = document.createElement('iframe');
+        fr.src = 'https://www.youtube.com/embed/' + yid + '?autoplay=1&playsinline=1';
+        fr.allow = 'autoplay; encrypted-media';
+        fr.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;border:0;';
+        d.appendChild(fr);
+        d.classList.add('playing'); btn.textContent = '❚❚';
+      } else {
+        fr.remove(); fr = null;
+        d.classList.remove('playing'); btn.textContent = '▶';
+      }
+    };
+    return d;
+  }
   btn.onclick = () => {
     if (m.url) {
       if (!audio) {
