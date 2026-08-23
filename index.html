@@ -298,7 +298,7 @@
   .gbblk input:focus, .gbblk textarea:focus { outline: none; border-color: var(--pri); }
   .gbblk input::placeholder, .gbblk textarea::placeholder { color: var(--dim); opacity: .8; }
   /* 러브로그 방명록 실물 이식 */
-  .gbblk .gb-item { border: 1px solid var(--line); border-radius: 11px; background: var(--card); padding: 13px 16px; margin-bottom: 10px; list-style: none; }
+  .gbblk .gb-item { border: 1px solid var(--line); border-radius: 11px; background: rgba(var(--cardbase), var(--cardop)); padding: 13px 16px; margin-bottom: 10px; list-style: none; }
   .gbblk .gb-item .who { display: flex; justify-content: space-between; align-items: baseline; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--pri); margin-bottom: 4px; }
   .gbblk .gb-item .who a { color: var(--pri); text-decoration: none; }
   .gbblk .gb-item .who .dt { color: var(--mute); font-size: 8.5px; }
@@ -311,7 +311,7 @@
   .gbblk .gb-re b { color: var(--tx); }
   .gbblk .gb-rebtn { display: inline-block; margin-top: 6px; font-size: 10.5px; color: var(--dim); cursor: pointer; font-style: normal; }
   .gbblk .gb-rebtn:hover { color: var(--pri); }
-  .gbblk .gb-foot { border: 1px solid var(--line); background: var(--card); border-radius: 14px; padding: 16px; }
+  .gbblk .gb-foot { border: 1px solid var(--line); background: rgba(var(--cardbase), var(--cardop)); border-radius: 14px; padding: 16px; }
   .gbblk .gb-foot textarea { min-height: 84px; }
   .gbblk .gb-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
   .gbblk .gb-sec { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--dim); margin: 0; cursor: pointer; }
@@ -1441,6 +1441,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=102"></script>
+<script type="module" src="app.js?v=103"></script>
 </body>
 </html>
