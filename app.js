@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v94 로드');
+console.log('[LUVINFO] app.js v95 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1215,7 +1215,7 @@ async function checkOpsNoti() {
     const seen = parseInt(localStorage.getItem('li_ops_seen') || '0');
     const qs = await getDocs(collection(db, 'tinquiries'));
     let n = 0;
-    qs.forEach((s) => { const d = s.data() || {}; if ((d.ts || 0) > seen) n++; });
+    qs.forEach((s) => { const d = s.data() || {}; if (!d.fromOps && (d.ts || 0) > seen) n++; });
     if (n > 0) {
       if (gid('fab-ops')) gid('fab-ops').textContent = '⚙ 운영 ●' + n;
       toast('📮 새 문의 ' + n + '건이 있어요');
@@ -1252,9 +1252,11 @@ async function renderInqBox() {
       '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;' + (r.fromOps ? 'opacity:.75;' : '') + '">' +
       '<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">' + esc(r.date || '') + ' · @' + esc(r.handle || '?') + (r.email ? ' · ' + esc(r.email) : '') + (r.fromOps ? ' · 📮 보낸 쪽지' : (r.reply ? ' · ✓ 답변함' : '')) +
       ' <i data-inqdel="' + esc(r.id) + '" style="float:right;cursor:pointer;font-style:normal;color:var(--mute);">🗑</i></div>' +
-      '<div style="font-size:12.5px;white-space:pre-wrap;word-break:break-word;">' + esc(r.body || '') + '</div>' +
-      '<textarea data-inqre="' + esc(r.id) + '" style="min-height:150px;margin-top:8px;width:100%;box-sizing:border-box;font-size:13px;line-height:1.8;resize:vertical;" placeholder="답변 쓰기 — 문의한 사람이 ✉ 문의 창에서 보게 돼요">' + esc(r.reply || '') + '</textarea>' +
-      '<div style="margin-top:6px;"><button class="mini-btn" data-inqsave="' + esc(r.id) + '">답변 저장</button></div></div>'
+      (r.fromOps
+        ? '<div style="font-size:12.5px;white-space:pre-wrap;word-break:break-word;">' + esc(r.reply || '') + '</div></div>'
+        : '<div style="font-size:12.5px;white-space:pre-wrap;word-break:break-word;">' + esc(r.body || '') + '</div>' +
+          '<textarea data-inqre="' + esc(r.id) + '" style="min-height:150px;margin-top:8px;width:100%;box-sizing:border-box;font-size:13px;line-height:1.8;resize:vertical;" placeholder="답변 쓰기 — 문의한 사람이 ✉ 문의 창에서 보게 돼요">' + esc(r.reply || '') + '</textarea>' +
+          '<div style="margin-top:6px;"><button class="mini-btn" data-inqsave="' + esc(r.id) + '">답변 저장</button></div></div>')
     ).join('');
     box.querySelectorAll('[data-inqdel]').forEach((x) => {
       x.onclick = async () => {
