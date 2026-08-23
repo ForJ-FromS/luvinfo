@@ -41,7 +41,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v101 로드');
+console.log('[LUVINFO] app.js v102 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -789,7 +789,7 @@ function buildProfile(p) {
 function buildGbBlock() {
   const w = document.createElement('div');
   w.className = 'gbblk';
-  w.innerHTML = '<ul class="gb-list" style="padding:0;margin:0;max-height:360px;overflow-y:auto;"></ul><div class="gb-foot" style="margin-top:10px;"></div>';
+  w.innerHTML = '<div class="gb-foot"></div><ul class="gb-list" style="padding:0;margin:12px 0 0;max-height:360px;overflow-y:auto;"></ul>';
   const list = w.querySelector('.gb-list');
   const foot = w.querySelector('.gb-foot');
   const myUid = st.user ? st.user.uid : null;
@@ -854,9 +854,8 @@ function buildGbBlock() {
       foot.innerHTML = '<div class="gb-empty">✍ 방명록은 러브인포 멤버만 남길 수 있어요.</div>';
       return;
     }
-    foot.innerHTML = '<textarea class="gb-msg" maxlength="500" placeholder="따뜻한 말 한마디 — @' + esc(myH) + ' 이름으로 남아요 (500자)"></textarea>' +
-      '<label class="gb-sec"><input type="checkbox" class="gb-secret"> 🔒 주인에게만 보이기</label>' +
-      '<div style="display:flex;justify-content:flex-end;margin-top:7px;"><button class="mini-btn gb-send">✍ 남기기</button></div>';
+    foot.innerHTML = '<textarea class="gb-msg" maxlength="500" placeholder="다녀간 흔적을 남겨주세요"></textarea>' +
+      '<div class="gb-bar"><label class="gb-sec"><input type="checkbox" class="gb-secret"> 🔒 비공개로 남기기 (주인만 볼 수 있어요)</label><button class="gb-send">남기기</button></div>';
     foot.querySelector('.gb-send').onclick = async () => {
       const text = foot.querySelector('.gb-msg').value.trim();
       if (!text) { toast('내용을 적어주세요'); return; }
