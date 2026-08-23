@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v93 로드');
+console.log('[LUVINFO] app.js v94 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1371,10 +1371,10 @@ function bindShell() {
   };
   if (gid('ops-notice-del')) gid('ops-notice-del').onclick = async () => {
     if (!confirm('공지를 내릴까요?')) return;
-  if (gid('ops-dm-send')) gid('ops-dm-send').onclick = sendOpsDm;
     try { await setDoc(doc(db, 'config', 'tnotice'), { text: '', id: 0 }); gid('ops-notice').value = ''; toast('공지 내렸어요'); }
     catch (e) { toast('실패'); }
   };
+  if (gid('ops-dm-send')) gid('ops-dm-send').onclick = sendOpsDm;
   if (gid('ops-clear')) gid('ops-clear').onclick = () => { gid('ops-out').value = ''; };
   if (gid('ops-noti-reset')) gid('ops-noti-reset').onclick = () => { markOpsSeen(); toast('알림을 초기화했어요'); };
   if (gid('ops-copy')) gid('ops-copy').onclick = () => {
