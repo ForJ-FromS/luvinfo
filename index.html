@@ -881,6 +881,13 @@
   </div>
 
   <div class="f-row">
+    <label>유저에게 쪽지 (그 사람 ✉ 문의 창에 도착해요)</label>
+    <input type="text" id="ops-dm-handle" placeholder="받는 사람 핸들 (@ 없이)" style="margin-bottom:6px;">
+    <textarea id="ops-dm-body" style="min-height:90px;" placeholder="쪽지 내용 — 다음 접속 때 '답변 도착' 알림으로 안내돼요"></textarea>
+    <div style="margin-top:6px;"><button class="mini-btn" id="ops-dm-send">쪽지 보내기</button></div>
+  </div>
+
+  <div class="f-row">
     <label>문의함 <button class="mini-btn" id="ops-noti-reset" style="margin-left:6px;">🔔 알림 초기화</button></label>
     <div id="inqbox-list"><p style="color:var(--mute);font-size:12px;">불러오는 중…</p></div>
   </div>
@@ -1403,6 +1410,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=92"></script>
+<script type="module" src="app.js?v=93"></script>
 </body>
 </html>

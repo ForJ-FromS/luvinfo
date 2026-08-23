@@ -36,7 +36,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v92 로드');
+console.log('[LUVINFO] app.js v93 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1183,6 +1183,32 @@ async function sendInq() {
     toast('전송 실패 — 규칙이 아직 없을 수 있어요 (운영자에게 알려주세요)');
   }
 }
+async function sendOpsDm() {
+  const h = gid('ops-dm-handle').value.trim().replace(/^@/, '').toLowerCase();
+  const body = gid('ops-dm-body').value.trim();
+  if (!h || !body) { toast('핸들과 내용을 적어주세요'); return; }
+  try {
+    const qs = await getDocs(query(collection(db, 'tusers'), where('handle', '==', h)));
+    let target = null;
+    qs.forEach((s) => { target = { uid: s.id, ...s.data() }; });
+    if (!target) { toast('@' + h + ' 을(를) 못 찾았어요 — 핸들을 확인해 주세요'); return; }
+    const now = Date.now();
+    await setDoc(doc(db, 'tinquiries', uid()), {
+      uid: target.uid,
+      handle: h,
+      email: '',
+      body: '📮 운영자가 보낸 쪽지예요',
+      reply: body,
+      fromOps: 1,
+      ts: now,
+      repliedAt: now,
+      date: new Date().toISOString().slice(0, 10)
+    });
+    gid('ops-dm-body').value = '';
+    toast('📮 @' + h + ' 에게 쪽지를 보냈어요 — 다음 접속 때 알림이 떠요');
+  } catch (e) { toast('쪽지 보내기 실패: ' + (e.message || e)); }
+}
+
 async function checkOpsNoti() {
   // jeste: 마지막 확인 이후 새 문의 → ⚙ 배지
   try {
@@ -1223,8 +1249,8 @@ async function renderInqBox() {
     rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
     if (!rows.length) { box.innerHTML = '<p style="color:var(--mute);font-size:12px;">아직 문의가 없어요.</p>'; return; }
     box.innerHTML = rows.map((r) =>
-      '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;">' +
-      '<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">' + esc(r.date || '') + ' · @' + esc(r.handle || '?') + (r.email ? ' · ' + esc(r.email) : '') + (r.reply ? ' · ✓ 답변함' : '') +
+      '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;' + (r.fromOps ? 'opacity:.75;' : '') + '">' +
+      '<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">' + esc(r.date || '') + ' · @' + esc(r.handle || '?') + (r.email ? ' · ' + esc(r.email) : '') + (r.fromOps ? ' · 📮 보낸 쪽지' : (r.reply ? ' · ✓ 답변함' : '')) +
       ' <i data-inqdel="' + esc(r.id) + '" style="float:right;cursor:pointer;font-style:normal;color:var(--mute);">🗑</i></div>' +
       '<div style="font-size:12.5px;white-space:pre-wrap;word-break:break-word;">' + esc(r.body || '') + '</div>' +
       '<textarea data-inqre="' + esc(r.id) + '" style="min-height:150px;margin-top:8px;width:100%;box-sizing:border-box;font-size:13px;line-height:1.8;resize:vertical;" placeholder="답변 쓰기 — 문의한 사람이 ✉ 문의 창에서 보게 돼요">' + esc(r.reply || '') + '</textarea>' +
@@ -1345,6 +1371,7 @@ function bindShell() {
   };
   if (gid('ops-notice-del')) gid('ops-notice-del').onclick = async () => {
     if (!confirm('공지를 내릴까요?')) return;
+  if (gid('ops-dm-send')) gid('ops-dm-send').onclick = sendOpsDm;
     try { await setDoc(doc(db, 'config', 'tnotice'), { text: '', id: 0 }); gid('ops-notice').value = ''; toast('공지 내렸어요'); }
     catch (e) { toast('실패'); }
   };
