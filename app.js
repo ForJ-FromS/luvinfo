@@ -23,6 +23,11 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const uid = () => Math.random().toString(36).slice(2, 9);
+const sha256 = async (s) => {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(b)).map((x) => x.toString(16).padStart(2, '0')).join('');
+};
+const isHash = (s) => /^[0-9a-f]{64}$/i.test(s || '');
 
 const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 
@@ -36,7 +41,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v95 로드');
+console.log('[LUVINFO] app.js v97 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -247,9 +252,13 @@ function showGate(g, preview) {
   $('#gate-enter').textContent = preview ? '✕ 미리보기 닫기' : (g.btn || '입장');
   $('#gate-msg').textContent = g.msg || 'WELCOME';
   $('#gate-pw').style.display = g.pw && !preview ? 'block' : 'none';
-  const enter = () => {
+  const enter = async () => {
     if (preview) { closeGatePv(el, gid('gate-pvbar')); return; }
-    if (g.pw && $('#gate-pw').value !== g.pw) { toast('비밀번호가 달라요'); return; }
+    if (g.pw) {
+      const inp = $('#gate-pw').value;
+      const ok = isHash(g.pw) ? (await sha256(inp)) === g.pw.toLowerCase() : inp === g.pw;
+      if (!ok) { toast('비밀번호가 달라요'); return; }
+    }
     sessionStorage.setItem('sh_gate_' + st.handle, '1');
     el.classList.remove('show');
     showSite();
@@ -275,8 +284,6 @@ async function login() {
     const ud = await getDoc(doc(db, 'tusers', r.user.uid));
     if (!ud.exists()) { openClaim(r.user); return; }
     if (!ud.data().email) {
-      try { await setDoc(doc(db, 'tusers', r.user.uid), { email: r.user.email || '' }, { merge: true }); }
-      catch (e) { console.log('[LUVINFO] email backfill err', e); }
     }
     location.href = homeUrl(ud.data().handle);
   } catch (e) {
@@ -365,7 +372,6 @@ function openClaim(user) {
       await setDoc(doc(db, 'tsites', h), defaultSite(user.uid, h));
       await setDoc(doc(db, 'tusers', user.uid), {
         handle: h,
-        email: user.email || '',
         ref: claimRef || '',
         joined: new Date().toISOString().slice(0, 10),
         ts: Date.now()
@@ -1280,7 +1286,68 @@ async function renderInqBox() {
   }
 }
 
+async function gbLoad() {
+  const box = gid('gb-list');
+  box.innerHTML = '<div style="font-size:12px;color:var(--dim);">불러오는 중…</div>';
+  try {
+    const qs = await getDocs(collection(db, 'tsites', st.handle, 'tguest'));
+    const rows = [];
+    qs.forEach((s) => rows.push({ id: s.id, ...s.data() }));
+    rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    box.innerHTML = rows.length ? rows.map((r) =>
+      '<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;">' +
+      '<div style="font-size:11px;color:var(--dim);margin-bottom:4px;display:flex;justify-content:space-between;"><span>' + esc(r.nick || '?') + ' · ' + new Date(r.ts || 0).toLocaleDateString('ko-KR') + '</span>' +
+      ((st.mine || (st.user && r.uid === st.user.uid)) ? '<a href="#" data-gbdel="' + esc(r.id) + '" style="color:var(--dim);">🗑</a>' : '') + '</div>' +
+      '<div style="font-size:13px;white-space:pre-wrap;word-break:break-word;line-height:1.7;">' + esc(r.msg || '') + '</div></div>'
+    ).join('') : '<div style="font-size:12px;color:var(--dim);">아직 아무도 안 다녀갔어요 — 첫 발자국을 남겨보세요!</div>';
+    box.querySelectorAll('[data-gbdel]').forEach((a) => {
+      a.onclick = async (e) => {
+        e.preventDefault();
+        if (!confirm('이 방명록 글을 지울까요?')) return;
+        try { await deleteDoc(doc(db, 'tsites', st.handle, 'tguest', a.dataset.gbdel)); gbLoad(); }
+        catch (err) { toast('삭제 실패: ' + (err.message || err)); }
+      };
+    });
+  } catch (e) { box.innerHTML = '<div style="font-size:12px;color:var(--dim);">불러오기 실패 — 잠시 후 다시 열어주세요</div>'; }
+}
+
+function gbOpen() {
+  gid('gb-bg').classList.add('on');
+  gid('gb').classList.add('on');
+  const authed = !!st.user;
+  gid('gb-form').style.display = authed ? '' : 'none';
+  gid('gb-need-login').style.display = authed ? 'none' : '';
+  gid('gb-send').style.display = authed ? '' : 'none';
+  if (authed) gid('gb-nick').value = localStorage.getItem('li_gb_nick') || '';
+  gbLoad();
+}
+function gbClose() {
+  gid('gb-bg').classList.remove('on');
+  gid('gb').classList.remove('on');
+}
+
+async function gbSend() {
+  if (!st.user) { toast('방명록은 로그인 후 남길 수 있어요'); return; }
+  const nick = gid('gb-nick').value.trim();
+  const msg = gid('gb-msg').value.trim();
+  if (!nick || !msg) { toast('닉네임과 내용을 적어주세요'); return; }
+  try {
+    await setDoc(doc(db, 'tsites', st.handle, 'tguest', uid() + uid()), { nick: nick.slice(0, 20), msg: msg.slice(0, 500), ts: Date.now(), uid: st.user.uid });
+    localStorage.setItem('li_gb_nick', nick);
+    gid('gb-msg').value = '';
+    toast('📖 방명록에 남겼어요!');
+    gbLoad();
+  } catch (e) { toast('남기기 실패: ' + (e.message || e)); }
+}
+
 function renderFoot() {
+  if (gid('foot-gbopen') && !gid('foot-gbopen')._b) {
+    gid('foot-gbopen')._b = 1;
+    gid('foot-gbopen').onclick = (e) => { e.preventDefault(); gbOpen(); };
+    gid('gb-close').onclick = gbClose;
+    gid('gb-bg').onclick = gbClose;
+    gid('gb-send').onclick = gbSend;
+  }
   $('#hcount').textContent = st.site.heart || 0;
   const liked = localStorage.getItem('sh_like_' + st.handle) === '1';
   $('#heart').classList.toggle('liked', liked);
@@ -1303,12 +1370,14 @@ function renderFoot() {
   showEl('heart', f.heart !== false);
   const cp = document.querySelector('.copy-btn'); if (cp) cp.style.display = f.copy === false ? 'none' : '';
   // 링크 줄: 보이는 항목 사이에만 구분점 (꼬리·머리 구분점 금지)
-  const hasLv = !!lv, hasGuide = f.guide !== false, hasInq = f.inq !== false;
+  const hasLv = !!lv, hasGb = !!st.site.gb, hasGuide = f.guide !== false, hasInq = f.inq !== false;
   showEl('foot-guide', hasGuide);
   showEl('foot-inq', hasInq);
-  showEl('foot-lvdot', hasLv && (hasGuide || hasInq));
+  showEl('foot-gb', hasGb);
+  showEl('foot-lvdot', hasLv && (hasGb || hasGuide || hasInq));
+  showEl('foot-gbdot', hasGb && (hasGuide || hasInq));
   showEl('foot-gdot', hasGuide && hasInq);
-  showEl('foot-links', hasLv || hasGuide || hasInq);
+  showEl('foot-links', hasLv || hasGb || hasGuide || hasInq);
   // 시스템 줄: 날짜 끄면 가운뎃점도 함께
   showEl('upd-date', f.date !== false);
   showEl('foot-sysdot', f.date !== false);
@@ -2024,10 +2093,12 @@ function openDeco() {
   if (gid('dc-hdrule')) gid('dc-hdrule').onchange = () => {
     st.site.head = st.site.head || {};
     st.site.head.rule = gid('dc-hdrule').checked;
+    st.site.gb = gid('dc-gb') ? gid('dc-gb').checked : false;
     setDirty(); applyTheme();
   };
   if (gid('dc-hh')) { gid('dc-hh').value = parseInt(hd.h) || 200; gid('dc-hhv').textContent = (parseInt(hd.h) || 200) + 'px'; }
   if (gid('dc-hdrule')) gid('dc-hdrule').checked = (st.site.head || {}).rule !== false;
+  if (gid('dc-gb')) gid('dc-gb').checked = !!st.site.gb;
   if (gid('dc-hy')) gid('dc-hy').value = parseInt(hd.py ?? 50);
   if (gid('dc-hz')) { gid('dc-hz').value = Math.max(100, parseInt(hd.sc) || 100); if (gid('dc-hzv')) gid('dc-hzv').textContent = (Math.max(100, parseInt(hd.sc) || 100)) + '%'; }
   $('#dc-head').value = hd.mode || 'text';
@@ -2038,7 +2109,8 @@ function openDeco() {
   $('#dc-gate').value = g.on ? 'on' : 'off';
   $('#dc-gate-opts').style.display = g.on ? 'block' : 'none';
   $('#dc-gate-msg').value = g.msg || '';
-  $('#dc-gate-pw').value = g.pw || '';
+  $('#dc-gate-pw').value = isHash(g.pw) ? '' : (g.pw || '');
+  $('#dc-gate-pw').placeholder = isHash(g.pw) ? '비밀번호 설정됨 — 바꾸려면 입력, 없애려면 한 글자 쓰고 지우기' : '비밀번호 (비우면 버튼만)';
   $('#dc-gate-style').value = g.style === 'full' ? 'full' : 'card';
   $('#dc-gate-over').value = g.over || '';
   $('#dc-gate-btn').value = g.btn || '';
@@ -2228,7 +2300,6 @@ function bindDeco() {
       if (gImg) st.site.gate.img = String(gImg);
       if (gMsg) st.site.gate.msg = String(gMsg);
       // 비밀번호는 가져오지 않음 — 러브로그는 암호화 저장이라 형식이 달라요
-      if (st.site.gate.pw && /^[0-9a-f]{64}$/i.test(st.site.gate.pw)) st.site.gate.pw = ''; // 이전 가져오기로 들어온 해시 청소
       got.push('대문 이미지·문구 (비밀번호는 러브인포에서 새로 설정해 주세요)');
     }
     if (!got.length) { toast('가져올 수 있는 설정을 못 찾았어요 — 러브로그 홈 구조가 예상과 달라요'); return; }
@@ -2374,6 +2445,7 @@ async function saveSite() {
   if (!st.mine) return;
   delete st.site._migrated;
   st.site.updated = Date.now();
+  if (st.site.gate && st.site.gate.pw && !isHash(st.site.gate.pw)) st.site.gate.pw = await sha256(st.site.gate.pw);
   try { await offloadBigHtml(); }
   catch (e) {
     console.log('[LUVINFO] offload err', e);
