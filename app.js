@@ -41,7 +41,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v104 로드');
+console.log('[LUVINFO] app.js v105 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -236,6 +236,7 @@ function showGate(g, preview) {
   el.dataset.grad = g.grad === false ? 'off' : 'on';
   if (g.btnc) el.style.setProperty('--gbc', g.btnc); else el.style.removeProperty('--gbc');
   if (g.btnt) el.style.setProperty('--gbt', g.btnt); else el.style.removeProperty('--gbt');
+  if (g.pwc) el.style.setProperty('--gpwc', g.pwc); else el.style.removeProperty('--gpwc');
   const bgOf = (z, x, y) => z == null || z === '' ? null : [z + '% auto', (x ?? 50) + '% ' + (y ?? 50) + '%'];
   const setBg = (sk, pk, pair) => {
     if (pair) { el.style.setProperty(sk, pair[0]); el.style.setProperty(pk, pair[1]); }
@@ -2153,6 +2154,7 @@ function openDeco() {
   $('#dc-gate-btn').value = g.btn || '';
   $('#dc-gate-btnc').value = g.btnc || '#C9A96E';
   $('#dc-gate-btnt').value = g.btnt || '#111111';
+  $('#dc-gate-pwc').value = g.pwc || '#EAEAEA';
   $('#dc-gate-grad').checked = g.grad !== false;
   $('#dc-css').value = t.css || '';
   $('#deco-bg').classList.add('on');
@@ -2403,7 +2405,8 @@ function bindDeco() {
   // 모바일 일부 브라우저는 색 확정 시 change만 발화 — 양쪽 다 바인딩 (v71)
   $('#dc-gate-btnc').oninput = $('#dc-gate-btnc').onchange = (e) => gset('btnc', e.target.value);
   $('#dc-gate-btnt').oninput = $('#dc-gate-btnt').onchange = (e) => gset('btnt', e.target.value);
-  $('#dc-gate-cx').onclick = () => { gset('btnc', ''); st.site.gate.btnt = ''; $('#dc-gate-btnc').value = '#C9A96E'; $('#dc-gate-btnt').value = '#111111'; toast('버튼 기본색으로'); };
+  $('#dc-gate-pwc').oninput = $('#dc-gate-pwc').onchange = (e) => gset('pwc', e.target.value);
+  $('#dc-gate-cx').onclick = () => { gset('btnc', ''); st.site.gate.btnt = ''; st.site.gate.pwc = ''; $('#dc-gate-btnc').value = '#C9A96E'; $('#dc-gate-btnt').value = '#111111'; $('#dc-gate-pwc').value = '#EAEAEA'; toast('버튼·입력칸 기본색으로'); };
   $('#dc-gate-grad').onchange = (e) => gset('grad', e.target.checked);
   $('#dc-gate-pv').onclick = () => { closeDeco(); showGate(st.site.gate || {}, true); };
   const gateAdj = (pre) => {
