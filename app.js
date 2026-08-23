@@ -41,7 +41,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v103 로드');
+console.log('[LUVINFO] app.js v104 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -809,7 +809,7 @@ function buildGbBlock() {
           : '<p class="gb-lock">🔒 주인에게만 남긴 비공개 방명록이에요.</p>';
       } else bodyHtml = '<p>' + esc(g.text) + '</p>';
       const re = g.reply && (!g.secret || mineOrAuthor)
-        ? '<p class="gb-re">↳ <b>' + esc(st.site.title || st.handle) + '</b> ' + esc(g.reply) + '</p>' : '';
+        ? '<p class="gb-re">↳ <b>' + esc((st.site.head && st.site.head.title) || st.handle) + '</b> ' + esc(g.reply) + '</p>' : '';
       const rebtn = st.mine ? '<i class="gb-rebtn" data-gbr="' + esc(g.id) + '">' + (g.reply ? '답글 수정' : '답글') + '</i>' : '';
       return '<li class="gb-item"><p class="who"><span>' + who + del + '</span><span class="dt">' + new Date(g.ts || 0).toLocaleDateString('ko-KR') + '</span></p>' + bodyHtml + re + rebtn + '<span class="gb-ref" data-gbf="' + esc(g.id) + '"></span></li>';
     }).join('') : '<p class="gb-empty">아직 방명록이 비어 있어요 — 첫 흔적을 남겨주세요.</p>';
