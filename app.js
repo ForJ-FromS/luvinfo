@@ -41,7 +41,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v98 로드');
+console.log('[LUVINFO] app.js v101 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -789,55 +789,101 @@ function buildProfile(p) {
 function buildGbBlock() {
   const w = document.createElement('div');
   w.className = 'gbblk';
-  const authed = !!st.user;
-  w.innerHTML =
-    '<div class="gb-list" style="max-height:320px;overflow-y:auto;"></div>' +
-    (authed
-      ? '<div class="gb-form" style="margin-top:10px;">' +
-        '<input type="text" class="gb-nick" maxlength="20" placeholder="닉네임 (20자)" style="margin-bottom:6px;width:100%;box-sizing:border-box;">' +
-        '<textarea class="gb-msg" maxlength="500" placeholder="따뜻한 말 한마디 (500자)" style="min-height:64px;width:100%;box-sizing:border-box;"></textarea>' +
-        '<div style="display:flex;justify-content:flex-end;margin-top:6px;"><button class="mini-btn gb-send">✍ 남기기</button></div></div>'
-      : '<div style="font-size:12px;color:var(--dim);margin-top:10px;">✍ luvinfo.me에서 로그인하면 글을 남길 수 있어요. 구경은 자유!</div>');
+  w.innerHTML = '<ul class="gb-list" style="padding:0;margin:0;max-height:360px;overflow-y:auto;"></ul><div class="gb-foot" style="margin-top:10px;"></div>';
   const list = w.querySelector('.gb-list');
-  const load = async () => {
-    list.innerHTML = '<div style="font-size:12px;color:var(--dim);">불러오는 중…</div>';
-    try {
-      const qs = await getDocs(collection(db, 'tsites', st.handle, 'tguest'));
-      const rows = [];
-      qs.forEach((s) => rows.push({ id: s.id, ...s.data() }));
-      rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
-      list.innerHTML = rows.length ? rows.map((r) =>
-        '<div style="border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:7px;">' +
-        '<div style="font-size:11px;color:var(--dim);margin-bottom:3px;display:flex;justify-content:space-between;"><span>' + esc(r.nick || '?') + ' · ' + new Date(r.ts || 0).toLocaleDateString('ko-KR') + '</span>' +
-        ((st.mine || (st.user && r.uid === st.user.uid)) ? '<a href="#" data-gbdel="' + esc(r.id) + '" style="color:var(--dim);text-decoration:none;">🗑</a>' : '') + '</div>' +
-        '<div style="font-size:13px;white-space:pre-wrap;word-break:break-word;line-height:1.7;">' + esc(r.msg || '') + '</div></div>'
-      ).join('') : '<div style="font-size:12px;color:var(--dim);">아직 아무도 안 다녀갔어요 — 첫 발자국을 남겨보세요!</div>';
-      list.querySelectorAll('[data-gbdel]').forEach((a) => {
-        a.onclick = async (e) => {
-          e.preventDefault();
-          if (!confirm('이 방명록 글을 지울까요?')) return;
-          try { await deleteDoc(doc(db, 'tsites', st.handle, 'tguest', a.dataset.gbdel)); load(); }
-          catch (err) { toast('삭제 실패: ' + (err.message || err)); }
+  const foot = w.querySelector('.gb-foot');
+  const myUid = st.user ? st.user.uid : null;
+  let rows = [];
+
+  const render = () => {
+    list.innerHTML = rows.length ? rows.map((g) => {
+      const mineOrAuthor = st.mine || (myUid && g.uid === myUid);
+      const who = g.home
+        ? '<a href="/' + esc(g.home) + '">@' + esc(g.home) + '</a>'
+        : '@' + esc(g.name || 'guest');
+      const del = mineOrAuthor ? '<i class="del" data-gbd="' + esc(g.id) + '">삭제</i>' : '';
+      let bodyHtml;
+      if (g.secret) {
+        bodyHtml = mineOrAuthor
+          ? '<p>' + esc(g.text) + (st.mine ? '<span class="gb-badge">🔒 비공개</span>' : '<span class="gb-badge">🔒 내 글</span>') + '</p>'
+          : '<p class="gb-lock">🔒 주인에게만 남긴 비공개 방명록이에요.</p>';
+      } else bodyHtml = '<p>' + esc(g.text) + '</p>';
+      const re = g.reply && (!g.secret || mineOrAuthor)
+        ? '<p class="gb-re">↳ <b>' + esc(st.site.title || st.handle) + '</b> ' + esc(g.reply) + '</p>' : '';
+      const rebtn = st.mine ? '<i class="gb-rebtn" data-gbr="' + esc(g.id) + '">' + (g.reply ? '답글 수정' : '답글') + '</i>' : '';
+      return '<li class="gb-item"><p class="who"><span>' + who + del + '</span><span class="dt">' + new Date(g.ts || 0).toLocaleDateString('ko-KR') + '</span></p>' + bodyHtml + re + rebtn + '<span class="gb-ref" data-gbf="' + esc(g.id) + '"></span></li>';
+    }).join('') : '<p class="gb-empty">아직 방명록이 비어 있어요 — 첫 흔적을 남겨주세요.</p>';
+
+    list.querySelectorAll('[data-gbd]').forEach((b) => {
+      b.onclick = async () => {
+        if (!confirm('이 방명록 글을 지울까요?')) return;
+        try { await deleteDoc(doc(db, 'tsites', st.handle, 'tguest', b.dataset.gbd)); rows = rows.filter((x) => x.id !== b.dataset.gbd); render(); }
+        catch (err) { toast('삭제 실패: ' + (err.message || err)); }
+      };
+    });
+    list.querySelectorAll('[data-gbr]').forEach((b) => {
+      b.onclick = () => {
+        const id = b.dataset.gbr, g = rows.find((x) => x.id === id); if (!g) return;
+        const slot = list.querySelector('[data-gbf="' + id + '"]');
+        if (slot.innerHTML) { slot.innerHTML = ''; return; }
+        slot.innerHTML = '<textarea class="gb-ret" maxlength="300" placeholder="답글 (비우고 저장하면 답글 삭제)" style="margin-top:6px;min-height:44px;"></textarea>' +
+          '<div style="display:flex;justify-content:flex-end;gap:6px;margin-top:5px;"><button class="mini-btn gb-resave">저장</button></div>';
+        slot.querySelector('.gb-ret').value = g.reply || '';
+        slot.querySelector('.gb-resave').onclick = async () => {
+          const t = slot.querySelector('.gb-ret').value.trim();
+          try {
+            await updateDoc(doc(db, 'tsites', st.handle, 'tguest', id), { reply: t });
+            g.reply = t; render(); toast(t ? '↳ 답글을 남겼어요' : '답글을 지웠어요');
+          } catch (err) { toast('답글 실패: ' + (err.message || err)); }
         };
-      });
-    } catch (e) { list.innerHTML = '<div style="font-size:12px;color:var(--dim);">불러오기 실패 — 새로고침 후 다시 봐주세요</div>'; }
+      };
+    });
   };
-  if (authed) {
-    w.querySelector('.gb-nick').value = localStorage.getItem('li_gb_nick') || '';
-    w.querySelector('.gb-send').onclick = async () => {
-      const nick = w.querySelector('.gb-nick').value.trim();
-      const msg = w.querySelector('.gb-msg').value.trim();
-      if (!nick || !msg) { toast('닉네임과 내용을 적어주세요'); return; }
+
+  const buildForm = async () => {
+    if (!st.user) {
+      foot.innerHTML = '<div class="gb-empty">✍ 방명록은 러브인포 멤버만 남길 수 있어요. luvinfo.me에서 로그인해 주세요.</div>';
+      return;
+    }
+    let myH = st.mine ? st.handle : st._myH;
+    if (myH === undefined) {
+      try { const s = await getDoc(doc(db, 'tusers', st.user.uid)); myH = st._myH = s.exists() ? (s.data().handle || '') : ''; }
+      catch (e) { myH = st._myH = ''; }
+    }
+    if (!myH) {
+      foot.innerHTML = '<div class="gb-empty">✍ 방명록은 러브인포 멤버만 남길 수 있어요.</div>';
+      return;
+    }
+    foot.innerHTML = '<textarea class="gb-msg" maxlength="500" placeholder="따뜻한 말 한마디 — @' + esc(myH) + ' 이름으로 남아요 (500자)"></textarea>' +
+      '<label class="gb-sec"><input type="checkbox" class="gb-secret"> 🔒 주인에게만 보이기</label>' +
+      '<div style="display:flex;justify-content:flex-end;margin-top:7px;"><button class="mini-btn gb-send">✍ 남기기</button></div>';
+    foot.querySelector('.gb-send').onclick = async () => {
+      const text = foot.querySelector('.gb-msg').value.trim();
+      if (!text) { toast('내용을 적어주세요'); return; }
+      const secret = foot.querySelector('.gb-secret').checked;
+      const id = uid() + uid();
+      const rec = { home: myH, text: text.slice(0, 500), secret, reply: '', uid: st.user.uid, ts: Date.now() };
       try {
-        await setDoc(doc(db, 'tsites', st.handle, 'tguest', uid() + uid()), { nick: nick.slice(0, 20), msg: msg.slice(0, 500), ts: Date.now(), uid: st.user.uid });
-        localStorage.setItem('li_gb_nick', nick);
-        w.querySelector('.gb-msg').value = '';
-        toast('📖 방명록에 남겼어요!');
-        load();
+        await setDoc(doc(db, 'tsites', st.handle, 'tguest', id), rec);
+        rows.unshift({ id, ...rec });
+        foot.querySelector('.gb-msg').value = '';
+        foot.querySelector('.gb-secret').checked = false;
+        toast(secret ? '🔒 비공개로 남겼어요' : '📖 방명록에 남겼어요!');
+        render();
       } catch (e) { toast('남기기 실패: ' + (e.message || e)); }
     };
-  }
-  load();
+  };
+
+  (async () => {
+    list.innerHTML = '<p class="gb-empty">불러오는 중…</p>';
+    try {
+      const qs = await getDocs(collection(db, 'tsites', st.handle, 'tguest'));
+      qs.forEach((s) => rows.push({ id: s.id, ...s.data() }));
+      rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    } catch (e) { /* 목록 실패해도 폼은 시도 */ }
+    render();
+    buildForm();
+  })();
   return w;
 }
 
