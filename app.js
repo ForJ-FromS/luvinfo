@@ -41,7 +41,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v97 로드');
+console.log('[LUVINFO] app.js v98 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -717,6 +717,7 @@ function renderBlocks(ch, bodyEl) {
     else if (blk.kind === 'quo' && d.text) div.appendChild(buildQuote(d));
     else if (blk.kind === 'dd' && d.date) div.appendChild(buildDday(d));
     else if (blk.kind === 'htm' && d.body) div.appendChild(buildHtmBlock(blk));
+    else if (blk.kind === 'gb') div.appendChild(buildGbBlock());
     else return;
     host.appendChild(div);
   });
@@ -783,6 +784,61 @@ function buildProfile(p) {
     (p.ds ? '<div class="pf-ds">' + esc(p.ds).replace(/\n/g, '<br>') + '</div>' : '') +
     '</div>';
   return d;
+}
+
+function buildGbBlock() {
+  const w = document.createElement('div');
+  w.className = 'gbblk';
+  const authed = !!st.user;
+  w.innerHTML =
+    '<div class="gb-list" style="max-height:320px;overflow-y:auto;"></div>' +
+    (authed
+      ? '<div class="gb-form" style="margin-top:10px;">' +
+        '<input type="text" class="gb-nick" maxlength="20" placeholder="닉네임 (20자)" style="margin-bottom:6px;width:100%;box-sizing:border-box;">' +
+        '<textarea class="gb-msg" maxlength="500" placeholder="따뜻한 말 한마디 (500자)" style="min-height:64px;width:100%;box-sizing:border-box;"></textarea>' +
+        '<div style="display:flex;justify-content:flex-end;margin-top:6px;"><button class="mini-btn gb-send">✍ 남기기</button></div></div>'
+      : '<div style="font-size:12px;color:var(--dim);margin-top:10px;">✍ luvinfo.me에서 로그인하면 글을 남길 수 있어요. 구경은 자유!</div>');
+  const list = w.querySelector('.gb-list');
+  const load = async () => {
+    list.innerHTML = '<div style="font-size:12px;color:var(--dim);">불러오는 중…</div>';
+    try {
+      const qs = await getDocs(collection(db, 'tsites', st.handle, 'tguest'));
+      const rows = [];
+      qs.forEach((s) => rows.push({ id: s.id, ...s.data() }));
+      rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      list.innerHTML = rows.length ? rows.map((r) =>
+        '<div style="border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:7px;">' +
+        '<div style="font-size:11px;color:var(--dim);margin-bottom:3px;display:flex;justify-content:space-between;"><span>' + esc(r.nick || '?') + ' · ' + new Date(r.ts || 0).toLocaleDateString('ko-KR') + '</span>' +
+        ((st.mine || (st.user && r.uid === st.user.uid)) ? '<a href="#" data-gbdel="' + esc(r.id) + '" style="color:var(--dim);text-decoration:none;">🗑</a>' : '') + '</div>' +
+        '<div style="font-size:13px;white-space:pre-wrap;word-break:break-word;line-height:1.7;">' + esc(r.msg || '') + '</div></div>'
+      ).join('') : '<div style="font-size:12px;color:var(--dim);">아직 아무도 안 다녀갔어요 — 첫 발자국을 남겨보세요!</div>';
+      list.querySelectorAll('[data-gbdel]').forEach((a) => {
+        a.onclick = async (e) => {
+          e.preventDefault();
+          if (!confirm('이 방명록 글을 지울까요?')) return;
+          try { await deleteDoc(doc(db, 'tsites', st.handle, 'tguest', a.dataset.gbdel)); load(); }
+          catch (err) { toast('삭제 실패: ' + (err.message || err)); }
+        };
+      });
+    } catch (e) { list.innerHTML = '<div style="font-size:12px;color:var(--dim);">불러오기 실패 — 새로고침 후 다시 봐주세요</div>'; }
+  };
+  if (authed) {
+    w.querySelector('.gb-nick').value = localStorage.getItem('li_gb_nick') || '';
+    w.querySelector('.gb-send').onclick = async () => {
+      const nick = w.querySelector('.gb-nick').value.trim();
+      const msg = w.querySelector('.gb-msg').value.trim();
+      if (!nick || !msg) { toast('닉네임과 내용을 적어주세요'); return; }
+      try {
+        await setDoc(doc(db, 'tsites', st.handle, 'tguest', uid() + uid()), { nick: nick.slice(0, 20), msg: msg.slice(0, 500), ts: Date.now(), uid: st.user.uid });
+        localStorage.setItem('li_gb_nick', nick);
+        w.querySelector('.gb-msg').value = '';
+        toast('📖 방명록에 남겼어요!');
+        load();
+      } catch (e) { toast('남기기 실패: ' + (e.message || e)); }
+    };
+  }
+  load();
+  return w;
 }
 
 function buildHtmBlock(blk) {
@@ -1286,68 +1342,7 @@ async function renderInqBox() {
   }
 }
 
-async function gbLoad() {
-  const box = gid('gb-list');
-  box.innerHTML = '<div style="font-size:12px;color:var(--dim);">불러오는 중…</div>';
-  try {
-    const qs = await getDocs(collection(db, 'tsites', st.handle, 'tguest'));
-    const rows = [];
-    qs.forEach((s) => rows.push({ id: s.id, ...s.data() }));
-    rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
-    box.innerHTML = rows.length ? rows.map((r) =>
-      '<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;">' +
-      '<div style="font-size:11px;color:var(--dim);margin-bottom:4px;display:flex;justify-content:space-between;"><span>' + esc(r.nick || '?') + ' · ' + new Date(r.ts || 0).toLocaleDateString('ko-KR') + '</span>' +
-      ((st.mine || (st.user && r.uid === st.user.uid)) ? '<a href="#" data-gbdel="' + esc(r.id) + '" style="color:var(--dim);">🗑</a>' : '') + '</div>' +
-      '<div style="font-size:13px;white-space:pre-wrap;word-break:break-word;line-height:1.7;">' + esc(r.msg || '') + '</div></div>'
-    ).join('') : '<div style="font-size:12px;color:var(--dim);">아직 아무도 안 다녀갔어요 — 첫 발자국을 남겨보세요!</div>';
-    box.querySelectorAll('[data-gbdel]').forEach((a) => {
-      a.onclick = async (e) => {
-        e.preventDefault();
-        if (!confirm('이 방명록 글을 지울까요?')) return;
-        try { await deleteDoc(doc(db, 'tsites', st.handle, 'tguest', a.dataset.gbdel)); gbLoad(); }
-        catch (err) { toast('삭제 실패: ' + (err.message || err)); }
-      };
-    });
-  } catch (e) { box.innerHTML = '<div style="font-size:12px;color:var(--dim);">불러오기 실패 — 잠시 후 다시 열어주세요</div>'; }
-}
-
-function gbOpen() {
-  gid('gb-bg').classList.add('on');
-  gid('gb').classList.add('on');
-  const authed = !!st.user;
-  gid('gb-form').style.display = authed ? '' : 'none';
-  gid('gb-need-login').style.display = authed ? 'none' : '';
-  gid('gb-send').style.display = authed ? '' : 'none';
-  if (authed) gid('gb-nick').value = localStorage.getItem('li_gb_nick') || '';
-  gbLoad();
-}
-function gbClose() {
-  gid('gb-bg').classList.remove('on');
-  gid('gb').classList.remove('on');
-}
-
-async function gbSend() {
-  if (!st.user) { toast('방명록은 로그인 후 남길 수 있어요'); return; }
-  const nick = gid('gb-nick').value.trim();
-  const msg = gid('gb-msg').value.trim();
-  if (!nick || !msg) { toast('닉네임과 내용을 적어주세요'); return; }
-  try {
-    await setDoc(doc(db, 'tsites', st.handle, 'tguest', uid() + uid()), { nick: nick.slice(0, 20), msg: msg.slice(0, 500), ts: Date.now(), uid: st.user.uid });
-    localStorage.setItem('li_gb_nick', nick);
-    gid('gb-msg').value = '';
-    toast('📖 방명록에 남겼어요!');
-    gbLoad();
-  } catch (e) { toast('남기기 실패: ' + (e.message || e)); }
-}
-
 function renderFoot() {
-  if (gid('foot-gbopen') && !gid('foot-gbopen')._b) {
-    gid('foot-gbopen')._b = 1;
-    gid('foot-gbopen').onclick = (e) => { e.preventDefault(); gbOpen(); };
-    gid('gb-close').onclick = gbClose;
-    gid('gb-bg').onclick = gbClose;
-    gid('gb-send').onclick = gbSend;
-  }
   $('#hcount').textContent = st.site.heart || 0;
   const liked = localStorage.getItem('sh_like_' + st.handle) === '1';
   $('#heart').classList.toggle('liked', liked);
@@ -1370,14 +1365,12 @@ function renderFoot() {
   showEl('heart', f.heart !== false);
   const cp = document.querySelector('.copy-btn'); if (cp) cp.style.display = f.copy === false ? 'none' : '';
   // 링크 줄: 보이는 항목 사이에만 구분점 (꼬리·머리 구분점 금지)
-  const hasLv = !!lv, hasGb = !!st.site.gb, hasGuide = f.guide !== false, hasInq = f.inq !== false;
+  const hasLv = !!lv, hasGuide = f.guide !== false, hasInq = f.inq !== false;
   showEl('foot-guide', hasGuide);
   showEl('foot-inq', hasInq);
-  showEl('foot-gb', hasGb);
-  showEl('foot-lvdot', hasLv && (hasGb || hasGuide || hasInq));
-  showEl('foot-gbdot', hasGb && (hasGuide || hasInq));
+  showEl('foot-lvdot', hasLv && (hasGuide || hasInq));
   showEl('foot-gdot', hasGuide && hasInq);
-  showEl('foot-links', hasLv || hasGb || hasGuide || hasInq);
+  showEl('foot-links', hasLv || hasGuide || hasInq);
   // 시스템 줄: 날짜 끄면 가운뎃점도 함께
   showEl('upd-date', f.date !== false);
   showEl('foot-sysdot', f.date !== false);
@@ -1519,7 +1512,7 @@ let work = null;
 let isNewCh = false;
 let editingBlk = null;
 
-const KIND_LABEL = { txt: '글', pf: '프로필', gal: '갤러리', mu: '음악', stk: '스티커', bn: '배너', lnk: '링크', quo: '인용구', dd: '디데이', htm: 'HTML' };
+const KIND_LABEL = { txt: '글', pf: '프로필', gal: '갤러리', mu: '음악', stk: '스티커', bn: '배너', lnk: '링크', quo: '인용구', dd: '디데이', htm: 'HTML', gb: '방명록' };
 
 function newBlockData(kind) {
   if (kind === 'txt') return { body: '', imgs: [] };
@@ -1527,6 +1520,7 @@ function newBlockData(kind) {
   if (kind === 'gal') return { layout: '3', imgs: [] };
   if (kind === 'mu') return { title: '', artist: '', url: '' };
   if (kind === 'htm') return { body: '' };
+  if (kind === 'gb') return {};
   if (kind === 'stk') return { items: [] };
   if (kind === 'bn') return { items: [] };
   if (kind === 'lnk') return { items: [] };
@@ -1632,7 +1626,7 @@ function openBlockEdit(blk) {
   if (gid('ble-label')) gid('ble-label').value = blk.label || '';
   $('#es-cellrow').style.display = 'none';
   $('#bl-edit').style.display = 'block';
-  ['txt', 'pf', 'gal', 'mu', 'stk', 'bn', 'lnk', 'quo', 'dd', 'htm'].forEach((k) => {
+  ['txt', 'pf', 'gal', 'mu', 'stk', 'bn', 'lnk', 'quo', 'dd', 'htm', 'gb'].forEach((k) => {
     $('#ble-' + k).style.display = blk.kind === k ? 'block' : 'none';
   });
   const d = blk.data;
@@ -2093,12 +2087,10 @@ function openDeco() {
   if (gid('dc-hdrule')) gid('dc-hdrule').onchange = () => {
     st.site.head = st.site.head || {};
     st.site.head.rule = gid('dc-hdrule').checked;
-    st.site.gb = gid('dc-gb') ? gid('dc-gb').checked : false;
     setDirty(); applyTheme();
   };
   if (gid('dc-hh')) { gid('dc-hh').value = parseInt(hd.h) || 200; gid('dc-hhv').textContent = (parseInt(hd.h) || 200) + 'px'; }
   if (gid('dc-hdrule')) gid('dc-hdrule').checked = (st.site.head || {}).rule !== false;
-  if (gid('dc-gb')) gid('dc-gb').checked = !!st.site.gb;
   if (gid('dc-hy')) gid('dc-hy').value = parseInt(hd.py ?? 50);
   if (gid('dc-hz')) { gid('dc-hz').value = Math.max(100, parseInt(hd.sc) || 100); if (gid('dc-hzv')) gid('dc-hzv').textContent = (Math.max(100, parseInt(hd.sc) || 100)) + '%'; }
   $('#dc-head').value = hd.mode || 'text';

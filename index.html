@@ -836,7 +836,7 @@
       </div>
       <div class="foot-hair"></div>
       <p id="foot-txt" class="foot-txt" style="display:none;"></p>
-      <div class="foot-links" id="foot-links"><span id="foot-lv" style="display:none;"><a href="#" id="foot-luvlog" target="_blank" rel="noopener">러브로그 홈 ↗</a><i id="foot-lvdot">·</i></span><span id="foot-gb" style="display:none;"><a href="#" id="foot-gbopen">📖 방명록</a><i id="foot-gbdot">·</i></span><a href="guide.html" id="foot-guide">가이드</a><i id="foot-gdot">·</i><a href="#" id="foot-inq">✉ 문의</a></div>
+      <div class="foot-links" id="foot-links"><span id="foot-lv" style="display:none;"><a href="#" id="foot-luvlog" target="_blank" rel="noopener">러브로그 홈 ↗</a><i id="foot-lvdot">·</i></span><a href="guide.html" id="foot-guide">가이드</a><i id="foot-gdot">·</i><a href="#" id="foot-inq">✉ 문의</a></div>
       <p class="foot-sys"><a href="#" id="foot-brand">LUVINFO</a><i id="foot-sysdot" style="font-style:normal;"> · </i><span id="upd-date"></span></p>
     </div>
   </div>
@@ -966,6 +966,7 @@
       <button class="mini-btn" data-add="quo">＋ 인용구</button>
       <button class="mini-btn" data-add="dd">＋ 디데이</button>
       <button class="mini-btn" data-add="htm">＋ HTML</button>
+      <button class="mini-btn" data-add="gb">＋ 방명록</button>
     </div>
   </div>
 
@@ -1049,6 +1050,9 @@
       <div class="f-row"><label>출처·화자 (선택)</label><input type="text" id="eq-by" placeholder="예: 제스테"></div>
     </div>
 
+    <div id="ble-gb" style="display:none;">
+      <div class="f-note">📖 방명록 블록 — 따로 설정할 건 없어요. 방문자들이 홈에서 바로 글을 남깁니다 (로그인한 분만 작성, 삭제는 나와 작성자 본인만).</div>
+    </div>
     <div id="ble-htm" style="display:none;">
       <div class="f-row"><label>HTML</label>
         <textarea id="eh-body" class="tall" placeholder="&lt;style&gt;·&lt;script&gt;·HTML을 붙여넣으세요. 스타일은 이 블록 안에만 적용됩니다." spellcheck="false"></textarea></div>
@@ -1174,7 +1178,6 @@
         <option value="none">없음</option>
       </select>
     <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--dim);cursor:pointer;"><input type="checkbox" id="dc-hdrule" checked> 머리글 밑줄 장식(—) 표시</label>
-    <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--dim);cursor:pointer;"><input type="checkbox" id="dc-gb"> 방명록 사용 (푸터에 「방명록」 링크가 생겨요)</label>
     </div>
     <div class="f-row">
       <label>페이지 번호 (01 표기)</label>
@@ -1382,20 +1385,6 @@
   </div>
 </div>
 
-<div class="adj-bg" id="gb-bg"></div>
-<div class="adj" id="gb" style="width:min(520px,94vw);text-align:left;">
-  <h3 style="margin:0 0 10px;">📖 방명록</h3>
-  <div id="gb-list" style="max-height:42vh;overflow-y:auto;margin-bottom:12px;"></div>
-  <div id="gb-form">
-    <div class="f-row"><input type="text" id="gb-nick" maxlength="20" placeholder="닉네임 (20자)" style="margin-bottom:6px;">
-    <textarea id="gb-msg" maxlength="500" style="min-height:70px;" placeholder="따뜻한 말 한마디 (500자)"></textarea></div>
-  </div>
-  <div id="gb-need-login" style="display:none;font-size:12.5px;color:var(--dim);padding:10px 2px;">✍ 방명록은 <b>luvinfo.me</b>에서 로그인한 분만 남길 수 있어요. 구경은 자유!</div>
-  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
-    <button class="mini-btn" id="gb-close">닫기</button>
-    <button class="btn solid" id="gb-send" style="padding:8px 22px;">남기기</button>
-  </div>
-</div>
 <div class="adj-bg" id="adj-bg"></div>
 <div class="adj" id="adj">
   <h3>사진 조정</h3>
@@ -1425,6 +1414,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=97"></script>
+<script type="module" src="app.js?v=98"></script>
 </body>
 </html>
