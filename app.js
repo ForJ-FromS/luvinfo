@@ -41,7 +41,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v107 로드');
+console.log('[LUVINFO] app.js v108 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -307,6 +307,7 @@ function openClaim(user) {
     const needRef = SIGNUP.mode === 'invite';
     gid('claim-ref').style.display = needRef ? '' : 'none';
     gid('claim-ref').previousElementSibling.style.display = needRef ? '' : 'none';
+    if (gid('claim-ref-note')) gid('claim-ref-note').style.display = needRef ? '' : 'none';
   }
   $('#claim-cancel').onclick = () => { $('#claim').classList.remove('on'); $('#landing').classList.add('show'); };
   $('#claim-ok').onclick = async () => {
@@ -329,32 +330,40 @@ function openClaim(user) {
     if (SIGNUP.mode === 'invite') {
       const code = (gid('claim-code') ? gid('claim-code').value : '').trim().toLowerCase();
       if (!code) { toast('초대 코드를 입력해 주세요'); return; }
-      const refRaw = (gid('claim-ref') ? gid('claim-ref').value : '').trim();
-      if (!refRaw) { toast('초대해 준 분의 러브인포 핸들을 @핸들 형태로 적어 주세요'); return; }
-      if (refRaw.charAt(0) !== '@') { toast('앞에 @를 붙여 주세요 (예: @jeste)'); return; }
-      claimRef = refRaw.slice(1).toLowerCase();
-      if (!/^[a-z0-9]{2,20}$/.test(claimRef)) { toast('핸들 형식이 아니에요 — @핸들 형태로 적어 주세요 (예: @jeste)'); return; }
-      try {
-        const rs = await getDoc(doc(db, 'tsites', claimRef));
-        if (!rs.exists()) { toast('@' + claimRef + ' 홈을 찾을 수 없어요 — 초대해 준 분의 러브인포 핸들이 맞는지 확인해 주세요'); return; }
-      } catch (e) {
-        console.log('[LUVINFO] ref check err', e);
-        toast('초대해 준 분 확인에 실패했어요 — 잠시 후 다시 시도해 주세요');
-        return;
-      }
+      // ① 코드부터 확인 — 없는 코드는 핸들 검증 전에 걸러냄
+      let planted = '';
       try {
         const iv = await getDoc(doc(db, 'invites', code));
         const d = iv.exists() ? (iv.data() || {}) : null;
-        const spent = d && (d.used === true || (d.uses || 0) >= (d.max || 1));
-        if (!d || d.svc !== 'luvinfo') { toast('초대 코드가 달라요'); return; }
+        if (!d || d.svc !== 'luvinfo') { toast('초대코드가 올바르지 않아요'); return; }
+        const spent = (d.used === true || (d.uses || 0) >= (d.max || 1));
         if (spent) { toast('이미 사용이 끝난 코드예요'); return; }
         claimCode = code;
         claimUses = d.uses || 0;
         claimMax = d.max || 1;
+        planted = String(d.ref || '').trim();
       } catch (e) {
         console.log('[LUVINFO] invite check err', e);
         toast('코드 확인에 실패했어요 — 잠시 후 다시 시도해 주세요');
         return;
+      }
+      // ② 1차 — 심긴 코드면 심긴 값이 우선(운영자 확정 > 자기 신고), 아니면 @핸들 필수
+      if (planted) {
+        claimRef = planted;
+      } else {
+        const refRaw = (gid('claim-ref') ? gid('claim-ref').value : '').trim();
+        if (!refRaw) { toast('초대해 준 분의 러브인포 핸들을 @핸들 형태로 적어 주세요'); return; }
+        if (refRaw.charAt(0) !== '@') { toast('앞에 @를 붙여 주세요 (예: @jeste)'); return; }
+        claimRef = refRaw.slice(1).toLowerCase();
+        if (!/^[a-z0-9]{2,20}$/.test(claimRef)) { toast('핸들 형식이 아니에요 — @핸들 형태로 적어 주세요 (예: @jeste)'); return; }
+        try {
+          const rs = await getDoc(doc(db, 'tsites', claimRef));
+          if (!rs.exists()) { toast('@' + claimRef + ' 홈을 찾을 수 없어요 — 초대해 준 분의 러브인포 핸들이 맞는지 확인해 주세요'); return; }
+        } catch (e) {
+          console.log('[LUVINFO] ref check err', e);
+          toast('초대해 준 분 확인에 실패했어요 — 잠시 후 다시 시도해 주세요');
+          return;
+        }
       }
     }
     const h = $('#claim-h').value.trim().toLowerCase();
@@ -1235,15 +1244,27 @@ async function opsMake() {
   const prefix = gid('ops-prefix').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
   const count = Math.min(50, Math.max(1, parseInt(gid('ops-count').value) || 1));
   const max = Math.min(99, Math.max(1, parseInt(gid('ops-max').value) || 1));
+  // 1차 지정 (선택) — 실존 핸들이면 그대로, 아니면 자유 표기로 심을지 확인
+  let ref1 = (gid('ops-ref1') ? gid('ops-ref1').value : '').trim().replace(/^@/, '');
+  if (ref1) {
+    let known = false;
+    if (/^[a-z0-9]{2,20}$/.test(ref1.toLowerCase())) {
+      try {
+        const rs = await getDoc(doc(db, 'tsites', ref1.toLowerCase()));
+        if (rs.exists()) { known = true; ref1 = ref1.toLowerCase(); }
+      } catch (e) { /* 조회 실패 시 자유 표기 확인으로 */ }
+    }
+    if (!known && !confirm('「' + ref1 + '」은(는) 러브인포 가입자 핸들이 아니에요.\n자유 표기로 그대로 심을까요? (트위터 닉 등)')) return;
+  }
   const made = [];
   try {
     for (let i = 0; i < count; i++) {
       const c = genCode(prefix);
-      await setDoc(doc(db, 'invites', c), { svc: 'luvinfo', max, uses: 0, used: false, at: Date.now() });
-      made.push(c);
+      await setDoc(doc(db, 'invites', c), Object.assign({ svc: 'luvinfo', max, uses: 0, used: false, at: Date.now() }, ref1 ? { ref: ref1 } : {}));
+      made.push(c + (ref1 ? ' (1차:' + ref1 + ')' : ''));
     }
     gid('ops-out').value = made.join('\n');
-    toast(made.length + '개 만들었어요 ✓ (코드당 ' + max + '명)');
+    toast(made.length + '개 만들었어요 ✓ (코드당 ' + max + '명' + (ref1 ? ' · 1차:' + ref1 : '') + ')');
   } catch (e) {
     console.log('[LUVINFO] ops make err', e);
     toast('코드 생성 실패 — 규칙이 게시됐는지 확인해 주세요');
