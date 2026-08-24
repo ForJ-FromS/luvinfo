@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v109 로드');
+console.log('[LUVINFO] app.js v110 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -559,8 +559,13 @@ function chDisplayName(ch, i) {
   return '';
 }
 
+// 보이는 페이지 목록 — 편집 모드에선 숨김 페이지도 보임
+function viewChs() {
+  const chs = (st.site && st.site.chapters) || [];
+  return st.edit ? chs : chs.filter((c) => !c.hidden);
+}
 function renderChapter() {
-  const chs = st.site.chapters || [];
+  const chs = viewChs();
   if (st.cur >= chs.length) st.cur = Math.max(0, chs.length - 1);
   const ch = chs[st.cur];
   const titleEl = $('#ch-title');
@@ -612,7 +617,7 @@ function renderChapter() {
           .then((t) => {
             if (ch.bodyRef !== refAt || ch.body) return; // 그 사이 새 내용이 생겼으면 옛 응답 폐기
             htmlCache[ch.id] = t;
-            if ((st.site.chapters || [])[st.cur] === ch) renderChapter();
+            if (viewChs()[st.cur] === ch) renderChapter();
           })
           .catch((e) => {
             console.log('[LUVINFO] html fetch err', e);
@@ -1197,7 +1202,7 @@ function bindAdjust() {
 
 function renderPager() {
   const nav = st.site.theme?.nav || 'dot';
-  const chs = st.site.chapters || [];
+  const chs = viewChs();
   const pg = $('#pager');
   pg.innerHTML = '';
   if (chs.length <= 1) return;
@@ -1219,7 +1224,7 @@ function renderPager() {
     chs.forEach((ch, i) => {
       const b = document.createElement('button');
       b.className = 'pg-pill' + (i === st.cur ? ' on' : '');
-      b.textContent = ch.title || String(i + 1).padStart(2, '0');
+      b.textContent = (st.edit && ch.hidden ? '🙈 ' : '') + (ch.title || String(i + 1).padStart(2, '0'));
       b.onclick = () => go(i);
       pg.appendChild(b);
     });
@@ -1230,6 +1235,7 @@ function renderPager() {
     chs.forEach((_, i) => {
       const d = document.createElement('div');
       d.className = 'pg-dot' + (i === st.cur ? ' on' : '');
+      if (st.edit && chs[i].hidden) d.style.opacity = '.35';
       d.onclick = () => go(i);
       dots.appendChild(d);
     });
@@ -1239,7 +1245,7 @@ function renderPager() {
 }
 
 function go(i) {
-  const chs = st.site.chapters || [];
+  const chs = viewChs();
   if (!chs.length) return;
   st.cur = ((i % chs.length) + chs.length) % chs.length;
   renderChapter();
@@ -1619,16 +1625,17 @@ function bindShell() {
   $('#ob-save').onclick = saveSite;
 
   // 페이지 도구
-  $('#ct-edit').onclick = () => { const ch = st.site.chapters[st.cur]; if (ch) openChapterEdit(ch, ch.type); };
+  $('#ct-edit').onclick = () => { const ch = viewChs()[st.cur]; if (ch) openChapterEdit(ch, ch.type); };
   $('#ct-up').onclick = () => moveChapter(-1);
   $('#ct-down').onclick = () => moveChapter(1);
   $('#ct-del').onclick = () => {
-    const chs = st.site.chapters;
-    if (!chs[st.cur]) return;
+    const ch = viewChs()[st.cur];
+    if (!ch) return;
     if (!confirm('이 페이지를 삭제할까요?')) return;
-    chs.splice(st.cur, 1);
+    const chs = st.site.chapters;
+    chs.splice(chs.indexOf(ch), 1);
     setDirty();
-    if (st.cur >= chs.length) st.cur = Math.max(0, chs.length - 1);
+    if (st.cur >= viewChs().length) st.cur = Math.max(0, viewChs().length - 1);
     renderChapter();
   };
 
@@ -1666,12 +1673,16 @@ function moveChapter(d) {
 
 // ═══════════ 편집 모드 ═══════════
 function toggleEdit() {
+  const cur = viewChs()[st.cur];
   st.edit = document.body.classList.toggle('edit');
   $('#fab-edit').textContent = st.edit ? '보기 모드' : '✎ 편집';
   if (!st.edit) {
     closeEditSheet(); closeDeco();
     if (st.dirty) toast('저장하지 않은 변경이 있어요 — ✓ 저장을 눌러 주세요');
   }
+  const idx = viewChs().indexOf(cur);
+  st.cur = idx >= 0 ? idx : 0;
+  renderChapter();
 }
 
 // ── 페이지 편집 시트 (블록 스택) ──
@@ -1718,6 +1729,7 @@ function openChapterEdit(ch, type) {
   $('#es-title').textContent = ch ? '페이지 수정' : (type === 'html' ? '새 HTML 페이지' : '새 페이지');
   $('#es-name').value = work.title || '';
   $('#es-pw').value = work.pw || '';
+  if (gid('es-hidden')) gid('es-hidden').checked = !!work.hidden;
   if (gid('es-timgpos')) gid('es-timgpos').value = work.timgPos || 'top';
   if (gid('es-timg-chip')) gid('es-timg-chip').textContent = work.timg ? '이미지 있음 ✓' : '없음';
   const isHtml = type === 'html';
@@ -2190,6 +2202,7 @@ function confirmChapterEdit() {
   if (editingBlk) saveBlockFields();
   work.title = $('#es-name').value.trim();
   work.pw = $('#es-pw').value.trim();
+  if (gid('es-hidden')) work.hidden = gid('es-hidden').checked;
     if (gid('es-timgpos')) work.timgPos = gid('es-timgpos').value;
   if (work.type === 'html') {
     work.body = $('#es-html').value;
