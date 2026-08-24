@@ -41,7 +41,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v106 로드');
+console.log('[LUVINFO] app.js v107 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1347,12 +1347,14 @@ async function checkMyReplies() {
   try {
     const seen = parseInt(localStorage.getItem('li_inq_seen') || '0');
     const qs = await getDocs(query(collection(db, 'tinquiries'), where('uid', '==', st.user.uid)));
-    let n = 0;
+    let nReply = 0, nDm = 0;
     qs.forEach((s) => {
       const d = s.data() || {};
-      if (d.reply && (d.repliedAt || 0) > seen) n++;
+      if (d.reply && (d.repliedAt || 0) > seen) { if (d.fromOps) nDm++; else nReply++; }
     });
-    if (n > 0) toast('📮 문의에 답변이 도착했어요 — 맨 아래 ✉ 문의에서 확인하세요');
+    if (nDm > 0 && nReply > 0) toast('📮 운영자 쪽지와 문의 답변이 도착했어요 — 맨 아래 ✉ 문의에서 확인하세요');
+    else if (nDm > 0) toast('📮 운영자가 보낸 쪽지가 있어요 — 맨 아래 ✉ 문의에서 확인하세요');
+    else if (nReply > 0) toast('📮 문의에 답변이 도착했어요 — 맨 아래 ✉ 문의에서 확인하세요');
   } catch (e) { /* 조용히 */ }
 }
 
