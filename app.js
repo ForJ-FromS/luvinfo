@@ -41,7 +41,7 @@ const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 �
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v105 로드');
+console.log('[LUVINFO] app.js v106 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -329,9 +329,19 @@ function openClaim(user) {
     if (SIGNUP.mode === 'invite') {
       const code = (gid('claim-code') ? gid('claim-code').value : '').trim().toLowerCase();
       if (!code) { toast('초대 코드를 입력해 주세요'); return; }
-      claimRef = (gid('claim-ref') ? gid('claim-ref').value : '').trim();
-      if (!claimRef) { toast('초대해 준 분의 닉네임이나 핸들을 적어 주세요'); return; }
-      if (claimRef.length > 40) { toast('초대해 준 분 칸이 너무 길어요 (40자 이내)'); return; }
+      const refRaw = (gid('claim-ref') ? gid('claim-ref').value : '').trim();
+      if (!refRaw) { toast('초대해 준 분의 러브인포 핸들을 @핸들 형태로 적어 주세요'); return; }
+      if (refRaw.charAt(0) !== '@') { toast('앞에 @를 붙여 주세요 (예: @jeste)'); return; }
+      claimRef = refRaw.slice(1).toLowerCase();
+      if (!/^[a-z0-9]{2,20}$/.test(claimRef)) { toast('핸들 형식이 아니에요 — @핸들 형태로 적어 주세요 (예: @jeste)'); return; }
+      try {
+        const rs = await getDoc(doc(db, 'tsites', claimRef));
+        if (!rs.exists()) { toast('@' + claimRef + ' 홈을 찾을 수 없어요 — 초대해 준 분의 러브인포 핸들이 맞는지 확인해 주세요'); return; }
+      } catch (e) {
+        console.log('[LUVINFO] ref check err', e);
+        toast('초대해 준 분 확인에 실패했어요 — 잠시 후 다시 시도해 주세요');
+        return;
+      }
       try {
         const iv = await getDoc(doc(db, 'invites', code));
         const d = iv.exists() ? (iv.data() || {}) : null;
