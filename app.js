@@ -39,9 +39,10 @@ function gid(i) { return document.getElementById(i); }
 // 코드제로 바꾸려면: mode를 'code'로, code에 원하는 초대 코드를 넣고 재배포
 const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 러브인포 코드(횟수제) / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
+const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v108 로드');
+console.log('[LUVINFO] app.js v109 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -49,12 +50,14 @@ function setDirty() {
   if (b) b.classList.add('attn');
 }
 
-function toast(m) {
+function toast(m, ms, act) {
   const t = $('#toast');
   t.textContent = m;
+  t.onclick = null; t.style.cursor = '';
+  if (act) { t.style.cursor = 'pointer'; t.onclick = () => { t.classList.remove('on'); act(); }; }
   t.classList.add('on');
   clearTimeout(t._tm);
-  t._tm = setTimeout(() => t.classList.remove('on'), 2400);
+  t._tm = setTimeout(() => t.classList.remove('on'), ms || 2400);
 }
 
 // ── 프리셋 기본값 (색 피커 표시용) ──
@@ -293,6 +296,46 @@ async function login() {
   }
 }
 
+// ── 가입 핸들 실시간 확인 (예약·중복 미리 알림 — 최종 판정은 가입 버튼에서 한 번 더) ──
+let _resvCache = null;
+async function reservedSets() {
+  if (_resvCache) return _resvCache;
+  try {
+    const [r1, r2, r3] = await Promise.all([
+      getDoc(doc(db, 'config', 'reserved')),
+      getDoc(doc(db, 'config', 'treserved')),
+      getDoc(doc(db, 'config', 'tallow'))
+    ]);
+    const norm = (arr) => arr.map((x) => String(x).trim().toLowerCase());
+    _resvCache = {
+      allow: norm(r3.exists() ? (r3.data().list || []) : []),
+      deny: norm([].concat(r1.exists() ? (r1.data().list || []) : []).concat(r2.exists() ? (r2.data().list || []) : []))
+    };
+  } catch (e) { _resvCache = { allow: [], deny: [] }; }
+  return _resvCache;
+}
+let _hChkSeq = 0;
+async function checkHandleLive() {
+  const el = gid('claim-h-stat');
+  if (!el) return;
+  const seq = ++_hChkSeq;
+  const h = gid('claim-h').value.trim().toLowerCase();
+  if (!h) { el.textContent = ''; return; }
+  if (!/^[a-z0-9]{2,20}$/.test(h)) { el.textContent = '영문 소문자·숫자 2~20자'; el.style.color = 'var(--mute)'; return; }
+  el.textContent = '확인 중…'; el.style.color = 'var(--mute)';
+  const rs = await reservedSets();
+  if (seq !== _hChkSeq) return;
+  if (!rs.allow.includes(h) && (SYS_RESERVED.includes(h) || rs.deny.includes(h))) {
+    el.textContent = '✗ 사용할 수 없는 핸들이에요'; el.style.color = '#d66'; return;
+  }
+  try {
+    const ex = await getDoc(doc(db, 'tsites', h));
+    if (seq !== _hChkSeq) return;
+    if (ex.exists()) { el.textContent = '✗ 이미 사용 중인 핸들이에요'; el.style.color = '#d66'; }
+    else { el.textContent = '✓ 사용할 수 있어요 — luvinfo.me/' + h; el.style.color = 'var(--pri)'; }
+  } catch (e) { if (seq === _hChkSeq) el.textContent = ''; }
+}
+
 function openClaim(user) {
   $('#landing').classList.remove('show');
   $('#claim').classList.add('on');
@@ -301,6 +344,12 @@ function openClaim(user) {
     const needCode = SIGNUP.mode === 'invite' || SIGNUP.mode === 'code';
     gid('claim-code').style.display = needCode ? '' : 'none';
     gid('claim-code').previousElementSibling.style.display = needCode ? '' : 'none';
+  }
+  if (gid('claim-h')) {
+    gid('claim-h').value = '';
+    if (gid('claim-h-stat')) gid('claim-h-stat').textContent = '';
+    let tm;
+    gid('claim-h').oninput = () => { clearTimeout(tm); tm = setTimeout(checkHandleLive, 450); };
   }
   if (gid('claim-ref')) {
     gid('claim-ref').value = '';
@@ -369,7 +418,6 @@ function openClaim(user) {
     const h = $('#claim-h').value.trim().toLowerCase();
     if (!/^[a-z0-9]{2,20}$/.test(h)) { toast('영문 소문자·숫자 2~20자로 입력해 주세요'); return; }
     // 시스템 예약어 + 예약 핸들 목록(러브로그 config/reserved 공유 + 러브인포 전용 config/treserved)
-    const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
     try {
       const [r1, r2, r3] = await Promise.all([
         getDoc(doc(db, 'config', 'reserved')),
@@ -862,7 +910,7 @@ function buildGbBlock() {
 
   const buildForm = async () => {
     if (!st.user) {
-      foot.innerHTML = '<div class="gb-empty">✍ 방명록은 러브인포 멤버만 남길 수 있어요. luvinfo.me에서 로그인해 주세요.</div>';
+      foot.innerHTML = '<div class="gb-empty">✍ 방명록은 러브인포 멤버만 남길 수 있어요. <a href="/" style="color:var(--pri);text-decoration:underline;">로그인하러 가기 →</a></div>';
       return;
     }
     let myH = st.mine ? st.handle : st._myH;
@@ -875,7 +923,10 @@ function buildGbBlock() {
       return;
     }
     foot.innerHTML = '<textarea class="gb-msg" maxlength="500" placeholder="다녀간 흔적을 남겨주세요"></textarea>' +
+      '<div class="gb-cnt">0/500</div>' +
       '<div class="gb-bar"><label class="gb-sec"><input type="checkbox" class="gb-secret"> 🔒 비공개로 남기기 (주인만 볼 수 있어요)</label><button class="gb-send">남기기</button></div>';
+    const gbTa = foot.querySelector('.gb-msg'), gbCnt = foot.querySelector('.gb-cnt');
+    gbTa.addEventListener('input', () => { gbCnt.textContent = gbTa.value.length + '/500'; });
     foot.querySelector('.gb-send').onclick = async () => {
       const text = foot.querySelector('.gb-msg').value.trim();
       if (!text) { toast('내용을 적어주세요'); return; }
@@ -929,7 +980,7 @@ function buildGallery(g) {
       imgs.map((it) => '<div class="gal-cell" style="' + imgVars(it).replace(/--p/g, '--g') + '"></div>').join('') +
       '</div>';
     wrap.querySelectorAll('.gal-cell').forEach((c, i) => {
-      c.onclick = () => { $('#lb-img').src = imgs[i].u; $('#lightbox').classList.add('on'); };
+      c.onclick = () => openLb(imgs.map((x) => x.u), i);
     });
   }
   return wrap;
@@ -940,7 +991,7 @@ function initGalSlider(rootEl, imgs) {
   const slides = rootEl.querySelectorAll('.gal-slide');
   const nav = rootEl.querySelector('.gal-nav');
   slides.forEach((s, i) => {
-    s.onclick = () => { $('#lb-img').src = imgs[i].u; $('#lightbox').classList.add('on'); };
+    s.onclick = () => openLb(imgs.map((x) => x.u), i);
     const dd = document.createElement('div');
     dd.className = 'gal-dot' + (i === 0 ? ' on' : '');
     dd.onclick = () => go(i);
@@ -1195,6 +1246,40 @@ function go(i) {
   window.scrollTo({ top: 0 });
 }
 
+// ── 라이트박스 상태 (←/→ 넘기기용) ──
+let lbImgs = [], lbIdx = 0;
+function openLb(list, i) {
+  lbImgs = list || []; lbIdx = i || 0;
+  $('#lb-img').src = lbImgs[lbIdx];
+  $('#lightbox').classList.add('on');
+}
+function lbGo(d) {
+  if (lbImgs.length < 2) return;
+  lbIdx = (lbIdx + d + lbImgs.length) % lbImgs.length;
+  $('#lb-img').src = lbImgs[lbIdx];
+}
+
+// ── 키보드: 라이트박스(Esc·←→) > 페이지 넘김(←→, 열람 중일 때만) ──
+document.addEventListener('keydown', (e) => {
+  const lb = $('#lightbox');
+  if (lb && lb.classList.contains('on')) {
+    if (e.key === 'Escape') { lb.classList.remove('on'); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft') { lbGo(-1); e.preventDefault(); }
+    else if (e.key === 'ArrowRight') { lbGo(1); e.preventDefault(); }
+    return;
+  }
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const a = document.activeElement;
+  if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.isContentEditable)) return;
+  if (!st.site || st.edit) return;
+  if (document.querySelector('.sheet.on')) return;
+  const gate = document.getElementById('gate');
+  if (gate && gate.classList.contains('show')) return;
+  const claim = document.getElementById('claim');
+  if (claim && claim.classList.contains('on')) return;
+  go(st.cur + (e.key === 'ArrowRight' ? 1 : -1));
+});
+
 async function openOps() {
   gid('ops-bg').classList.add('on');
   gid('ops-sheet').classList.add('on');
@@ -1357,7 +1442,7 @@ async function checkOpsNoti() {
     qs.forEach((s) => { const d = s.data() || {}; if (!d.fromOps && (d.ts || 0) > seen) n++; });
     if (n > 0) {
       if (gid('fab-ops')) gid('fab-ops').textContent = '⚙ 운영 ●' + n;
-      toast('📮 새 문의 ' + n + '건이 있어요');
+      toast('📮 새 문의 ' + n + '건이 있어요 — 눌러서 열기', 4500, openOps);
     }
   } catch (e) { /* 조용히 */ }
 }
@@ -1373,9 +1458,9 @@ async function checkMyReplies() {
       const d = s.data() || {};
       if (d.reply && (d.repliedAt || 0) > seen) { if (d.fromOps) nDm++; else nReply++; }
     });
-    if (nDm > 0 && nReply > 0) toast('📮 운영자 쪽지와 문의 답변이 도착했어요 — 맨 아래 ✉ 문의에서 확인하세요');
-    else if (nDm > 0) toast('📮 운영자가 보낸 쪽지가 있어요 — 맨 아래 ✉ 문의에서 확인하세요');
-    else if (nReply > 0) toast('📮 문의에 답변이 도착했어요 — 맨 아래 ✉ 문의에서 확인하세요');
+    if (nDm > 0 && nReply > 0) toast('📮 운영자 쪽지와 문의 답변이 도착했어요 — 눌러서 바로 확인', 4500, openInq);
+    else if (nDm > 0) toast('📮 운영자가 보낸 쪽지가 있어요 — 눌러서 바로 확인', 4500, openInq);
+    else if (nReply > 0) toast('📮 문의에 답변이 도착했어요 — 눌러서 바로 확인', 4500, openInq);
   } catch (e) { /* 조용히 */ }
 }
 
@@ -1471,7 +1556,10 @@ function bindShell() {
       return;
     }
     const img = e.target.closest('.cellbody img');
-    if (img) { $('#lb-img').src = img.src; $('#lightbox').classList.add('on'); }
+    if (img) {
+      const all = [...document.querySelectorAll('.cellbody img')].map((x) => x.src);
+      openLb(all, Math.max(0, all.indexOf(img.src)));
+    }
   });
   $('#lightbox').onclick = () => $('#lightbox').classList.remove('on');
   $('#heart').onclick = async () => {
