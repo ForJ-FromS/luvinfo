@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v110 로드');
+console.log('[LUVINFO] app.js v111 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -482,7 +482,8 @@ function applyTheme() {
   if (t.cardop) document.body.dataset.op = t.cardop; else delete document.body.dataset.op;
   const sb = $('#site');
   if (t.bgImg) {
-    const dim = Math.min(96, Math.max(30, parseInt(t.bgDim) || 84));
+    const dimRaw = parseInt(t.bgDim);
+    const dim = Math.min(96, Math.max(0, Number.isFinite(dimRaw) ? dimRaw : 84));
     const ov = 'color-mix(in srgb, var(--bg) ' + dim + '%, transparent)';
     sb.style.backgroundImage = 'linear-gradient(' + ov + ', ' + ov + '), url("' + t.bgImg + '")';
     sb.style.backgroundSize = 'cover';
@@ -2259,8 +2260,9 @@ function openDeco() {
   });
   $('#dc-corner').value = t.corner || '';
   $('#dc-cardop').value = t.cardop || '';
-  $('#dc-bgdim').value = parseInt(t.bgDim) || 84;
-  $('#dc-bgdimv').textContent = (parseInt(t.bgDim) || 84) + '%';
+  const _bd = parseInt(t.bgDim), _bdv = Number.isFinite(_bd) ? _bd : 84;
+  $('#dc-bgdim').value = _bdv;
+  $('#dc-bgdimv').textContent = _bdv + '%';
   $('#dc-valign').value = t.valign || '';
   $('#dc-cardc').value = t.cardC || CARDC[t.preset || 'white'] || '#FFFFFF';
   const hd = st.site.head;
@@ -2463,7 +2465,7 @@ function bindDeco() {
     if (bgImg && typeof bgImg === 'string') {
       t.bgImg = bgImg;
       const bd = parseInt(pick('bgDim'));
-      if (!isNaN(bd)) t.bgDim = Math.min(96, Math.max(30, bd));
+      if (!isNaN(bd)) t.bgDim = Math.min(96, Math.max(0, bd));
       got.push('배경 이미지');
     }
     const gImg = pick('enterImg');
