@@ -330,8 +330,9 @@
   .chatblk.ch-retro .ch-b p { border-radius: 0; border: 2px solid; border-color: #fff #404040 #404040 #fff; background: var(--chL, #c0c0c0); color: var(--chLt, #000); }
   .chatblk.ch-retro .ch-line.r .ch-b p { background: var(--chR, #000080); color: var(--chRt, #fff); border-color: #404040 #fff #fff #404040; }
   .chatblk.ch-retro .ch-p { border-radius: 0; }
-  .chatblk.ch-script .ch-b p { background: none; border: none; border-radius: 0; padding: 0 0 8px; border-bottom: 1px dashed var(--line); }
-  .chatblk.ch-script .ch-line.r .ch-b p { color: var(--chRt, var(--pri)); }
+  .chatblk.ch-script .ch-p { display: none; }
+  .chatblk.ch-script .ch-b p { background: none; border: none; border-radius: 0; padding: 0 0 8px; border-bottom: 1px dashed color-mix(in srgb, var(--pri) 45%, var(--line)); }
+  .chatblk.ch-script .ch-line.r .ch-b p { background: none; border: none; border-radius: 0; border-bottom: 1px dashed color-mix(in srgb, var(--pri) 45%, var(--line)); color: var(--chRt, var(--pri)); }
   .chatblk.ch-scroll .ch-box, .tlblk.ch-scroll .ch-box { max-height: var(--chMax, 380px); overflow-y: auto; overscroll-behavior: contain; padding-right: 5px; }
   .chatblk.ch-scroll .ch-box::-webkit-scrollbar, .tlblk.ch-scroll .ch-box::-webkit-scrollbar { width: 4px; }
   .chatblk.ch-scroll .ch-box::-webkit-scrollbar-thumb, .tlblk.ch-scroll .ch-box::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
@@ -345,6 +346,8 @@
   .qablk .qa-q { font-weight: 700; font-size: 13px; margin-bottom: 4px; white-space: pre-line; }
   .qablk .qa-q .qm { color: var(--pri); margin-right: 7px; }
   .qablk .qa-a { font-size: 13px; line-height: 1.8; color: var(--tx); padding-left: 21px; white-space: pre-line; }
+  .qablk .qa-a.named { display: flex; gap: 8px; align-items: baseline; margin-bottom: 3px; }
+  .qablk .qa-an { flex: none; color: var(--pri); font-size: 11.5px; font-weight: 700; letter-spacing: .02em; min-width: 34px; }
   /* ── v114 타임라인 (러브로그 이식 — 기본/마디 카드/담백 3디자인) ── */
   .tlblk .ch-box { display: flex; flex-direction: column; gap: 0; }
   .tlblk .tl-i { position: relative; display: flex; gap: 10px; padding: 0 2px 14px; align-items: flex-start; margin: 0; overflow: hidden; }
@@ -1217,8 +1220,8 @@
     <div id="ble-qa" style="display:none;">
       <div class="f-row">
         <label>문답 내용</label>
-        <textarea id="eqa-body" class="tall" style="min-height:170px;" placeholder="Q. 처음 입덕한 계기는?&#10;A. 무대 영상 하나 보고 그대로…&#10;&#10;Q. 최애 포인트 세 가지&#10;A. 목소리, 손, 웃을 때 눈"></textarea>
-        <div class="f-note"><b>Q.</b>로 질문, <b>A.</b>로 답변 (Q: / A: 도 돼요). 접두어 없는 줄은 바로 윗글에 이어 붙어요.</div>
+        <textarea id="eqa-body" class="tall" style="min-height:170px;" placeholder="Q. 서로 첫인상은?&#10;마루: 목소리가 크다고 생각했다.&#10;보리: 조용한 사람인 줄 알았음&#10;&#10;Q. 좋아하는 계절은?&#10;A. 초여름 저녁"></textarea>
+        <div class="f-note"><b>Q.</b>로 질문, <b>A.</b>로 답변 — 페어 인터뷰는 답을 <b>이름: 내용</b>으로 쓰면 이름이 붙어서 여럿이 나란히 대답해요. 접두어 없는 줄은 바로 윗글에 이어 붙어요.</div>
       </div>
     </div>
 
@@ -1617,6 +1620,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=115"></script>
+<script type="module" src="app.js?v=119"></script>
 </body>
 </html>

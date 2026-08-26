@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v115 로드');
+console.log('[LUVINFO] app.js v119 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1265,20 +1265,25 @@ const chatIO = ('IntersectionObserver' in window)
     }), { threshold: .25 })
   : null;
 function chatObserve(el) { if (chatIO) chatIO.observe(el); else chatPlay(el); }
-// ── v113 문답 블록: Q./A. 접두, 무접두 줄은 윗글에 이어붙임 ──
+// ── 문답(인터뷰) 블록: Q./A. + 「이름: 답」으로 페어 인터뷰 (한 질문에 여러 명 대답) ──
 function buildQa(d) {
   const el = document.createElement('div');
   el.className = 'qablk';
   const items = [];
+  const cur = () => items[items.length - 1];
+  const lastAns = () => { const c = cur(); return c && c.ans.length ? c.ans[c.ans.length - 1] : null; };
   (d.body || '').split('\n').forEach((line) => {
     const t = line.trim();
     if (!t) return;
     const qm = t.match(/^[QqＱ][.:．：]?\s+(.*)$/);
+    if (qm) { items.push({ q: qm[1], ans: [] }); return; }
     const am = t.match(/^[AaＡ][.:．：]?\s+(.*)$/);
-    if (qm) { items.push({ q: qm[1], a: '' }); return; }
-    const cur = items[items.length - 1];
-    if (am) { if (cur) cur.a += (cur.a ? '\n' : '') + am[1]; else items.push({ q: '', a: am[1] }); return; }
-    if (cur) { if (cur.a) cur.a += '\n' + t; else cur.q += '\n' + t; }
+    if (am) { if (!cur()) items.push({ q: '', ans: [] }); cur().ans.push({ n: '', t: am[1] }); return; }
+    const nm = t.match(/^(\S[^:]{0,15}):\s+(.*)$/);
+    if (nm && cur()) { cur().ans.push({ n: nm[1].trim(), t: nm[2] }); return; }
+    const la = lastAns();
+    if (la) la.t += '\n' + t;
+    else if (cur()) cur().q += '\n' + t;
   });
   items.forEach((it) => {
     const w = document.createElement('div');
@@ -1286,19 +1291,25 @@ function buildQa(d) {
     if (it.q) {
       const q = document.createElement('div');
       q.className = 'qa-q';
-      const qm = document.createElement('span');
-      qm.className = 'qm';
-      qm.textContent = 'Q.';
-      q.appendChild(qm);
+      const qm2 = document.createElement('span');
+      qm2.className = 'qm';
+      qm2.textContent = 'Q.';
+      q.appendChild(qm2);
       q.appendChild(document.createTextNode(it.q));
       w.appendChild(q);
     }
-    if (it.a) {
-      const a = document.createElement('div');
-      a.className = 'qa-a';
-      a.textContent = it.a;
-      w.appendChild(a);
-    }
+    it.ans.forEach((a) => {
+      const row = document.createElement('div');
+      row.className = 'qa-a' + (a.n ? ' named' : '');
+      if (a.n) {
+        const nn = document.createElement('b');
+        nn.className = 'qa-an';
+        nn.textContent = a.n;
+        row.appendChild(nn);
+      }
+      row.appendChild(document.createTextNode(a.t));
+      w.appendChild(row);
+    });
     el.appendChild(w);
   });
   return el;
