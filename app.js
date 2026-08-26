@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v112 로드');
+console.log('[LUVINFO] app.js v113 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -529,6 +529,8 @@ function showSite() {
     gid('fab-logout').onclick = doLogout;
   }
   applyTheme();
+  const _pp = parseInt(new URLSearchParams(location.search).get('p'));
+  if (Number.isFinite(_pp) && _pp >= 1 && _pp <= viewChs().length) st.cur = _pp - 1;
   renderChapter();
   renderFoot();
   if (st.mine) {
@@ -790,6 +792,9 @@ function renderBlocks(ch, bodyEl) {
     else if (blk.kind === 'lnk' && (d.items || []).length) div.appendChild(buildLinks(d));
     else if (blk.kind === 'quo' && d.text) div.appendChild(buildQuote(d));
     else if (blk.kind === 'dd' && d.date) div.appendChild(buildDday(d));
+    else if (blk.kind === 'chat' && d.body) div.appendChild(buildChat(d));
+    else if (blk.kind === 'qa' && d.body) div.appendChild(buildQa(d));
+    else if (blk.kind === 'tl' && d.body) div.appendChild(buildTimeline(d));
     else if (blk.kind === 'htm' && d.body) div.appendChild(buildHtmBlock(blk));
     else if (blk.kind === 'gb') div.appendChild(buildGbBlock());
     else return;
@@ -1071,6 +1076,113 @@ function buildSticker(s) {
   return d;
 }
 
+// ── v113 채팅로그 블록: 「이름: 내용」(나=오른쪽) / -- 가운데 줄 / 무접두 줄은 윗말에 이어붙임 ──
+function buildChat(d) {
+  const el = document.createElement('div');
+  el.className = 'chatblk';
+  let lastName = null, lastBub = null;
+  (d.body || '').split('\n').forEach((line) => {
+    const t = line.trim();
+    if (!t) { lastName = null; lastBub = null; return; }
+    if (t.startsWith('--')) {
+      const sys = document.createElement('div');
+      sys.className = 'ch-sys';
+      sys.textContent = t.replace(/^-+\s*/, '').replace(/\s*-+$/, '') || '· · ·';
+      el.appendChild(sys);
+      lastName = null; lastBub = null;
+      return;
+    }
+    const m = t.match(/^(\S[^:]{0,19}):\s*(.*)$/);
+    if (!m) {
+      if (lastBub) lastBub.textContent += '\n' + t;
+      return;
+    }
+    const name = m[1].trim(), msg = m[2];
+    const me = name === '나';
+    if (!me && name !== lastName) {
+      const nm = document.createElement('div');
+      nm.className = 'ch-name';
+      nm.textContent = name;
+      el.appendChild(nm);
+    }
+    const row = document.createElement('div');
+    row.className = 'ch-row' + (me ? ' me' : '');
+    const bub = document.createElement('div');
+    bub.className = 'ch-bub';
+    bub.textContent = msg;
+    row.appendChild(bub);
+    el.appendChild(row);
+    lastName = name; lastBub = bub;
+  });
+  return el;
+}
+// ── v113 문답 블록: Q./A. 접두, 무접두 줄은 윗글에 이어붙임 ──
+function buildQa(d) {
+  const el = document.createElement('div');
+  el.className = 'qablk';
+  const items = [];
+  (d.body || '').split('\n').forEach((line) => {
+    const t = line.trim();
+    if (!t) return;
+    const qm = t.match(/^[QqＱ][.:．：]?\s+(.*)$/);
+    const am = t.match(/^[AaＡ][.:．：]?\s+(.*)$/);
+    if (qm) { items.push({ q: qm[1], a: '' }); return; }
+    const cur = items[items.length - 1];
+    if (am) { if (cur) cur.a += (cur.a ? '\n' : '') + am[1]; else items.push({ q: '', a: am[1] }); return; }
+    if (cur) { if (cur.a) cur.a += '\n' + t; else cur.q += '\n' + t; }
+  });
+  items.forEach((it) => {
+    const w = document.createElement('div');
+    w.className = 'qa-item';
+    if (it.q) {
+      const q = document.createElement('div');
+      q.className = 'qa-q';
+      const qm = document.createElement('span');
+      qm.className = 'qm';
+      qm.textContent = 'Q.';
+      q.appendChild(qm);
+      q.appendChild(document.createTextNode(it.q));
+      w.appendChild(q);
+    }
+    if (it.a) {
+      const a = document.createElement('div');
+      a.className = 'qa-a';
+      a.textContent = it.a;
+      w.appendChild(a);
+    }
+    el.appendChild(w);
+  });
+  return el;
+}
+// ── v113 타임라인 블록: 「날짜 | 내용」 ──
+function buildTimeline(d) {
+  const el = document.createElement('div');
+  el.className = 'tlblk';
+  (d.body || '').split('\n').forEach((line) => {
+    const t = line.trim();
+    if (!t) return;
+    const bar = t.indexOf('|');
+    const date = bar > -1 ? t.slice(0, bar).trim() : '';
+    const tx = bar > -1 ? t.slice(bar + 1).trim() : t;
+    const w = document.createElement('div');
+    w.className = 'tl-item';
+    const dot = document.createElement('span');
+    dot.className = 'tl-dot';
+    w.appendChild(dot);
+    if (date) {
+      const dt = document.createElement('div');
+      dt.className = 'tl-date';
+      dt.textContent = date;
+      w.appendChild(dt);
+    }
+    const tb = document.createElement('div');
+    tb.className = 'tl-tx';
+    tb.textContent = tx;
+    w.appendChild(tb);
+    el.appendChild(w);
+  });
+  return el;
+}
 function buildQuote(d) {
   const w = document.createElement('div');
   w.className = 'quoblk';
@@ -1584,6 +1696,26 @@ async function renderInqBox() {
   }
 }
 
+// ── v113 방문자 수: tsites/{h}/tstats/counter — 로그인 방문 1일 1회(세션 기준) 집계 ──
+async function fillVisitCnt(el) {
+  try {
+    const ref = doc(db, 'tsites', st.handle, 'tstats', 'counter');
+    const today = new Date().toISOString().slice(0, 10);
+    const snap = await getDoc(ref);
+    const cur = snap.exists() ? (snap.data() || {}) : {};
+    let total = parseInt(cur.total) || 0;
+    let tday = cur.day === today ? (parseInt(cur.today) || 0) : 0;
+    const key = 'li_cnt_' + st.handle + '_' + today;
+    if (st.user && !sessionStorage.getItem(key)) {
+      try {
+        await setDoc(ref, { total: total + 1, day: today, today: tday + 1 });
+        total += 1; tday += 1;
+        sessionStorage.setItem(key, '1');
+      } catch (e) { /* 규칙 미게시 등 — 표시만 */ }
+    }
+    el.textContent = '방문 ' + tday + ' · 누적 ' + total;
+  } catch (e) { el.textContent = ''; }
+}
 function renderFoot() {
   $('#hcount').textContent = st.site.heart || 0;
   const liked = localStorage.getItem('sh_like_' + st.handle) === '1';
@@ -1613,6 +1745,11 @@ function renderFoot() {
   showEl('foot-lvdot', hasLv && (hasGuide || hasInq));
   showEl('foot-gdot', hasGuide && hasInq);
   showEl('foot-links', hasLv || hasGuide || hasInq);
+  const fc = gid('foot-cnt');
+  if (fc) {
+    if (f.cnt) { fc.style.display = ''; fillVisitCnt(fc); }
+    else { fc.style.display = 'none'; }
+  }
   // 시스템 줄: 날짜 끄면 가운뎃점도 함께
   showEl('upd-date', f.date !== false);
   showEl('foot-sysdot', f.date !== false);
@@ -1652,8 +1789,9 @@ function bindShell() {
     catch (e) { console.log('[LUVINFO] heart err', e); }
   };
   $('#copy-link').onclick = () => {
-    navigator.clipboard?.writeText(subUrl(st.handle))
-      .then(() => toast('링크를 복사했어요 ✓ — ' + st.handle + '.luvinfo.me'))
+    const pq = st.cur > 0 ? '?p=' + (st.cur + 1) : '';
+    navigator.clipboard?.writeText(subUrl(st.handle) + pq)
+      .then(() => toast(pq ? '이 페이지 링크를 복사했어요 ✓ — 바로 ' + (st.cur + 1) + '페이지로 열려요' : '링크를 복사했어요 ✓ — ' + st.handle + '.luvinfo.me'))
       .catch(() => toast('복사에 실패했어요'));
   };
   $('#foot-brand').onclick = (e) => { e.preventDefault(); location.href = BASE; };
@@ -1774,7 +1912,7 @@ let work = null;
 let isNewCh = false;
 let editingBlk = null;
 
-const KIND_LABEL = { txt: '글', pf: '프로필', gal: '갤러리', mu: '음악', stk: '스티커', bn: '배너', lnk: '링크', quo: '인용구', dd: '디데이', htm: 'HTML', gb: '방명록' };
+const KIND_LABEL = { txt: '글', pf: '프로필', gal: '갤러리', mu: '음악', stk: '스티커', bn: '배너', lnk: '링크', quo: '인용구', dd: '디데이', chat: '채팅로그', qa: '문답', tl: '타임라인', htm: 'HTML', gb: '방명록' };
 
 function newBlockData(kind) {
   if (kind === 'txt') return { body: '', imgs: [] };
@@ -1788,6 +1926,9 @@ function newBlockData(kind) {
   if (kind === 'lnk') return { items: [] };
   if (kind === 'quo') return { text: '', by: '' };
   if (kind === 'dd') return { label: '', date: '' };
+  if (kind === 'chat') return { body: '' };
+  if (kind === 'qa') return { body: '' };
+  if (kind === 'tl') return { body: '' };
   return {};
 }
 
@@ -1802,6 +1943,9 @@ function blkSummary(blk) {
   if (blk.kind === 'lnk') return (d.items || []).length + '개';
   if (blk.kind === 'quo') return (d.text || '').slice(0, 14);
   if (blk.kind === 'dd') return d.label || d.date || '';
+  if (blk.kind === 'chat') return (d.body || '').split('\n').filter((x) => x.trim()).length + '마디';
+  if (blk.kind === 'qa') return ((d.body || '').match(/^[QqＱ][.:．：]/gm) || []).length + '문';
+  if (blk.kind === 'tl') return (d.body || '').split('\n').filter((x) => x.trim()).length + '항목';
   return '';
 }
 
@@ -1861,6 +2005,7 @@ function renderBlockList() {
     '<button class="ct" data-bmv="' + i + ',-1" title="위로">↑</button>' +
     '<button class="ct" data-bmv="' + i + ',1" title="아래로">↓</button>' +
     '<button class="ct" data-bed="' + i + '" title="수정">✎</button>' +
+    '<button class="ct" data-bcp="' + i + '" title="복제">⧉</button>' +
     '<button class="ct del" data-brm="' + i + '" title="삭제">🗑</button></div>'
   ).join('');
   box.querySelectorAll('[data-bmv]').forEach((x) => {
@@ -1874,6 +2019,15 @@ function renderBlockList() {
   });
   box.querySelectorAll('[data-bed]').forEach((x) => {
     x.onclick = () => openBlockEdit(blocks[parseInt(x.dataset.bed)]);
+  });
+  box.querySelectorAll('[data-bcp]').forEach((x) => {
+    x.onclick = () => {
+      const i = parseInt(x.dataset.bcp);
+      const cp = JSON.parse(JSON.stringify(blocks[i]));
+      if (cp.id) cp.id = uid();
+      blocks.splice(i + 1, 0, cp);
+      renderBlockList();
+    };
   });
   box.querySelectorAll('[data-brm]').forEach((x) => {
     x.onclick = () => {
@@ -1889,7 +2043,7 @@ function openBlockEdit(blk) {
   if (gid('ble-label')) gid('ble-label').value = blk.label || '';
   $('#es-cellrow').style.display = 'none';
   $('#bl-edit').style.display = 'block';
-  ['txt', 'pf', 'gal', 'mu', 'stk', 'bn', 'lnk', 'quo', 'dd', 'htm', 'gb'].forEach((k) => {
+  ['txt', 'pf', 'gal', 'mu', 'stk', 'bn', 'lnk', 'quo', 'dd', 'chat', 'qa', 'tl', 'htm', 'gb'].forEach((k) => {
     $('#ble-' + k).style.display = blk.kind === k ? 'block' : 'none';
   });
   const d = blk.data;
@@ -1927,6 +2081,12 @@ function openBlockEdit(blk) {
     $('#ed-label').value = blk.data.label || '';
     $('#ed-date').value = blk.data.date || '';
     if (gid('ed-one')) gid('ed-one').checked = !!blk.data.one;
+  } else if (blk.kind === 'chat') {
+    $('#ecl-body').value = d.body || '';
+  } else if (blk.kind === 'qa') {
+    $('#eqa-body').value = d.body || '';
+  } else if (blk.kind === 'tl') {
+    $('#etl-body').value = d.body || '';
   } else if (blk.kind === 'htm') {
     $('#eh-body').value = d.body || '';
   }
@@ -1962,6 +2122,12 @@ function saveBlockFields() {
     d.label = $('#ed-label').value.trim();
     d.date = $('#ed-date').value.trim();
     d.one = gid('ed-one') && gid('ed-one').checked ? 1 : 0;
+  } else if (editingBlk.kind === 'chat') {
+    d.body = $('#ecl-body').value;
+  } else if (editingBlk.kind === 'qa') {
+    d.body = $('#eqa-body').value;
+  } else if (editingBlk.kind === 'tl') {
+    d.body = $('#etl-body').value;
   } else if (editingBlk.kind === 'htm') {
     d.body = $('#eh-body').value;
   }
@@ -2338,8 +2504,8 @@ function openDeco() {
   if (gid('dc-foottxt')) gid('dc-foottxt').value = st.site.footTxt || '';
   if (gid('dc-priv')) gid('dc-priv').value = st.site.priv ? '1' : '';
   const ff = st.site.foot || {};
-  [['df-heart', 'heart'], ['df-copy', 'copy'], ['df-guide', 'guide'], ['df-inq', 'inq'], ['df-date', 'date']].forEach(([id, key]) => {
-    if (gid(id)) gid(id).checked = ff[key] !== false;
+  [['df-heart', 'heart'], ['df-copy', 'copy'], ['df-guide', 'guide'], ['df-inq', 'inq'], ['df-date', 'date'], ['df-cnt', 'cnt']].forEach(([id, key]) => {
+    if (gid(id)) gid(id).checked = key === 'cnt' ? ff[key] === true : ff[key] !== false;
   });
   $('#dc-corner').value = t.corner || '';
   $('#dc-cardop').value = t.cardop || '';
@@ -2411,7 +2577,7 @@ function bindDeco() {
   $('#dc-nav').onchange = (e) => { t().nav = e.target.value; setDirty(); renderPager(); };
   $('#dc-num').onchange = (e) => { t().num = e.target.value; setDirty(); renderChapter(); };
   if (gid('dc-chtitle')) gid('dc-chtitle').onchange = (e) => { t().chtitle = e.target.value; setDirty(); applyTheme(); };
-  [['df-heart', 'heart'], ['df-copy', 'copy'], ['df-guide', 'guide'], ['df-inq', 'inq'], ['df-date', 'date']].forEach(([id, key]) => {
+  [['df-heart', 'heart'], ['df-copy', 'copy'], ['df-guide', 'guide'], ['df-inq', 'inq'], ['df-date', 'date'], ['df-cnt', 'cnt']].forEach(([id, key]) => {
     if (gid(id)) gid(id).onchange = (e) => {
       st.site.foot = st.site.foot || {};
       st.site.foot[key] = e.target.checked;

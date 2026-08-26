@@ -315,6 +315,29 @@
   .gbblk .gb-foot { border: 1px solid var(--line); background: rgba(var(--cardbase), var(--cardop)); border-radius: 14px; padding: 16px; }
   .gbblk .gb-foot textarea { min-height: 84px; }
   .gbblk .gb-cnt { text-align: right; font-size: 10.5px; color: var(--mute); margin-top: 4px; }
+  /* v113: 채팅로그 */
+  .chatblk { display: flex; flex-direction: column; gap: 7px; }
+  .chatblk .ch-name { font-size: 10.5px; color: var(--dim); margin: 2px 0 2px 4px; }
+  .chatblk .ch-row { display: flex; }
+  .chatblk .ch-row.me { justify-content: flex-end; }
+  .chatblk .ch-bub { max-width: 78%; padding: 8px 13px; border-radius: 14px 14px 14px 4px; background: rgba(var(--cardbase), var(--cardop)); border: 1px solid var(--line); font-size: 13px; line-height: 1.7; white-space: pre-line; word-break: break-word; }
+  .chatblk .ch-row.me .ch-bub { border-radius: 14px 14px 4px 14px; background: color-mix(in srgb, var(--pri) 16%, transparent); border-color: color-mix(in srgb, var(--pri) 38%, var(--line)); }
+  .chatblk .ch-sys { text-align: center; font-size: 11px; color: var(--mute); margin: 5px 0; }
+  /* v113: 문답 */
+  .qablk .qa-item { margin-bottom: 15px; }
+  .qablk .qa-item:last-child { margin-bottom: 0; }
+  .qablk .qa-q { font-weight: 700; font-size: 13px; margin-bottom: 4px; white-space: pre-line; }
+  .qablk .qa-q .qm { color: var(--pri); margin-right: 7px; }
+  .qablk .qa-a { font-size: 13px; line-height: 1.8; color: var(--tx); padding-left: 21px; white-space: pre-line; }
+  /* v113: 타임라인 */
+  .tlblk { position: relative; padding-left: 4px; }
+  .tlblk .tl-item { position: relative; padding: 0 0 16px 20px; }
+  .tlblk .tl-item:last-child { padding-bottom: 0; }
+  .tlblk .tl-item::before { content: ''; position: absolute; left: 3.5px; top: 12px; bottom: -4px; width: 1px; background: var(--line); }
+  .tlblk .tl-item:last-child::before { display: none; }
+  .tlblk .tl-dot { position: absolute; left: 0; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--pri); }
+  .tlblk .tl-date { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--pri); letter-spacing: .04em; margin-bottom: 2px; }
+  .tlblk .tl-tx { font-size: 13px; line-height: 1.75; white-space: pre-line; word-break: break-word; }
   .gbblk .gb-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
   .gbblk .gb-sec { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--dim); margin: 0; cursor: pointer; }
   .gbblk .gb-sec input { width: auto; margin: 0; padding: 0; background: none; border: none; border-radius: 0; accent-color: var(--pri); }
@@ -867,6 +890,7 @@
       <p id="foot-txt" class="foot-txt" style="display:none;"></p>
       <div class="foot-links" id="foot-links"><span id="foot-lv" style="display:none;"><a href="#" id="foot-luvlog" target="_blank" rel="noopener">러브로그 홈 ↗</a><i id="foot-lvdot">·</i></span><a href="guide.html" id="foot-guide">가이드</a><i id="foot-gdot">·</i><a href="#" id="foot-inq">✉ 문의</a></div>
       <p class="foot-sys"><a href="#" id="foot-brand">LUVINFO</a><i id="foot-sysdot" style="font-style:normal;"> · </i><span id="upd-date"></span></p>
+      <p id="foot-cnt" class="foot-sys" style="display:none;margin-top:2px;"></p>
     </div>
   </div>
 </div>
@@ -999,6 +1023,9 @@
       <button class="mini-btn" data-add="lnk">＋ 링크</button>
       <button class="mini-btn" data-add="quo">＋ 인용구</button>
       <button class="mini-btn" data-add="dd">＋ 디데이</button>
+      <button class="mini-btn" data-add="chat">＋ 채팅로그</button>
+      <button class="mini-btn" data-add="qa">＋ 문답</button>
+      <button class="mini-btn" data-add="tl">＋ 타임라인</button>
       <button class="mini-btn" data-add="htm">＋ HTML</button>
       <button class="mini-btn" data-add="gb">＋ 방명록</button>
     </div>
@@ -1099,6 +1126,30 @@
       </div>
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);cursor:pointer;margin-bottom:8px;"><input type="checkbox" id="ed-one"> 당일을 1일로 세기 (「n일 째」 표시)</label>
       <div class="f-note">기본: 다가올 날짜 D-n · 당일 D-DAY · 지난 날짜 D+n / 체크 시: 당일부터 1일 째, 2일 째…</div>
+    </div>
+
+    <div id="ble-chat" style="display:none;">
+      <div class="f-row">
+        <label>대화 내용</label>
+        <textarea id="ecl-body" class="tall" style="min-height:170px;" placeholder="나: 오늘 별 보러 갈래?&#10;은하: 좋아, 몇 시에 만날까&#10;나: 아홉 시!&#10;-- 다음 날 --"></textarea>
+        <div class="f-note">한 줄에 한 마디씩, <b>이름: 내용</b> — 이름이 <b>나</b>면 오른쪽(내 말풍선), 그 외엔 왼쪽에 이름과 함께 떠요. <b>--</b>로 시작하면 가운데 안내 줄(날짜·장면 전환). 이름 없이 쓰면 바로 윗줄에 이어 붙어요.</div>
+      </div>
+    </div>
+
+    <div id="ble-qa" style="display:none;">
+      <div class="f-row">
+        <label>문답 내용</label>
+        <textarea id="eqa-body" class="tall" style="min-height:170px;" placeholder="Q. 처음 입덕한 계기는?&#10;A. 무대 영상 하나 보고 그대로…&#10;&#10;Q. 최애 포인트 세 가지&#10;A. 목소리, 손, 웃을 때 눈"></textarea>
+        <div class="f-note"><b>Q.</b>로 질문, <b>A.</b>로 답변 (Q: / A: 도 돼요). 접두어 없는 줄은 바로 윗글에 이어 붙어요.</div>
+      </div>
+    </div>
+
+    <div id="ble-tl" style="display:none;">
+      <div class="f-row">
+        <label>타임라인 내용</label>
+        <textarea id="etl-body" class="tall" style="min-height:170px;" placeholder="2024.03.30 | 처음 만난 날&#10;2024.07.07 | 첫 콘서트&#10;2025.01.01 | 새해 같이 맞음"></textarea>
+        <div class="f-note">한 줄에 하나씩 <b>날짜 | 내용</b>. 세로줄(|) 없이 쓰면 날짜 없는 항목이 돼요. 날짜 자리는 자유 표기(「어느 봄날」도 OK).</div>
+      </div>
     </div>
 
     <div id="ble-lnk" style="display:none;">
@@ -1248,6 +1299,7 @@
         <label class="chk-row"><input type="checkbox" id="df-guide" checked> 가이드</label>
         <label class="chk-row"><input type="checkbox" id="df-inq" checked> ✉ 문의</label>
         <label class="chk-row"><input type="checkbox" id="df-date" checked> 날짜</label>
+        <label class="chk-row"><input type="checkbox" id="df-cnt"> 방문자 수</label>
       </div>
       <div class="f-note">러브로그 홈 링크는 아래 "내 러브로그 홈 연결"에 핸들을 넣으면 떠요</div>
     </div>
@@ -1471,6 +1523,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=112"></script>
+<script type="module" src="app.js?v=113"></script>
 </body>
 </html>
