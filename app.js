@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v111 로드');
+console.log('[LUVINFO] app.js v112 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1291,7 +1291,7 @@ async function openOps() {
   gid('ops-bg').classList.add('on');
   gid('ops-sheet').classList.add('on');
   gid('ops-out').value = '';
-  try { const n = await getDoc(doc(db, 'config', 'tnotice')); if (gid('ops-notice')) gid('ops-notice').value = (n.exists() && n.data().text) || ''; } catch (e) { /* */ }
+  try { const n = await getDoc(doc(db, 'config', 'tnotice')); renderNoticeList(n.exists() ? tnItems(n.data()) : []); } catch (e) { /* */ }
   markOpsSeen();
   renderInqBox();
 }
@@ -1304,19 +1304,90 @@ function markOpsSeen() {
   const f = gid('fab-ops');
   if (f) f.textContent = '⚙ 운영';
 }
+// ── 공지: 쌓임형 (러브로그 사양) — tnotice { items:[{id,date,text}...] }, 구형 {text,id,date}는 자동 승계 ──
+function tnItems(d) {
+  if (!d) return [];
+  if (Array.isArray(d.items)) return d.items.filter((x) => x && x.text);
+  if (d.text && d.id) return [{ id: d.id, date: d.date || '', text: d.text }];
+  return [];
+}
+function tnSeen() {
+  try {
+    const raw = localStorage.getItem('li_notice_seen') || '[]';
+    if (raw.charAt(0) === '[') return JSON.parse(raw).map(String);
+    return [raw]; // 구형: 단일 id 문자열
+  } catch (e) { return []; }
+}
+function tnMarkSeen(ids) {
+  const s = new Set(tnSeen()); ids.forEach((i) => s.add(String(i)));
+  localStorage.setItem('li_notice_seen', JSON.stringify([...s].slice(-100)));
+}
+async function tnSave(items) {
+  await setDoc(doc(db, 'config', 'tnotice'), { items });
+}
+function renderNoticeList(items) {
+  const box = gid('ops-notice-list');
+  if (!box) return;
+  box.innerHTML = '';
+  items.forEach((it, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 2px;border-top:1px solid var(--line);font-size:12px;';
+    const dt = document.createElement('span');
+    dt.style.cssText = 'color:var(--mute);font-size:11px;white-space:nowrap;';
+    dt.textContent = (it.date || '').replaceAll('-', '.');
+    const tx = document.createElement('span');
+    tx.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx);';
+    tx.textContent = (it.text || '').split('\n')[0];
+    const del = document.createElement('button');
+    del.className = 'mini-btn';
+    del.textContent = '삭제';
+    del.onclick = async () => {
+      if (!confirm('이 공지를 지울까요?\n「' + tx.textContent.slice(0, 30) + '…」')) return;
+      items.splice(idx, 1);
+      try { await tnSave(items); renderNoticeList(items); toast('지웠어요'); }
+      catch (e) { toast('삭제 실패 — tnotice 쓰기 규칙 확인'); }
+    };
+    row.appendChild(dt); row.appendChild(tx); row.appendChild(del);
+    box.appendChild(row);
+  });
+  if (!items.length) {
+    box.innerHTML = '<div class="f-note" style="border-top:1px solid var(--line);padding-top:8px;">올린 공지가 없어요.</div>';
+  }
+}
+
 async function checkNotice() {
   try {
     if (!st.user) return;  // 서비스 공지는 로그인한 이용자에게만 — 구경 온 손님에겐 안 띄움
     const s = await getDoc(doc(db, 'config', 'tnotice'));
     if (!s.exists()) return;
-    const d = s.data() || {};
-    if (!d.text || !d.id) return;
-    if (localStorage.getItem('li_notice_seen') === String(d.id)) return;
-    gid('notice-body').textContent = d.text;
+    const items = tnItems(s.data());
+    if (!items.length) return;
+    const seen = tnSeen();
+    const unseen = items.filter((it) => !seen.includes(String(it.id)));
+    if (!unseen.length) return;
+    const body = gid('notice-body');
+    body.innerHTML = '';
+    items.slice(0, 5).forEach((it, i) => {
+      const wrap = document.createElement('div');
+      if (i > 0) wrap.style.cssText = 'margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);';
+      const head = document.createElement('div');
+      head.style.cssText = 'font-size:11px;color:var(--mute);margin-bottom:4px;display:flex;gap:6px;align-items:center;';
+      head.textContent = (it.date || '').replaceAll('-', '.');
+      if (!seen.includes(String(it.id))) {
+        const nw = document.createElement('span');
+        nw.textContent = 'NEW!';
+        nw.style.cssText = 'color:var(--pri);font-weight:700;font-size:10px;letter-spacing:.06em;';
+        head.appendChild(nw);
+      }
+      const tx = document.createElement('div');
+      tx.textContent = it.text;
+      wrap.appendChild(head); wrap.appendChild(tx);
+      body.appendChild(wrap);
+    });
     gid('notice-bg').classList.add('on');
     gid('notice-pop').classList.add('on');
     const close = () => {
-      localStorage.setItem('li_notice_seen', String(d.id));
+      tnMarkSeen(unseen.map((it) => it.id));
       gid('notice-bg').classList.remove('on');
       gid('notice-pop').classList.remove('on');
     };
@@ -1603,14 +1674,26 @@ function bindShell() {
     const text = gid('ops-notice').value.trim();
     if (!text) { toast('공지 내용을 적어주세요'); return; }
     try {
-      await setDoc(doc(db, 'config', 'tnotice'), { text, id: Date.now(), date: new Date().toISOString().slice(0, 10) });
-      toast('공지 올렸어요 ✓ — 유저들이 다음 방문 때 봐요');
+      const n = await getDoc(doc(db, 'config', 'tnotice'));
+      const items = n.exists() ? tnItems(n.data()) : [];
+      items.unshift({ id: Date.now(), date: new Date().toISOString().slice(0, 10), text });
+      await tnSave(items);
+      gid('ops-notice').value = '';
+      renderNoticeList(items);
+      if (gid('ops-notice-stat')) gid('ops-notice-stat').textContent = '올렸어요! 새 항목엔 NEW! 뱃지가 붙어요. 오래된 공지는 아래에서 지우면 돼요.';
     } catch (e) { console.log('[LUVINFO] notice err', e); toast('공지 저장 실패 — tnotice 쓰기 규칙 확인'); }
   };
   if (gid('ops-notice-del')) gid('ops-notice-del').onclick = async () => {
-    if (!confirm('공지를 내릴까요?')) return;
-    try { await setDoc(doc(db, 'config', 'tnotice'), { text: '', id: 0 }); gid('ops-notice').value = ''; toast('공지 내렸어요'); }
-    catch (e) { toast('실패'); }
+    try {
+      const n = await getDoc(doc(db, 'config', 'tnotice'));
+      const items = n.exists() ? tnItems(n.data()) : [];
+      if (!items.length) { toast('내릴 공지가 없어요'); return; }
+      if (!confirm('가장 최근 공지를 내릴까요?\n「' + items[0].text.split('\n')[0].slice(0, 30) + '…」')) return;
+      items.shift();
+      await tnSave(items);
+      renderNoticeList(items);
+      if (gid('ops-notice-stat')) gid('ops-notice-stat').textContent = '최근 공지를 내렸어요.';
+    } catch (e) { toast('실패'); }
   };
   if (gid('ops-dm-send')) gid('ops-dm-send').onclick = sendOpsDm;
   if (gid('ops-clear')) gid('ops-clear').onclick = () => { gid('ops-out').value = ''; };

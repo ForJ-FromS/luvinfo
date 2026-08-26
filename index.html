@@ -902,12 +902,15 @@
   </div>
 
   <div class="f-row">
-    <label>업데이트 공지 (저장하면 모든 유저에게 1회 팝업)</label>
-    <textarea id="ops-notice" style="min-height:70px;" placeholder="예: ◈ 8/19 업데이트 — 인용구·디데이 블록이 생겼어요"></textarea>
-    <div style="display:flex;gap:6px;margin-top:6px;">
+    <label>업데이트 공지</label>
+    <div class="f-note" style="margin:0 0 6px;">공지는 여러 개가 쌓여요 — 새로 올리면 목록 맨 위에 붙고, 각자 아직 안 본 항목에만 <b>NEW!</b>가 표시돼요. 오래된 공지는 아래 목록에서 지우면 됩니다.</div>
+    <textarea id="ops-notice" style="min-height:180px;" placeholder="예: 스티커 모바일 크기 조절과 커서 효과 3종이 추가됐어요!"></textarea>
+    <div style="display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap;">
       <button class="mini-btn" id="ops-notice-save">공지 올리기</button>
       <button class="mini-btn" id="ops-notice-del">공지 내리기</button>
+      <span id="ops-notice-stat" class="f-note" style="margin:0;"></span>
     </div>
+    <div id="ops-notice-list" style="margin-top:10px;"></div>
   </div>
 
   <div class="f-row">
@@ -1468,6 +1471,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=111"></script>
+<script type="module" src="app.js?v=112"></script>
 </body>
 </html>
