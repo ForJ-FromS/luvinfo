@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v113 로드');
+console.log('[LUVINFO] app.js v114 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -792,9 +792,9 @@ function renderBlocks(ch, bodyEl) {
     else if (blk.kind === 'lnk' && (d.items || []).length) div.appendChild(buildLinks(d));
     else if (blk.kind === 'quo' && d.text) div.appendChild(buildQuote(d));
     else if (blk.kind === 'dd' && d.date) div.appendChild(buildDday(d));
-    else if (blk.kind === 'chat' && d.body) div.appendChild(buildChat(d));
+    else if (blk.kind === 'chat' && ((d.lines || []).length || d.body)) div.appendChild(buildChat(blk));
     else if (blk.kind === 'qa' && d.body) div.appendChild(buildQa(d));
-    else if (blk.kind === 'tl' && d.body) div.appendChild(buildTimeline(d));
+    else if (blk.kind === 'tl' && ((d.items || []).length || d.body)) div.appendChild(buildTimeline(blk));
     else if (blk.kind === 'htm' && d.body) div.appendChild(buildHtmBlock(blk));
     else if (blk.kind === 'gb') div.appendChild(buildGbBlock());
     else return;
@@ -1076,46 +1076,195 @@ function buildSticker(s) {
   return d;
 }
 
-// ── v113 채팅로그 블록: 「이름: 내용」(나=오른쪽) / -- 가운데 줄 / 무접두 줄은 윗말에 이어붙임 ──
-function buildChat(d) {
-  const el = document.createElement('div');
-  el.className = 'chatblk';
-  let lastName = null, lastBub = null;
-  (d.body || '').split('\n').forEach((line) => {
+// ── v114 채팅로그·타임라인 (러브로그 이식) ──
+// v113 문법(이름: 내용) 저장분 자동 승계
+function chatLegacy(body) {
+  if (!body) return [];
+  const out = [];
+  String(body).split('\n').forEach((line) => {
     const t = line.trim();
-    if (!t) { lastName = null; lastBub = null; return; }
-    if (t.startsWith('--')) {
-      const sys = document.createElement('div');
-      sys.className = 'ch-sys';
-      sys.textContent = t.replace(/^-+\s*/, '').replace(/\s*-+$/, '') || '· · ·';
-      el.appendChild(sys);
-      lastName = null; lastBub = null;
-      return;
-    }
+    if (!t) return;
+    if (t.startsWith('--')) { out.push({ side: 'l', name: '', text: t.replace(/^-+\s*/, '').replace(/\s*-+$/, '') }); return; }
     const m = t.match(/^(\S[^:]{0,19}):\s*(.*)$/);
-    if (!m) {
-      if (lastBub) lastBub.textContent += '\n' + t;
-      return;
-    }
-    const name = m[1].trim(), msg = m[2];
-    const me = name === '나';
-    if (!me && name !== lastName) {
-      const nm = document.createElement('div');
-      nm.className = 'ch-name';
-      nm.textContent = name;
-      el.appendChild(nm);
-    }
-    const row = document.createElement('div');
-    row.className = 'ch-row' + (me ? ' me' : '');
-    const bub = document.createElement('div');
-    bub.className = 'ch-bub';
-    bub.textContent = msg;
-    row.appendChild(bub);
-    el.appendChild(row);
-    lastName = name; lastBub = bub;
+    if (!m) { if (out.length) out[out.length - 1].text += '\n' + t; return; }
+    const me = m[1].trim() === '나';
+    out.push({ side: me ? 'r' : 'l', name: me ? '' : m[1].trim(), text: m[2] });
   });
+  return out;
+}
+function tlLegacy(body) {
+  if (!body) return [];
+  return String(body).split('\n').map((l) => l.trim()).filter(Boolean).map((t) => {
+    const bar = t.indexOf('|');
+    return bar > -1 ? { d: t.slice(0, bar).trim(), tt: '', t: t.slice(bar + 1).trim() } : { d: '', tt: '', t };
+  });
+}
+function chatMigrate(d) { if (d.body && !(d.lines || []).length) { d.lines = chatLegacy(d.body); delete d.body; } return d; }
+function tlMigrate(d) { if (d.body && !(d.items || []).length) { d.items = tlLegacy(d.body); delete d.body; } return d; }
+function lumHex(hx) {
+  try { const n = parseInt(hx.slice(1), 16); return (((n >> 16) & 255) * .299 + ((n >> 8) & 255) * .587 + (n & 255) * .114) / 255; }
+  catch (e) { return .5; }
+}
+function buildChat(blk) {
+  const d = chatMigrate(blk.data);
+  const el = document.createElement('div');
+  el.className = 'chatblk ch-' + (d.style || 'msg');
+  const ls = (d.lines || []).filter((l) => l.text || l.name);
+  if (d.anim && ls.length) {
+    const akey = 'c' + (blk.id || '');
+    const done = (window.__animDone ??= new Set()).has(akey);
+    if (!(done && !d.loop)) {
+      el.className += ' ch-anim';
+      el.dataset.akey = akey;
+      if (done) el.dataset.warm = '1';
+      if (d.loop) el.dataset.loop = '1';
+      if (d.loop && d.fold) el.dataset.fold = '1';
+      chatObserve(el);
+    }
+  }
+  const imgs = d.imgs !== false;
+  const sv = [];
+  if (d.cL) sv.push('--chL:' + d.cL);
+  if (d.cR) sv.push('--chR:' + d.cR);
+  const tL = d.tL || (d.cL ? (lumHex(d.cL) > .62 ? '#1a1a1a' : '#fff') : '');
+  const tR = d.tR || (d.cR ? (lumHex(d.cR) > .62 ? '#1a1a1a' : '#fff') : '');
+  if (tL) sv.push('--chLt:' + tL);
+  if (tR) sv.push('--chRt:' + tR);
+  if (d.tL || d.tR) sv.push('--chNm:' + (d.tL || d.tR));
+  if (d.fs) sv.push('--chFs:' + d.fs + 'px');
+  if (d.font === 'serif') sv.push("--chFf:'Noto Serif KR',serif");
+  if (d.font === 'mono') sv.push("--chFf:'JetBrains Mono',monospace");
+  if (sv.length) el.setAttribute('style', sv.join(';'));
+  if (+d.maxH > 0) { el.className += ' ch-scroll'; el.style.setProperty('--chMax', (+d.maxH) + 'px'); }
+  const box = document.createElement('div');
+  box.className = 'ch-box';
+  ls.forEach((l) => {
+    const row = document.createElement('div');
+    row.className = 'ch-line ' + (l.side === 'r' ? 'r' : 'l');
+    if (imgs && l.img) {
+      const p = document.createElement('img');
+      p.className = 'ch-p'; p.src = l.img; p.alt = ''; p.draggable = false;
+      row.appendChild(p);
+    }
+    const b = document.createElement('div');
+    b.className = 'ch-b';
+    if (l.name) { const n = document.createElement('span'); n.className = 'ch-n'; n.textContent = l.name; b.appendChild(n); }
+    const pp = document.createElement('p'); pp.textContent = l.text || ''; b.appendChild(pp);
+    row.appendChild(b);
+    box.appendChild(row);
+  });
+  const lab = document.createElement('p'); lab.className = 'label'; lab.textContent = 'CHAT';
+  el.appendChild(lab); el.appendChild(box);
+  // 움짤 자리 예약 (러브로그 방식): 재생 전 실제 높이만큼 확보해 출렁임 방지
+  if (d.anim && el.classList.contains('ch-anim')) {
+    requestAnimationFrame(() => {
+      if (!el.isConnected) return;
+      el.classList.remove('ch-anim');
+      const need = +d.maxH > 0 ? Math.min(box.scrollHeight, +d.maxH) : box.scrollHeight;
+      el.classList.add('ch-anim');
+      if (need > 0) box.style.minHeight = need + 'px';
+    });
+  }
   return el;
 }
+function buildTimeline(blk) {
+  const d = tlMigrate(blk.data);
+  const el = document.createElement('div');
+  el.className = 'tlblk tl-' + (d.style || 'line');
+  const its = (d.items || []).filter((i) => i.t || i.d || i.tt);
+  if (d.anim && its.length) {
+    const akey = 't' + (blk.id || '');
+    const done = (window.__animDone ??= new Set()).has(akey);
+    if (!(done && !d.loop)) {
+      el.className += ' ch-anim';
+      el.dataset.akey = akey;
+      if (done) el.dataset.warm = '1';
+      if (d.loop) el.dataset.loop = '1';
+      if (d.loop && d.fold) el.dataset.fold = '1';
+      chatObserve(el);
+    }
+  }
+  if (+d.maxH > 0) { el.className += ' ch-scroll'; el.style.setProperty('--chMax', (+d.maxH) + 'px'); }
+  const lab = document.createElement('p'); lab.className = 'label'; lab.textContent = d.title || 'TIMELINE';
+  el.appendChild(lab);
+  const box = document.createElement('div');
+  box.className = 'ch-box tl-box';
+  its.forEach((i) => {
+    const w = document.createElement('div');
+    w.className = 'ch-line tl-i';
+    const dot = document.createElement('span');
+    dot.className = 'tl-dot' + (d.dot ? ' cdot' : '');
+    dot.textContent = d.dot || '';
+    w.appendChild(dot);
+    const bd = document.createElement('span'); bd.className = 'tl-bd';
+    if (i.d) { const dt = document.createElement('i'); dt.className = 'tl-d'; dt.textContent = i.d; bd.appendChild(dt); }
+    if (i.tt) { const tt = document.createElement('b'); tt.className = 'tl-tt'; tt.textContent = i.tt; bd.appendChild(tt); }
+    if (i.t) { const p = document.createElement('p'); p.className = 'tl-t'; p.textContent = i.t; bd.appendChild(p); }
+    w.appendChild(bd);
+    box.appendChild(w);
+  });
+  el.appendChild(box);
+  if (d.anim && el.classList.contains('ch-anim')) {
+    requestAnimationFrame(() => {
+      if (!el.isConnected) return;
+      el.classList.remove('ch-anim');
+      const need = +d.maxH > 0 ? Math.min(box.scrollHeight, +d.maxH) : box.scrollHeight;
+      el.classList.add('ch-anim');
+      if (need > 0) box.style.minHeight = need + 'px';
+    });
+  }
+  return el;
+}
+// 등장 재생기 (러브로그 chatPlay 이식)
+function chatPlay(el) {
+  const lines = [...el.querySelectorAll('.ch-line')];
+  const box = el.querySelector('.ch-box');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    lines.forEach((l) => l.classList.add('ch-in'));
+    if (box) { box.style.minHeight = ''; box.scrollTop = 0; }
+    return;
+  }
+  if (box) box.scrollTop = 0;
+  let i = 0;
+  if (el.dataset.warm === '1') {
+    lines.forEach((l) => l.classList.add('ch-in'));
+    i = lines.length;
+    if (box) { box.style.minHeight = ''; box.style.minHeight = box.clientHeight + 'px'; box.scrollTop = box.scrollHeight; }
+  }
+  const step = () => {
+    if (!el.isConnected) return;
+    if (i >= lines.length) {
+      if (el.dataset.akey) { (window.__animDone ??= new Set()).add(el.dataset.akey); }
+      if (box) {
+        box.style.minHeight = '';
+        if (el.dataset.loop === '1') box.style.minHeight = box.clientHeight + 'px';
+      }
+      if (el.dataset.loop === '1')
+        setTimeout(() => {
+          if (!el.isConnected) return;
+          if (box && el.dataset.fold === '1' && !el.classList.contains('ch-scroll')) {
+            box.style.transition = 'min-height .5s ease';
+            box.style.minHeight = '0px';
+          }
+          lines.forEach((l) => l.classList.remove('ch-in'));
+          if (box) box.scrollTop = 0;
+          i = 0; setTimeout(step, 500);
+        }, 2400);
+      return;
+    }
+    lines[i].classList.add('ch-in');
+    if (box && box.scrollHeight > box.clientHeight)
+      box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
+    i++; setTimeout(step, 650);
+  };
+  setTimeout(step, 420);
+}
+const chatIO = ('IntersectionObserver' in window)
+  ? new IntersectionObserver((es) => es.forEach((e) => {
+      if (e.isIntersecting) { chatIO.unobserve(e.target); chatPlay(e.target); }
+    }), { threshold: .25 })
+  : null;
+function chatObserve(el) { if (chatIO) chatIO.observe(el); else chatPlay(el); }
 // ── v113 문답 블록: Q./A. 접두, 무접두 줄은 윗글에 이어붙임 ──
 function buildQa(d) {
   const el = document.createElement('div');
@@ -1150,35 +1299,6 @@ function buildQa(d) {
       a.textContent = it.a;
       w.appendChild(a);
     }
-    el.appendChild(w);
-  });
-  return el;
-}
-// ── v113 타임라인 블록: 「날짜 | 내용」 ──
-function buildTimeline(d) {
-  const el = document.createElement('div');
-  el.className = 'tlblk';
-  (d.body || '').split('\n').forEach((line) => {
-    const t = line.trim();
-    if (!t) return;
-    const bar = t.indexOf('|');
-    const date = bar > -1 ? t.slice(0, bar).trim() : '';
-    const tx = bar > -1 ? t.slice(bar + 1).trim() : t;
-    const w = document.createElement('div');
-    w.className = 'tl-item';
-    const dot = document.createElement('span');
-    dot.className = 'tl-dot';
-    w.appendChild(dot);
-    if (date) {
-      const dt = document.createElement('div');
-      dt.className = 'tl-date';
-      dt.textContent = date;
-      w.appendChild(dt);
-    }
-    const tb = document.createElement('div');
-    tb.className = 'tl-tx';
-    tb.textContent = tx;
-    w.appendChild(tb);
     el.appendChild(w);
   });
   return el;
@@ -1926,9 +2046,9 @@ function newBlockData(kind) {
   if (kind === 'lnk') return { items: [] };
   if (kind === 'quo') return { text: '', by: '' };
   if (kind === 'dd') return { label: '', date: '' };
-  if (kind === 'chat') return { body: '' };
+  if (kind === 'chat') return { lines: [] };
   if (kind === 'qa') return { body: '' };
-  if (kind === 'tl') return { body: '' };
+  if (kind === 'tl') return { items: [] };
   return {};
 }
 
@@ -1943,9 +2063,9 @@ function blkSummary(blk) {
   if (blk.kind === 'lnk') return (d.items || []).length + '개';
   if (blk.kind === 'quo') return (d.text || '').slice(0, 14);
   if (blk.kind === 'dd') return d.label || d.date || '';
-  if (blk.kind === 'chat') return (d.body || '').split('\n').filter((x) => x.trim()).length + '마디';
+  if (blk.kind === 'chat') return ((d.lines || chatLegacy(d.body)).length) + '마디';
   if (blk.kind === 'qa') return ((d.body || '').match(/^[QqＱ][.:．：]/gm) || []).length + '문';
-  if (blk.kind === 'tl') return (d.body || '').split('\n').filter((x) => x.trim()).length + '항목';
+  if (blk.kind === 'tl') return ((d.items || tlLegacy(d.body)).length) + '항목';
   return '';
 }
 
@@ -2082,11 +2202,33 @@ function openBlockEdit(blk) {
     $('#ed-date').value = blk.data.date || '';
     if (gid('ed-one')) gid('ed-one').checked = !!blk.data.one;
   } else if (blk.kind === 'chat') {
-    $('#ecl-body').value = d.body || '';
+    chatMigrate(d);
+    $('#ech-st').value = d.style || 'msg';
+    $('#ech-max').value = +d.maxH > 0 ? +d.maxH : '';
+    gid('ech-imgs').checked = d.imgs !== false;
+    gid('ech-anim').checked = !!d.anim;
+    gid('ech-loop').checked = !!d.loop;
+    gid('ech-fold').checked = !!d.fold;
+    $('#ech-cl').value = d.cL || '#2a2f3a';
+    $('#ech-cr').value = d.cR || '#7c9cff';
+    $('#ech-tl').value = d.tL || '#ffffff';
+    $('#ech-tr').value = d.tR || '#ffffff';
+    $('#ech-ff').value = d.font || '';
+    $('#ech-fs').value = d.fs || 12.5;
+    gid('ech-fsv').textContent = (d.fs || 12.5) + 'px';
+    renderChatEd();
   } else if (blk.kind === 'qa') {
     $('#eqa-body').value = d.body || '';
   } else if (blk.kind === 'tl') {
-    $('#etl-body').value = d.body || '';
+    tlMigrate(d);
+    $('#etl-title').value = d.title || '';
+    $('#etl-st').value = d.style || '';
+    $('#etl-dot').value = d.dot || '';
+    $('#etl-max').value = +d.maxH > 0 ? +d.maxH : '';
+    gid('etl-anim').checked = !!d.anim;
+    gid('etl-loop').checked = !!d.loop;
+    gid('etl-fold').checked = !!d.fold;
+    renderTlEd();
   } else if (blk.kind === 'htm') {
     $('#eh-body').value = d.body || '';
   }
@@ -2122,12 +2264,8 @@ function saveBlockFields() {
     d.label = $('#ed-label').value.trim();
     d.date = $('#ed-date').value.trim();
     d.one = gid('ed-one') && gid('ed-one').checked ? 1 : 0;
-  } else if (editingBlk.kind === 'chat') {
-    d.body = $('#ecl-body').value;
   } else if (editingBlk.kind === 'qa') {
     d.body = $('#eqa-body').value;
-  } else if (editingBlk.kind === 'tl') {
-    d.body = $('#etl-body').value;
   } else if (editingBlk.kind === 'htm') {
     d.body = $('#eh-body').value;
   }
@@ -2206,6 +2344,47 @@ function renderStkChips() {
   });
 }
 
+function renderChatEd() {
+  const box = gid('ech-list');
+  if (!box) return;
+  const lines = editingBlk?.data.lines || (editingBlk.data.lines = []);
+  box.innerHTML = lines.map((l, i) =>
+    '<div class="chl"><div class="chl-h">' +
+    '<span class="chl-sd"><button data-csl="' + i + '" class="' + (l.side !== 'r' ? 'on' : '') + '">◀ 왼쪽</button>' +
+    '<button data-csr="' + i + '" class="' + (l.side === 'r' ? 'on' : '') + '">오른쪽 ▶</button></span>' +
+    '<input class="chl-nm" data-cnm="' + i + '" placeholder="이름 (선택)" value="' + esc(l.name || '') + '">' +
+    (l.img ? '<img class="chl-pv" src="' + esc(l.img) + '" alt="">' : '') +
+    '<button class="mini-btn" data-cimg="' + i + '" style="font-size:10px;">' + (l.img ? '프사 교체' : '＋프사') + '</button>' +
+    (l.img ? '<button class="mini-btn" data-cimx="' + i + '" style="font-size:10px;">프사✕</button>' : '') +
+    '<i data-crm="' + i + '" style="cursor:pointer;color:var(--mute);margin-left:auto;">✕</i>' +
+    '</div><textarea data-ctx="' + i + '" placeholder="대사">' + esc(l.text || '') + '</textarea></div>'
+  ).join('');
+  box.querySelectorAll('[data-csl]').forEach((x) => { x.onclick = () => { lines[+x.dataset.csl].side = 'l'; renderChatEd(); }; });
+  box.querySelectorAll('[data-csr]').forEach((x) => { x.onclick = () => { lines[+x.dataset.csr].side = 'r'; renderChatEd(); }; });
+  box.querySelectorAll('[data-cnm]').forEach((x) => { x.oninput = () => { lines[+x.dataset.cnm].name = x.value; }; });
+  box.querySelectorAll('[data-ctx]').forEach((x) => { x.oninput = () => { lines[+x.dataset.ctx].text = x.value; }; });
+  box.querySelectorAll('[data-crm]').forEach((x) => { x.onclick = () => { lines.splice(+x.dataset.crm, 1); renderChatEd(); }; });
+  box.querySelectorAll('[data-cimg]').forEach((x) => {
+    x.onclick = () => uploadOne((url) => { lines[+x.dataset.cimg].img = url; renderChatEd(); });
+  });
+  box.querySelectorAll('[data-cimx]').forEach((x) => { x.onclick = () => { delete lines[+x.dataset.cimx].img; renderChatEd(); }; });
+}
+function renderTlEd() {
+  const box = gid('etl-list');
+  if (!box) return;
+  const items = editingBlk?.data.items || (editingBlk.data.items = []);
+  box.innerHTML = items.map((it, i) =>
+    '<div class="tl-ed"><div class="tlrow">' +
+    '<input data-td="' + i + '" placeholder="날짜 (자유 형식)" value="' + esc(it.d || '') + '">' +
+    '<input data-ttt="' + i + '" placeholder="제목 (선택)" value="' + esc(it.tt || '') + '" style="flex:1.4;">' +
+    '<i data-trm="' + i + '" style="cursor:pointer;color:var(--mute);align-self:center;">✕</i></div>' +
+    '<textarea data-tt="' + i + '" placeholder="내용 — 줄바꿈 그대로 표시돼요 (선택)">' + esc(it.t || '') + '</textarea></div>'
+  ).join('');
+  box.querySelectorAll('[data-td]').forEach((x) => { x.oninput = () => { items[+x.dataset.td].d = x.value; }; });
+  box.querySelectorAll('[data-ttt]').forEach((x) => { x.oninput = () => { items[+x.dataset.ttt].tt = x.value; }; });
+  box.querySelectorAll('[data-tt]').forEach((x) => { x.oninput = () => { items[+x.dataset.tt].t = x.value; }; });
+  box.querySelectorAll('[data-trm]').forEach((x) => { x.onclick = () => { items.splice(+x.dataset.trm, 1); renderTlEd(); }; });
+}
 function renderLnkChips() {
   const box = $('#el-list');
   if (!box) return;
@@ -2423,6 +2602,50 @@ function bindEditor() {
     (editingBlk.data.items = editingBlk.data.items || []).push({ t: '', u: '' });
     renderLnkChips();
   };
+  if (gid('ech-add')) gid('ech-add').onclick = () => {
+    if (!editingBlk || editingBlk.kind !== 'chat') return;
+    const ls = (editingBlk.data.lines = editingBlk.data.lines || []);
+    ls.push({ side: ls.length && ls[ls.length - 1].side === 'l' ? 'r' : 'l', name: '', text: '' });
+    renderChatEd();
+  };
+  if (gid('etl-add')) gid('etl-add').onclick = () => {
+    if (!editingBlk || editingBlk.kind !== 'tl') return;
+    (editingBlk.data.items = editingBlk.data.items || []).push({ d: '', tt: '', t: '' });
+    renderTlEd();
+  };
+  const chOpt = (id, fn) => { if (gid(id)) gid(id).oninput = gid(id).onchange = (e) => { if (editingBlk && editingBlk.kind === 'chat') fn(editingBlk.data, e.target); }; };
+  chOpt('ech-st', (d, t) => { d.style = t.value; });
+  chOpt('ech-max', (d, t) => { d.maxH = parseInt(t.value) || 0; });
+  chOpt('ech-imgs', (d, t) => { d.imgs = t.checked; });
+  chOpt('ech-anim', (d, t) => { d.anim = t.checked ? 1 : 0; });
+  chOpt('ech-loop', (d, t) => { d.loop = t.checked ? 1 : 0; });
+  chOpt('ech-fold', (d, t) => { d.fold = t.checked ? 1 : 0; });
+  chOpt('ech-cl', (d, t) => { d.cL = t.value; });
+  chOpt('ech-cr', (d, t) => { d.cR = t.value; });
+  chOpt('ech-tl', (d, t) => { d.tL = t.value; });
+  chOpt('ech-tr', (d, t) => { d.tR = t.value; });
+  chOpt('ech-ff', (d, t) => { d.font = t.value; });
+  chOpt('ech-fs', (d, t) => { d.fs = parseFloat(t.value); if (gid('ech-fsv')) gid('ech-fsv').textContent = t.value + 'px'; });
+  if (gid('ech-cx')) gid('ech-cx').onclick = () => {
+    if (!editingBlk || editingBlk.kind !== 'chat') return;
+    delete editingBlk.data.cL; delete editingBlk.data.cR;
+    $('#ech-cl').value = '#2a2f3a'; $('#ech-cr').value = '#7c9cff';
+    toast('말풍선을 테마색으로');
+  };
+  if (gid('ech-tx')) gid('ech-tx').onclick = () => {
+    if (!editingBlk || editingBlk.kind !== 'chat') return;
+    delete editingBlk.data.tL; delete editingBlk.data.tR;
+    $('#ech-tl').value = '#ffffff'; $('#ech-tr').value = '#ffffff';
+    toast('글씨색 자동으로');
+  };
+  const tlOpt = (id, fn) => { if (gid(id)) gid(id).oninput = gid(id).onchange = (e) => { if (editingBlk && editingBlk.kind === 'tl') fn(editingBlk.data, e.target); }; };
+  tlOpt('etl-title', (d, t) => { d.title = t.value.trim(); });
+  tlOpt('etl-st', (d, t) => { d.style = t.value; });
+  tlOpt('etl-dot', (d, t) => { d.dot = t.value.trim(); });
+  tlOpt('etl-max', (d, t) => { d.maxH = parseInt(t.value) || 0; });
+  tlOpt('etl-anim', (d, t) => { d.anim = t.checked ? 1 : 0; });
+  tlOpt('etl-loop', (d, t) => { d.loop = t.checked ? 1 : 0; });
+  tlOpt('etl-fold', (d, t) => { d.fold = t.checked ? 1 : 0; });
   $('#eb-addh').onclick = async () => {
     if (!editingBlk) return;
     const inp = $('#eb-hin');
