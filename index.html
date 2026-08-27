@@ -800,6 +800,9 @@
     padding: 10px 12px; margin-bottom: 7px;
     font-size: 12.5px;
   }
+  .blrow .drag { cursor: grab; color: var(--mute); font-size: 12px; letter-spacing: -1px; user-select: none; padding: 0 2px; }
+  .blrow.dragging { opacity: .45; }
+  .blrow.over { border-color: var(--pri); box-shadow: inset 0 0 0 1px var(--pri); }
   .blrow .kind {
     font-size: 10px; letter-spacing: .1em;
     color: var(--pri);
@@ -1620,6 +1623,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=119"></script>
+<script type="module" src="app.js?v=120"></script>
 </body>
 </html>

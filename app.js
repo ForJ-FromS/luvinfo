@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v119 로드');
+console.log('[LUVINFO] app.js v120 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -524,6 +524,7 @@ function showSite() {
   $('#fabs').style.display = 'flex';
   checkNotice();
   checkMyReplies();
+  checkNewGuest();
   if (gid('fab-logout')) {
     gid('fab-logout').style.display = st.user ? 'block' : 'none';
     gid('fab-logout').onclick = doLogout;
@@ -1768,6 +1769,30 @@ async function checkOpsNoti() {
   } catch (e) { /* 조용히 */ }
 }
 
+// ── v120 방명록 새 글 알림 (내 홈에 들어왔을 때) ──
+async function checkNewGuest() {
+  try {
+    if (!st.mine || !st.handle) return;
+    const key = 'li_gb_seen_' + st.handle;
+    const seen = parseInt(localStorage.getItem(key) || '0');
+    const qs = await getDocs(collection(db, 'tsites', st.handle, 'tguest'));
+    let n = 0, newest = seen;
+    qs.forEach((d) => {
+      const g = d.data() || {};
+      const ts = parseInt(g.ts) || 0;
+      if (ts > newest) newest = ts;
+      if (ts > seen && g.uid !== st.user?.uid) n++;
+    });
+    if (!n) { localStorage.setItem(key, String(newest)); return; }
+    toast('📖 방명록에 새 글 ' + n + '개가 있어요 — 눌러서 보기', 4500, () => {
+      localStorage.setItem(key, String(newest));
+      const gb = document.querySelector('.gbblk');
+      if (gb) gb.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      else toast('이 페이지엔 방명록 블록이 없어요 — 방명록이 있는 페이지에서 확인해 주세요');
+    });
+  } catch (e) { /* 조회 실패는 조용히 */ }
+}
+
 async function checkMyReplies() {
   // 일반 유저: 내 문의에 새 답변 → 알림
   if (!st.user || !st.myHandle || st.myHandle === 'jeste') return;
@@ -2015,11 +2040,14 @@ function bindShell() {
 
 function moveChapter(d) {
   const chs = st.site.chapters;
-  const j = st.cur + d;
-  if (j < 0 || j >= chs.length) return;
-  const [ch] = chs.splice(st.cur, 1);
-  chs.splice(j, 0, ch);
-  st.cur = j;
+  const vis = viewChs();
+  const cur = vis[st.cur];
+  const tgt = vis[st.cur + d];
+  if (!cur || !tgt) return;
+  const a = chs.indexOf(cur), b = chs.indexOf(tgt);
+  if (a < 0 || b < 0) return;
+  chs[a] = tgt; chs[b] = cur;
+  st.cur += d;
   setDirty();
   renderChapter();
 }
@@ -2131,7 +2159,7 @@ function renderBlockList() {
     return;
   }
   box.innerHTML = blocks.map((blk, i) =>
-    '<div class="blrow"><span class="kind">' + KIND_LABEL[blk.kind] + (blk.label ? ' · <b style="color:var(--tx);font-weight:600;">' + esc(blk.label) + '</b>' : '') + '</span>' +
+    '<div class="blrow" draggable="true" data-bi="' + i + '"><span class="drag" title="끌어서 순서 바꾸기">⠿</span><span class="kind">' + KIND_LABEL[blk.kind] + (blk.label ? ' · <b style="color:var(--tx);font-weight:600;">' + esc(blk.label) + '</b>' : '') + '</span>' +
     '<span class="sum">' + esc(blkSummary(blk)) + '</span>' +
     '<button class="ct" data-bmv="' + i + ',-1" title="위로">↑</button>' +
     '<button class="ct" data-bmv="' + i + ',1" title="아래로">↓</button>' +
@@ -2139,6 +2167,30 @@ function renderBlockList() {
     '<button class="ct" data-bcp="' + i + '" title="복제">⧉</button>' +
     '<button class="ct del" data-brm="' + i + '" title="삭제">🗑</button></div>'
   ).join('');
+  let dragFrom = null;
+  box.querySelectorAll('.blrow').forEach((row) => {
+    row.ondragstart = (e) => {
+      dragFrom = parseInt(row.dataset.bi);
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', String(dragFrom)); } catch (err) { /* */ }
+    };
+    row.ondragend = () => { row.classList.remove('dragging'); box.querySelectorAll('.blrow').forEach((r) => r.classList.remove('over')); };
+    row.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; row.classList.add('over'); };
+    row.ondragleave = () => row.classList.remove('over');
+    row.ondrop = (e) => {
+      e.preventDefault();
+      row.classList.remove('over');
+      let from = dragFrom;
+      if (from === null) { const t = parseInt(e.dataTransfer.getData('text/plain')); if (Number.isFinite(t)) from = t; }
+      const to = parseInt(row.dataset.bi);
+      dragFrom = null;
+      if (!Number.isFinite(from) || from === to) return;
+      const [mv] = blocks.splice(from, 1);
+      blocks.splice(to, 0, mv);
+      renderBlockList();
+    };
+  });
   box.querySelectorAll('[data-bmv]').forEach((x) => {
     x.onclick = () => {
       const [i, d] = x.dataset.bmv.split(',').map(Number);
