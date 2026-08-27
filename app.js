@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v121 로드');
+console.log('[LUVINFO] app.js v123 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -534,8 +534,13 @@ function showSite() {
     gid('fab-logout').onclick = doLogout;
   }
   applyTheme();
-  const _pp = parseInt(new URLSearchParams(location.search).get('p'));
-  if (Number.isFinite(_pp) && _pp >= 1 && _pp <= viewChs().length) st.cur = _pp - 1;
+  const _hash = decodeURIComponent((location.hash || '').replace(/^#/, '')).toLowerCase();
+  const _hi = _hash ? viewChs().findIndex((c) => (c.slug || '') === _hash) : -1;
+  if (_hi >= 0) st.cur = _hi;
+  else {
+    const _pp = parseInt(new URLSearchParams(location.search).get('p'));
+    if (Number.isFinite(_pp) && _pp >= 1 && _pp <= viewChs().length) st.cur = _pp - 1;
+  }
   renderChapter();
   renderFoot();
   if (st.mine) {
@@ -1350,9 +1355,23 @@ function buildDday(d) {
 function buildLinks(d) {
   const w = document.createElement('div');
   w.className = 'lnkblk';
-  w.innerHTML = (d.items || []).map((it) =>
-    '<a class="lnkrow" href="' + esc(it.u || '#') + '" target="_blank" rel="noopener"><span>→ ' + esc(it.t || it.u || '') + '</span><i>↗</i></a>'
-  ).join('');
+  w.innerHTML = (d.items || []).map((it) => {
+    const u = it.u || '';
+    if (u.charAt(0) === '#') {
+      return '<a class="lnkrow inpage" href="' + esc(u) + '" data-goslug="' + esc(u.slice(1)) + '"><span>→ ' + esc(it.t || u.slice(1)) + '</span><i>›</i></a>';
+    }
+    return '<a class="lnkrow" href="' + esc(u || '#') + '" target="_blank" rel="noopener"><span>→ ' + esc(it.t || u) + '</span><i>↗</i></a>';
+  }).join('');
+  w.querySelectorAll('[data-goslug]').forEach((a) => {
+    a.onclick = (e) => {
+      e.preventDefault();
+      const sl = a.dataset.goslug;
+      const i = viewChs().findIndex((c) => (c.slug || '') === sl);
+      if (i < 0) { toast('「#' + sl + '」 페이지를 찾을 수 없어요'); return; }
+      go(i);
+      history.replaceState(null, '', '#' + sl);
+    };
+  });
   return w;
 }
 
@@ -1452,6 +1471,7 @@ function bindAdjust() {
 function renderPager() {
   const nav = st.site.theme?.nav || 'dot';
   const chs = viewChs();
+  if (nav === 'none' && !st.edit) { const pg = $('#pager'); if (pg) pg.innerHTML = ''; return; }
   const pg = $('#pager');
   pg.innerHTML = '';
   if (chs.length <= 1) return;
@@ -1949,9 +1969,10 @@ function bindShell() {
     catch (e) { console.log('[LUVINFO] heart err', e); }
   };
   $('#copy-link').onclick = () => {
-    const pq = st.cur > 0 ? '?p=' + (st.cur + 1) : '';
+    const _cch = viewChs()[st.cur];
+    const pq = (_cch && _cch.slug) ? '#' + _cch.slug : (st.cur > 0 ? '?p=' + (st.cur + 1) : '');
     navigator.clipboard?.writeText(subUrl(st.handle) + pq)
-      .then(() => toast(pq ? '이 페이지 링크를 복사했어요 ✓ — 바로 ' + (st.cur + 1) + '페이지로 열려요' : '링크를 복사했어요 ✓ — ' + st.handle + '.luvinfo.me'))
+      .then(() => toast(pq ? '이 페이지 링크를 복사했어요 ✓ — 바로 이 페이지로 열려요' : '링크를 복사했어요 ✓ — ' + st.handle + '.luvinfo.me'))
       .catch(() => toast('복사에 실패했어요'));
   };
   $('#foot-brand').onclick = (e) => { e.preventDefault(); location.href = BASE; };
@@ -2121,6 +2142,7 @@ function openChapterEdit(ch, type) {
   $('#es-name').value = work.title || '';
   $('#es-pw').value = work.pw || '';
   if (gid('es-hidden')) gid('es-hidden').checked = !!work.hidden;
+  if (gid('es-slug')) gid('es-slug').value = work.slug || '';
   if (gid('es-timgpos')) gid('es-timgpos').value = work.timgPos || 'top';
   if (gid('es-timg-chip')) gid('es-timg-chip').textContent = work.timg ? '이미지 있음 ✓' : '없음';
   const isHtml = type === 'html';
@@ -2664,6 +2686,22 @@ function bindEditor() {
     });
   };
   // 배너
+  if (gid('el-addp')) gid('el-addp').onclick = () => {
+    if (!editingBlk || editingBlk.kind !== 'lnk') return;
+    const chs = (st.site.chapters || []);
+    const opts = chs.filter((c) => c.slug);
+    if (!opts.length) {
+      toast('먼저 페이지 편집에서 「주소 이름」을 지어 주세요 (예: home)');
+      return;
+    }
+    const list = opts.map((c, i) => (i + 1) + '. ' + (c.title || '(제목 없음)') + '  →  #' + c.slug).join('\n');
+    const pick = prompt('어느 페이지로 갈까요?\n\n' + list + '\n\n번호를 입력하세요', '1');
+    const n = parseInt(pick);
+    if (!Number.isFinite(n) || n < 1 || n > opts.length) return;
+    const ch = opts[n - 1];
+    (editingBlk.data.items = editingBlk.data.items || []).push({ t: ch.title || ch.slug, u: '#' + ch.slug });
+    renderLnkChips();
+  };
   if (gid('el-add')) gid('el-add').onclick = () => {
     if (!editingBlk || editingBlk.kind !== 'lnk') return;
     (editingBlk.data.items = editingBlk.data.items || []).push({ t: '', u: '' });
@@ -2743,6 +2781,12 @@ function confirmChapterEdit() {
   work.title = $('#es-name').value.trim();
   work.pw = $('#es-pw').value.trim();
   if (gid('es-hidden')) work.hidden = gid('es-hidden').checked;
+  if (gid('es-slug')) {
+    const sl = gid('es-slug').value.trim().toLowerCase().replace(/^#/, '').replace(/[^a-z0-9-]/g, '');
+    const dup = (st.site.chapters || []).some((c) => c !== work && c.slug && c.slug === sl);
+    if (sl && dup) { toast('「#' + sl + '」은 다른 페이지가 쓰고 있어요 — 다른 이름으로 지어 주세요'); return; }
+    work.slug = sl;
+  }
     if (gid('es-timgpos')) work.timgPos = gid('es-timgpos').value;
   if (work.type === 'html') {
     work.body = $('#es-html').value;
@@ -3171,8 +3215,21 @@ async function saveSite() {
   const payload = JSON.parse(JSON.stringify(st.site));
   const size = new Blob([JSON.stringify(payload)]).size;
   if (size > 950000) {
-    toast('용량 초과에 가까워요 (' + Math.round(size / 1024) + 'KB / 최대 약 1MB) — HTML 페이지을 줄여 주세요');
-    if (size > 1000000) return;
+    // 무엇이 무거운지 짚어서 안내 (HTML 페이지 / 채팅·타임라인 / 그 외)
+    let htm = 0, chat = 0;
+    (payload.chapters || []).forEach((c) => {
+      if (c.type === 'html') htm += (c.body || '').length;
+      (c.blocks || []).forEach((b) => {
+        const j = JSON.stringify(b.data || {}).length;
+        if (b.kind === 'htm') htm += j;
+        else if (b.kind === 'chat' || b.kind === 'tl') chat += j;
+      });
+    });
+    const tip = htm > chat ? 'HTML 페이지 내용을 줄여 주세요'
+      : chat > 0 ? '채팅로그·타임라인 항목이 많아요 — 페이지를 나눠 주세요'
+      : '내용을 조금 덜어내 주세요';
+    toast('용량이 한도에 가까워요 (' + Math.round(size / 1024) + 'KB / 최대 약 1MB) — ' + tip, 6000);
+    if (size > 1000000) { toast('용량 초과로 저장하지 못했어요 (' + Math.round(size / 1024) + 'KB) — ' + tip, 7000); return; }
   }
   try {
     await setDoc(doc(db, 'tsites', st.handle), payload);
