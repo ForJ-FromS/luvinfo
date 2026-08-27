@@ -850,6 +850,8 @@
     max-width: 88vw; text-align: center;
   }
   #toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.tap { pointer-events: auto; cursor: pointer; }
+  #toast.tap::after { content: ' ›'; color: var(--pri); font-weight: 700; }
   /* HTML 페이지(머리글 숨김) 여백 — 시트 맨 끝: 세로 가운데(valign) 규칙보다 뒤라서 항상 우선 */
   body[data-chhead="off"] .wrap { padding-top: 72px; padding-bottom: 40px; }
   body[data-chhead="off"] .ch-title { margin-bottom: 16px; }
@@ -1623,6 +1625,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=120"></script>
+<script type="module" src="app.js?v=121"></script>
 </body>
 </html>

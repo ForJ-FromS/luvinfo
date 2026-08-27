@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v120 로드');
+console.log('[LUVINFO] app.js v121 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -53,11 +53,15 @@ function setDirty() {
 function toast(m, ms, act) {
   const t = $('#toast');
   t.textContent = m;
-  t.onclick = null; t.style.cursor = '';
-  if (act) { t.style.cursor = 'pointer'; t.onclick = () => { t.classList.remove('on'); act(); }; }
+  t.onclick = null;
+  t.classList.remove('tap');
+  if (act) {
+    t.classList.add('tap');
+    t.onclick = () => { t.classList.remove('on', 'tap'); t.onclick = null; act(); };
+  }
   t.classList.add('on');
   clearTimeout(t._tm);
-  t._tm = setTimeout(() => t.classList.remove('on'), ms || 2400);
+  t._tm = setTimeout(() => { t.classList.remove('on', 'tap'); t.onclick = null; }, ms || 2400);
 }
 
 // ── 프리셋 기본값 (색 피커 표시용) ──
@@ -1784,8 +1788,8 @@ async function checkNewGuest() {
       if (ts > seen && g.uid !== st.user?.uid) n++;
     });
     if (!n) { localStorage.setItem(key, String(newest)); return; }
-    toast('📖 방명록에 새 글 ' + n + '개가 있어요 — 눌러서 보기', 4500, () => {
-      localStorage.setItem(key, String(newest));
+    localStorage.setItem(key, String(newest));
+    toast('📖 방명록에 새 글 ' + n + '개가 있어요 — 눌러서 보기', 6000, () => {
       const gb = document.querySelector('.gbblk');
       if (gb) gb.scrollIntoView({ behavior: 'smooth', block: 'center' });
       else toast('이 페이지엔 방명록 블록이 없어요 — 방명록이 있는 페이지에서 확인해 주세요');
