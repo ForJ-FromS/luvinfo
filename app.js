@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v123 로드');
+console.log('[LUVINFO] app.js v124 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -3246,6 +3246,15 @@ async function saveSite() {
 
 window.addEventListener('beforeunload', (e) => {
   if (st.dirty) { e.preventDefault(); e.returnValue = ''; }
+});
+
+// 주소창 해시가 바뀌면(외부 링크·뒤로가기·직접 입력) 그 페이지로 이동
+window.addEventListener('hashchange', () => {
+  if (!st.site) return;
+  const h = decodeURIComponent((location.hash || '').replace(/^#/, '')).toLowerCase();
+  if (!h) return;
+  const i = viewChs().findIndex((c) => (c.slug || '') === h);
+  if (i >= 0 && i !== st.cur) go(i);
 });
 
 boot();
