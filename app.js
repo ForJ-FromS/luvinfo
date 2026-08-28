@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v124 로드');
+console.log('[LUVINFO] app.js v125 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -244,6 +244,7 @@ function showGate(g, preview) {
   if (g.btnc) el.style.setProperty('--gbc', g.btnc); else el.style.removeProperty('--gbc');
   if (g.btnt) el.style.setProperty('--gbt', g.btnt); else el.style.removeProperty('--gbt');
   if (g.pwc) el.style.setProperty('--gpwc', g.pwc); else el.style.removeProperty('--gpwc');
+  if (g.tpos) el.dataset.tpos = g.tpos; else delete el.dataset.tpos;
   const bgOf = (z, x, y) => z == null || z === '' ? null : [z + '% auto', (x ?? 50) + '% ' + (y ?? 50) + '%'];
   const setBg = (sk, pk, pair) => {
     if (pair) { el.style.setProperty(sk, pair[0]); el.style.setProperty(pk, pair[1]); }
@@ -2874,6 +2875,7 @@ function openDeco() {
   $('#dc-gate-btnc').value = g.btnc || '#C9A96E';
   $('#dc-gate-btnt').value = g.btnt || '#111111';
   $('#dc-gate-pwc').value = g.pwc || '#EAEAEA';
+  if (gid('dc-gate-tpos')) gid('dc-gate-tpos').value = g.tpos || '';
   $('#dc-gate-grad').checked = g.grad !== false;
   $('#dc-css').value = t.css || '';
   $('#deco-bg').classList.add('on');
@@ -3125,6 +3127,7 @@ function bindDeco() {
   $('#dc-gate-btnc').oninput = $('#dc-gate-btnc').onchange = (e) => gset('btnc', e.target.value);
   $('#dc-gate-btnt').oninput = $('#dc-gate-btnt').onchange = (e) => gset('btnt', e.target.value);
   $('#dc-gate-pwc').oninput = $('#dc-gate-pwc').onchange = (e) => gset('pwc', e.target.value);
+  if (gid('dc-gate-tpos')) gid('dc-gate-tpos').onchange = (e) => gset('tpos', e.target.value);
   $('#dc-gate-cx').onclick = () => { gset('btnc', ''); st.site.gate.btnt = ''; st.site.gate.pwc = ''; $('#dc-gate-btnc').value = '#C9A96E'; $('#dc-gate-btnt').value = '#111111'; $('#dc-gate-pwc').value = '#EAEAEA'; toast('버튼·입력칸 기본색으로'); };
   $('#dc-gate-grad').onchange = (e) => gset('grad', e.target.checked);
   $('#dc-gate-pv').onclick = () => { closeDeco(); showGate(st.site.gate || {}, true); };
