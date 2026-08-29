@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v125 로드');
+console.log('[LUVINFO] app.js v126 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1353,11 +1353,18 @@ function buildDday(d) {
   return w;
 }
 
+// 스킴 없는 주소는 https:// 로 (luvme.kr/abc → https://luvme.kr/abc, 안 붙이면 내 홈 하위 경로로 잘못 열림)
+function fixUrl(u) {
+  const t = String(u || '').trim();
+  if (!t) return '';
+  if (/^(#|\/|https?:|mailto:|tel:)/i.test(t)) return t;
+  return 'https://' + t;
+}
 function buildLinks(d) {
   const w = document.createElement('div');
   w.className = 'lnkblk';
   w.innerHTML = (d.items || []).map((it) => {
-    const u = it.u || '';
+    const u = fixUrl(it.u);
     if (u.charAt(0) === '#') {
       return '<a class="lnkrow inpage" href="' + esc(u) + '" data-goslug="' + esc(u.slice(1)) + '"><span>→ ' + esc(it.t || u.slice(1)) + '</span><i>›</i></a>';
     }
@@ -1381,7 +1388,7 @@ function buildBanner(bn) {
   d.className = 'banners';
   d.innerHTML = (bn.items || []).map((it) => {
     if (it.h) return '<a data-bh="' + esc(it.h) + '" href="' + esc(homeUrl(it.h)) + '"><span class="tb">@' + esc(it.h) + '</span></a>';
-    return '<a href="' + esc(it.url || '#') + '" target="_blank" rel="noopener"><img src="' + esc(it.img) + '" alt=""></a>';
+    return '<a href="' + esc(fixUrl(it.url) || '#') + '" target="_blank" rel="noopener"><img src="' + esc(it.img) + '" alt=""></a>';
   }).join('');
   d.querySelectorAll('[data-bh]').forEach(async (a) => {
     const info = await bannerInfo(a.dataset.bh);
@@ -2482,7 +2489,7 @@ function renderLnkChips() {
   box.innerHTML = items.map((it, i) =>
     '<div class="imgchip" style="width:100%;box-sizing:border-box;">' +
     '<input type="text" data-lt="' + i + '" value="' + esc(it.t || '') + '" placeholder="라벨" style="flex:1;min-width:80px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--tx);font-size:11px;padding:5px 7px;font-family:inherit;">' +
-    '<input type="text" data-lu="' + i + '" value="' + esc(it.u || '') + '" placeholder="https://…" style="flex:1.4;min-width:110px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--tx);font-size:11px;padding:5px 7px;font-family:inherit;">' +
+    '<input type="text" data-lu="' + i + '" value="' + esc(it.u || '') + '" placeholder="https://… (주소만 적어도 돼요)" style="flex:1.4;min-width:110px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--tx);font-size:11px;padding:5px 7px;font-family:inherit;">' +
     '<i data-lrm="' + i + '">✕</i></div>'
   ).join('');
   box.querySelectorAll('[data-lrm]').forEach((x) => { x.onclick = () => { items.splice(parseInt(x.dataset.lrm), 1); renderLnkChips(); }; });
