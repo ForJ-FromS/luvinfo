@@ -240,12 +240,37 @@
   .ddblk b { font-size: 22px; letter-spacing: .04em; color: var(--pri); }
   .ddblk span { font-size: 12.5px; color: var(--tx); }
   .ddblk i { margin-left: auto; font-style: normal; font-size: 10.5px; color: var(--mute); }
-  .lnkblk { display: flex; flex-direction: column; }
-  .lnkrow { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 12px 4px; font-size: 13px; color: var(--tx); text-decoration: none; transition: color .2s; }
+  /* ── 링크 블록: 목록형(list) · 버튼형(btn) · 미니멀(min) × 세로/가로 N열 ── */
+  .lnkblk { display: grid; grid-template-columns: repeat(var(--lcols, 1), minmax(0, 1fr)); gap: var(--lgap, 0); align-items: stretch; }
+  .lnkblk.lk-min { display: flex; flex-direction: column; gap: 11px; align-items: flex-start; }
+  .lnkblk.lk-min[data-flow="row"] { flex-direction: row; flex-wrap: wrap; gap: 9px 18px; align-items: baseline; }
+  .lnkrow { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 12px 4px; font-size: 13px; color: var(--tx); text-decoration: none; transition: color .2s; gap: 8px; }
   .lnkrow:hover { color: var(--pri); }
-  .lnkrow i { font-style: normal; color: var(--mute); font-size: 11px; }
+  .lnkrow i { font-style: normal; color: var(--mute); font-size: 11px; flex: none; }
   .lnkrow.inpage i { color: var(--pri); font-weight: 700; font-size: 14px; }
-  .blk[data-card="on"] .lnkrow:last-child { border-bottom: none; }
+  .lnkblk.lk-list:not([style*="--lcols: 1"]) .lnkrow { border-bottom: none; }
+  .blk[data-card="on"] .lk-list .lnkrow:last-child { border-bottom: none; }
+  .lnkrow .lk-ic { flex: none; font-size: 15px; line-height: 1; }
+  .lnkrow .lk-bd { min-width: 0; flex: 1; }
+  .lnkrow .lk-t { display: block; }
+  .lnkrow .lk-d { display: block; font-size: 11px; color: var(--mute); margin-top: 3px; line-height: 1.5; }
+  /* 버튼형 */
+  .lnkblk.lk-btn { --lgap: 8px; }
+  .lnkblk.lk-btn .lnkrow { border: 1px solid var(--line); border-radius: 11px; padding: 13px 15px; justify-content: center; text-align: center; }
+  .lnkblk.lk-btn .lnkrow:hover { border-color: var(--pri); }
+  .lnkblk.lk-btn .lnkrow i { display: none; }
+  .lnkblk.lk-btn[data-desc="on"] .lnkrow { justify-content: flex-start; text-align: left; }
+  .lnkblk.lk-btn[data-ic="top"] .lnkrow { flex-direction: column; gap: 7px; justify-content: center; text-align: center; padding: 16px 12px; }
+  .lnkblk.lk-btn[data-ic="top"] .lk-ic { font-size: 20px; }
+  .lnkblk.lk-btn[data-fill="solid"] .lnkrow { background: var(--pri); border-color: var(--pri); color: var(--bg); font-weight: 600; }
+  .lnkblk.lk-btn[data-fill="solid"] .lk-d { color: color-mix(in srgb, var(--bg) 70%, var(--pri)); }
+  .lnkblk.lk-btn[data-fill="tint"] .lnkrow { background: color-mix(in srgb, var(--pri) 15%, transparent); border-color: color-mix(in srgb, var(--pri) 40%, transparent); color: var(--pri); }
+  .lnkblk.lk-btn[data-fill="first"] .lnkrow:first-child { background: var(--pri); border-color: var(--pri); color: var(--bg); font-weight: 600; }
+  .lnkblk.lk-btn[data-fill="first"] .lnkrow:first-child .lk-d { color: color-mix(in srgb, var(--bg) 70%, var(--pri)); }
+  /* 미니멀 */
+  .lnkblk.lk-min .lnkrow { border: none; border-bottom: 1px dashed color-mix(in srgb, var(--pri) 45%, var(--line)); padding: 0 0 4px; width: fit-content; justify-content: flex-start; }
+  .lnkblk.lk-min .lnkrow i { display: none; }
+  .lnkblk.lk-min .lk-d { display: none; }
   .ch-title {
     font-size: 11px; letter-spacing: .28em;
     color: var(--dim);
@@ -804,7 +829,7 @@
     padding: 10px 12px; margin-bottom: 7px;
     font-size: 12.5px;
   }
-  .blrow .drag { cursor: grab; color: var(--mute); font-size: 12px; letter-spacing: -1px; user-select: none; padding: 0 2px; }
+  .blrow .drag { touch-action: none; cursor: grab; color: var(--mute); font-size: 12px; letter-spacing: -1px; user-select: none; padding: 0 2px; }
   .blrow.dragging { opacity: .45; }
   .blrow.over { border-color: var(--pri); box-shadow: inset 0 0 0 1px var(--pri); }
   .blrow .kind {
@@ -1267,6 +1292,41 @@
 
     <div id="ble-lnk" style="display:none;">
       <div class="imgchips" id="el-list" style="flex-direction:column;"></div>
+      <div class="f-2col" style="margin-bottom:8px;">
+        <div class="f-row"><label>모양</label>
+          <select id="el-style">
+            <option value="list">목록형 — 한 줄씩</option>
+            <option value="btn">버튼형 — 네모 버튼</option>
+            <option value="min">미니멀 — 밑줄만</option>
+          </select>
+        </div>
+        <div class="f-row"><label>배치</label>
+          <select id="el-cols">
+            <option value="1">세로로 (한 줄에 하나)</option>
+            <option value="2">가로 2개씩</option>
+            <option value="3">가로 3개씩</option>
+            <option value="4">가로 4개씩</option>
+            <option value="row">옆으로 이어서 (미니멀용)</option>
+          </select>
+        </div>
+      </div>
+      <div id="el-btnopt" class="f-2col" style="margin-bottom:8px;">
+        <div class="f-row"><label>버튼 채우기</label>
+          <select id="el-fill">
+            <option value="">테두리만</option>
+            <option value="tint">옅게 채움</option>
+            <option value="solid">진하게 채움</option>
+            <option value="first">첫 줄만 강조</option>
+          </select>
+        </div>
+        <div class="f-row"><label>아이콘 위치</label>
+          <select id="el-ic">
+            <option value="left">라벨 왼쪽</option>
+            <option value="top">라벨 위 (크게)</option>
+          </select>
+        </div>
+      </div>
+      <label class="chk-row" style="margin-bottom:8px;"><input type="checkbox" id="el-desc"> 설명 줄 보이기 (링크마다 한 줄 설명)</label>
       <div class="ea-btns" style="margin-top:8px;"><button class="mini-btn" id="el-add">＋ 링크 줄 추가</button><button class="mini-btn" id="el-addp">＋ 내 페이지</button></div>
       <div class="f-note">라벨과 주소를 넣으면 「→ 라벨 ↗」 줄로 나와요. <b>＋ 내 페이지</b>로 추가하면 같은 홈의 다른 페이지로 바로 넘어가는 버튼이 돼요.</div>
     </div>
@@ -1642,6 +1702,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=126"></script>
+<script type="module" src="app.js?v=127"></script>
 </body>
 </html>

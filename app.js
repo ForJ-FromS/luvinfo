@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v126 로드');
+console.log('[LUVINFO] app.js v127 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1362,13 +1362,29 @@ function fixUrl(u) {
 }
 function buildLinks(d) {
   const w = document.createElement('div');
-  w.className = 'lnkblk';
+  const style = d.style || 'list';
+  w.className = 'lnkblk lk-' + style;
+  const cols = d.cols || '1';
+  if (cols === 'row') w.dataset.flow = 'row';
+  else w.style.setProperty('--lcols', String(parseInt(cols) || 1));
+  if (style === 'btn') {
+    if (d.fill) w.dataset.fill = d.fill;
+    w.dataset.ic = d.ic || 'left';
+    if (d.desc) w.dataset.desc = 'on';
+  }
+  const arrow = style === 'list';
   w.innerHTML = (d.items || []).map((it) => {
     const u = fixUrl(it.u);
-    if (u.charAt(0) === '#') {
-      return '<a class="lnkrow inpage" href="' + esc(u) + '" data-goslug="' + esc(u.slice(1)) + '"><span>→ ' + esc(it.t || u.slice(1)) + '</span><i>›</i></a>';
+    const inpage = u.charAt(0) === '#';
+    const label = esc(it.t || (inpage ? u.slice(1) : u));
+    const icon = it.ic ? '<span class="lk-ic">' + esc(it.ic) + '</span>' : '';
+    const body = '<span class="lk-bd"><span class="lk-t">' + (style === 'list' ? '→ ' : '') + label + '</span>'
+      + (d.desc && it.ds ? '<span class="lk-d">' + esc(it.ds) + '</span>' : '') + '</span>';
+    const tail = arrow ? '<i>' + (inpage ? '›' : '↗') + '</i>' : '';
+    if (inpage) {
+      return '<a class="lnkrow inpage" href="' + esc(u) + '" data-goslug="' + esc(u.slice(1)) + '">' + icon + body + tail + '</a>';
     }
-    return '<a class="lnkrow" href="' + esc(u || '#') + '" target="_blank" rel="noopener"><span>→ ' + esc(it.t || u) + '</span><i>↗</i></a>';
+    return '<a class="lnkrow" href="' + esc(u || '#') + '" target="_blank" rel="noopener">' + icon + body + tail + '</a>';
   }).join('');
   w.querySelectorAll('[data-goslug]').forEach((a) => {
     a.onclick = (e) => {
@@ -2224,6 +2240,41 @@ function renderBlockList() {
       blocks.splice(to, 0, mv);
       renderBlockList();
     };
+    // 모바일: 손잡이를 눌러 끌기 (터치)
+    const grip = row.querySelector('.drag');
+    if (grip) {
+      grip.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const start = parseInt(row.dataset.bi);
+        row.classList.add('dragging');
+        let last = null;
+        const move = (ev) => {
+          const tt = ev.touches[0];
+          if (!tt) return;
+          const el = document.elementFromPoint(tt.clientX, tt.clientY);
+          const over = el && el.closest ? el.closest('.blrow') : null;
+          if (last && last !== over) last.classList.remove('over');
+          if (over && over !== row) { over.classList.add('over'); last = over; }
+          ev.preventDefault();
+        };
+        const end = () => {
+          row.classList.remove('dragging');
+          if (last) last.classList.remove('over');
+          document.removeEventListener('touchmove', move, { passive: false });
+          document.removeEventListener('touchend', end);
+          document.removeEventListener('touchcancel', end);
+          const to = last ? parseInt(last.dataset.bi) : NaN;
+          if (Number.isFinite(to) && to !== start) {
+            const [mv] = blocks.splice(start, 1);
+            blocks.splice(to, 0, mv);
+            renderBlockList();
+          }
+        };
+        document.addEventListener('touchmove', move, { passive: false });
+        document.addEventListener('touchend', end);
+        document.addEventListener('touchcancel', end);
+      }, { passive: false });
+    }
   });
   box.querySelectorAll('[data-bmv]').forEach((x) => {
     x.onclick = () => {
@@ -2290,6 +2341,11 @@ function openBlockEdit(blk) {
     $('#eb-hin').value = '';
     renderBnChips();
   } else if (blk.kind === 'lnk') {
+    if (gid('el-style')) gid('el-style').value = d.style || 'list';
+    if (gid('el-cols')) gid('el-cols').value = d.cols || '1';
+    if (gid('el-fill')) gid('el-fill').value = d.fill || '';
+    if (gid('el-ic')) gid('el-ic').value = d.ic || 'left';
+    if (gid('el-desc')) gid('el-desc').checked = !!d.desc;
     renderLnkChips();
   } else if (blk.kind === 'quo') {
     $('#eq-text').value = blk.data.text || '';
@@ -2486,15 +2542,23 @@ function renderLnkChips() {
   const box = $('#el-list');
   if (!box) return;
   const items = editingBlk?.data.items || [];
+  const inp = 'background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--tx);font-size:11px;padding:5px 7px;font-family:inherit;';
   box.innerHTML = items.map((it, i) =>
-    '<div class="imgchip" style="width:100%;box-sizing:border-box;">' +
-    '<input type="text" data-lt="' + i + '" value="' + esc(it.t || '') + '" placeholder="라벨" style="flex:1;min-width:80px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--tx);font-size:11px;padding:5px 7px;font-family:inherit;">' +
-    '<input type="text" data-lu="' + i + '" value="' + esc(it.u || '') + '" placeholder="https://… (주소만 적어도 돼요)" style="flex:1.4;min-width:110px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--tx);font-size:11px;padding:5px 7px;font-family:inherit;">' +
-    '<i data-lrm="' + i + '">✕</i></div>'
+    '<div class="imgchip" style="width:100%;box-sizing:border-box;flex-wrap:wrap;">' +
+    '<input type="text" data-lic="' + i + '" value="' + esc(it.ic || '') + '" placeholder="아이콘" title="이모지·문자 (비우면 없음)" maxlength="3" style="width:56px;flex:none;text-align:center;' + inp + '">' +
+    '<input type="text" data-lt="' + i + '" value="' + esc(it.t || '') + '" placeholder="라벨" style="flex:1;min-width:70px;' + inp + '">' +
+    '<input type="text" data-lu="' + i + '" value="' + esc(it.u || '') + '" placeholder="https://… (주소만 적어도 돼요)" style="flex:1.4;min-width:110px;' + inp + '">' +
+    '<i data-lrm="' + i + '">✕</i>' +
+    '<input type="text" data-lds="' + i + '" value="' + esc(it.ds || '') + '" placeholder="설명 (선택 — 버튼형에서 보여요)" style="width:100%;margin-top:5px;' + inp + '">' +
+    '</div>'
   ).join('');
   box.querySelectorAll('[data-lrm]').forEach((x) => { x.onclick = () => { items.splice(parseInt(x.dataset.lrm), 1); renderLnkChips(); }; });
   box.querySelectorAll('[data-lt]').forEach((x) => { x.oninput = () => { items[parseInt(x.dataset.lt)].t = x.value; }; });
   box.querySelectorAll('[data-lu]').forEach((x) => { x.oninput = () => { items[parseInt(x.dataset.lu)].u = x.value.trim(); }; });
+  box.querySelectorAll('[data-lic]').forEach((x) => { x.oninput = () => { items[parseInt(x.dataset.lic)].ic = x.value.trim(); }; });
+  box.querySelectorAll('[data-lds]').forEach((x) => { x.oninput = () => { items[parseInt(x.dataset.lds)].ds = x.value; }; });
+  const bo = gid('el-btnopt');
+  if (bo) bo.style.display = (editingBlk?.data.style === 'btn') ? '' : 'none';
 }
 
 function renderBnChips() {
@@ -2694,6 +2758,12 @@ function bindEditor() {
     });
   };
   // 배너
+  const lkOpt = (id, fn) => { if (gid(id)) gid(id).onchange = (e) => { if (editingBlk && editingBlk.kind === 'lnk') { fn(editingBlk.data, e.target); renderLnkChips(); } }; };
+  lkOpt('el-style', (d, t) => { d.style = t.value; });
+  lkOpt('el-cols', (d, t) => { d.cols = t.value; });
+  lkOpt('el-fill', (d, t) => { d.fill = t.value; });
+  lkOpt('el-ic', (d, t) => { d.ic = t.value; });
+  lkOpt('el-desc', (d, t) => { d.desc = t.checked ? 1 : 0; });
   if (gid('el-addp')) gid('el-addp').onclick = () => {
     if (!editingBlk || editingBlk.kind !== 'lnk') return;
     const chs = (st.site.chapters || []);
