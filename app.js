@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v127 로드');
+console.log('[LUVINFO] app.js v128 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -510,6 +510,7 @@ function applyTheme() {
   if ($('#h-rule')) $('#h-rule').style.display = hd.rule === false ? 'none' : '';
   const hi = $('#head-img');
   hi.style.height = (parseInt(hd.h) || 200) + 'px';
+  delete hi.dataset.empty;
   if (hd.img) {
     // img + object-fit: 위아래(py)를 움직여도 크기 불변, 확대(sc)는 별도
     const py = Math.min(100, Math.max(0, parseInt(hd.py ?? 50)));
@@ -518,8 +519,10 @@ function applyTheme() {
     hi.style.overflow = 'hidden';
     hi.innerHTML = '<img src="' + esc(hd.img) + '" alt="" draggable="false" style="width:100%;height:100%;object-fit:cover;object-position:50% ' + py + '%;transform:scale(' + (sc / 100) + ');transform-origin:50% ' + py + '%;display:block;">';
   } else {
+    // 이미지 없음: 방문자에겐 아예 안 보이고, 편집 모드에서만 점선 안내(위치 잡기용)
     hi.innerHTML = '';
-    hi.style.backgroundImage = 'linear-gradient(150deg, var(--line), var(--card))';
+    hi.style.backgroundImage = '';
+    hi.dataset.empty = '1';
   }
   document.title = hd.title || st.handle; // 홈은 홈 이름만(v65)
 }

@@ -217,6 +217,10 @@
     background-position: center;
     border-bottom: 1px solid var(--line);
   }
+  /* 이미지 없는 머리글: 방문자 화면에선 숨기고, 편집 모드에서만 점선 안내 */
+  .head-img[data-empty="1"] { display: none; }
+  body.edit .head-img[data-empty="1"] { display: flex; align-items: center; justify-content: center; border: 1px dashed var(--line); border-bottom: 1px dashed var(--line); background: none; color: var(--mute); font-size: 11px; letter-spacing: .08em; }
+  body.edit .head-img[data-empty="1"]::after { content: '머리글 이미지 자리 — 🎨 꾸미기에서 올리거나, 머리글 구성을 「글」로 바꾸세요'; }
   body[data-head="none"] .head, body[data-head="none"] .head-img { display: none; }
   body[data-chhead="off"] .head, body[data-chhead="off"] .head-img { display: none; }
   .chk-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--sub); cursor: pointer; }
@@ -1702,6 +1706,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=127"></script>
+<script type="module" src="app.js?v=128"></script>
 </body>
 </html>
