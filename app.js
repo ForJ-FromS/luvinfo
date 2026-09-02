@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v128 로드');
+console.log('[LUVINFO] app.js v130 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -3020,13 +3020,10 @@ function bindDeco() {
   $('#dc-cardc-del').onclick = () => { t().cardC = ''; setDirty(); applyTheme(); $('#dc-cardc').value = CARDC[t().preset || 'white'] || '#FFFFFF'; toast('카드 색을 프리셋 기본으로'); };
   $('#dc-mybn-up').onclick = () => uploadOne((url) => { st.site.myBanner = url; setDirty(); toast('내 배너 설정 — 저장을 눌러 주세요'); });
   $('#dc-mybn-del').onclick = () => { st.site.myBanner = ''; setDirty(); toast('내 배너 제거'); };
-  $('#dc-backup').onclick = () => {
-    const data = JSON.stringify(st.site, null, 2);
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
-    a.download = 'luvinfo-' + st.handle + '-' + new Date().toISOString().slice(0, 10) + '.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
+  $('#dc-backup').onclick = async () => {
+    const copy = await buildBackup();
+    dlJson('luvinfo-' + st.handle + '-' + new Date().toISOString().slice(0, 10) + '.json', copy);
+    toast('백업 저장 ✓');
   };
   $('#dc-restore').onclick = () => {
     const fi = $('#file-json');
@@ -3035,20 +3032,53 @@ function bindDeco() {
       const f = fi.files[0];
       if (!f) return;
       const rd = new FileReader();
-      rd.onload = () => {
+      rd.onload = async () => {
         try {
-          const data = JSON.parse(rd.result);
+          let data = JSON.parse(rd.result);
+          if (data.service === 'lovelog' || (!data.chapters && Array.isArray(data.posts))) {
+            toast('러브로그 백업이에요 — 꾸미기는 「러브로그에서 가져오기」로, 글은 러브인포로 옮겨지지 않아요', 6000); return;
+          }
           if (!data.chapters) { toast('러브인포 백업 파일이 아니에요'); return; }
-          if (!confirm('백업으로 복원하면 지금 내용을 덮어씁니다. 계속할까요?')) return;
-          data.ownerUid = st.site.ownerUid;
-          data.heart = st.site.heart || 0;
-          st.site = data;
+          const wantP = !gid('dc-rs-pages') || gid('dc-rs-pages').checked;
+          const wantD = !gid('dc-rs-deco') || gid('dc-rs-deco').checked;
+          if (!wantP && !wantD) { toast('복원 범위를 하나는 골라 주세요'); return; }
+          // 어느 홈 백업인지 — 표식이 없으면(구형) 저장소 주소에 박힌 핸들로 유추
+          let from = data.handle || '';
+          if (!from) {
+            const hs = new Set([...JSON.stringify(data).matchAll(/tsites%2F([a-z0-9]+)%2F/g)].map((m) => m[1]));
+            hs.delete(st.handle);
+            if (hs.size === 1) from = [...hs][0];
+          }
+          const cross = !!from && from !== st.handle;
+          const scope = wantP && wantD ? '전부' : (wantP ? '페이지만' : '꾸미기만');
+          const when = data.exported ? ' · ' + String(data.exported).slice(0, 10) : '';
+          const q = (cross
+            ? '이 백업은 @' + from + '의 것이에요(페이지 ' + (data.chapters || []).length + '개' + when + ').\n이 홈(@' + st.handle + ')으로 ' + scope + ' 이사할까요? 사진·배너·큰 HTML 파일을 이 홈 저장소로 복사해 담아요(시간이 조금 걸려요).'
+            : '백업(페이지 ' + (data.chapters || []).length + '개' + when + ')으로 ' + scope + ' 복원하면 지금 내용을 덮어씁니다. 계속할까요?')
+            + '\n\n진행 전에 지금 상태가 자동으로 백업 저장돼요.';
+          if (!confirm(q)) return;
+          // 안전망: 복원 직전 현재 상태 내려받기
+          try { dlJson('luvinfo-' + st.handle + '-before-restore-' + new Date().toISOString().slice(0, 10) + '.json', await buildBackup()); } catch (e) { /* */ }
+          if (cross) data = JSON.parse(await migrateStorageUrls(JSON.stringify(data)));
+          for (const ch of data.chapters || []) { if (ch.type === 'html' && ch.body && ch.bodyRef) ch.bodyRef = ''; }
+          const DECO_KEYS = ['theme', 'head', 'gate', 'foot', 'favicon', 'banner', 'lv'];
+          if (wantP && wantD) {
+            data.handle = st.handle;
+            data.ownerUid = st.site.ownerUid;
+            data.heart = st.site.heart || 0;
+            delete data._bk; delete data.service; delete data.exported;
+            st.site = data;
+          } else if (wantP) {
+            st.site.chapters = data.chapters || [];
+          } else {
+            DECO_KEYS.forEach((k) => { if (data[k] !== undefined) st.site[k] = data[k]; });
+          }
           setDirty();
           st.cur = 0;
           applyTheme();
           renderChapter();
           renderFoot();
-          toast('복원했어요 — ✓ 저장을 눌러야 서버에 반영돼요');
+          toast((cross ? '이사 완료 — ' : '복원했어요 — ') + '✓ 저장을 눌러야 서버에 반영돼요', 5000);
         } catch (e) { console.log('[LUVINFO] restore err', e); toast('파일을 읽을 수 없어요'); }
       };
       rd.readAsText(f);
@@ -3265,6 +3295,61 @@ function uploadMulti(cb) {
 }
 
 // ═══════════ 저장 ═══════════
+// ── 백업 파일 만들기: 큰 HTML 본문까지 담아 자급자족 ──
+async function buildBackup() {
+  const copy = JSON.parse(JSON.stringify(st.site));
+  copy.service = 'luvinfo';
+  copy.handle = st.handle;
+  copy.exported = new Date().toISOString();
+  copy._bk = 2;
+  for (const ch of copy.chapters || []) {
+    if (ch.type === 'html' && ch.bodyRef && !ch.body) {
+      try {
+        ch.body = htmlCache[ch.id] || await (await fetch(ch.bodyRef)).text();
+        delete ch.bodyRef;
+      } catch (e) { console.log('[LUVINFO] backup html fetch err', e); }
+    }
+  }
+  return copy;
+}
+function dlJson(name, obj) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' }));
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ── 이사: 문자열 안의 Firebase Storage 주소를 전부 내 홈 저장소로 복사해 갈아끼움 (러브로그 phase209 사양) ──
+const RX_STG = /https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/[^"\\]+/g;
+async function migrateStorageUrls(str) {
+  const urls = [...new Set(str.match(RX_STG) || [])];
+  if (!urls.length) return str;
+  const map = new Map();
+  let ok = 0, fail = 0;
+  for (let i = 0; i < urls.length; i++) {
+    const raw = urls[i];
+    const u = JSON.parse('"' + raw + '"'); // JSON 이스케이프 해제
+    toast('이사 중… ' + (i + 1) + ' / ' + urls.length, 60000);
+    let nu = u;
+    try {
+      const res = await fetch(u);
+      if (!res.ok) throw new Error('fetch ' + res.status);
+      const blob = await res.blob();
+      const ext = (blob.type.split('/')[1] || 'bin').replace('+xml', '').replace('jpeg', 'jpg');
+      const path = 'tsites/' + st.handle + '/mig_' + Date.now() + '_' + i + '.' + ext;
+      const r = sref(storage, path);
+      await uploadBytes(r, blob, { contentType: blob.type || 'application/octet-stream', cacheControl: 'public,max-age=31536000' });
+      nu = await getDownloadURL(r);
+      ok++;
+    } catch (e) { console.log('[LUVINFO] migrate err', u, e); fail++; }
+    map.set(raw, JSON.stringify(nu).slice(1, -1));
+  }
+  for (const [raw, esc2] of map) str = str.split(raw).join(esc2);
+  toast('사진·파일 이사 ' + ok + '개 완료' + (fail ? ' · ' + fail + '개는 원 주소 유지' : ''), 5000);
+  return str;
+}
+
 async function offloadBigHtml() {
   for (const ch of st.site.chapters || []) {
     if (ch.type !== 'html') continue;

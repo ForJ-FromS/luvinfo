@@ -1635,12 +1635,17 @@
   </div>
 
   <div class="f-row">
-    <label>백업</label>
+    <label>백업 · 이사</label>
     <div style="display:flex;gap:6px;">
       <button class="mini-btn" id="dc-backup">⬇ 백업 (JSON)</button>
-      <button class="mini-btn" id="dc-restore">복원</button>
+      <button class="mini-btn" id="dc-restore">복원 · 이사</button>
     </div>
-    <div class="f-note">HTML 페이지까지 통째로 저장돼요. 큰 수정 전에 한 번씩!</div>
+    <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--dim);">
+      <span>복원 범위:</span>
+      <label class="chk-row" style="margin:0;"><input type="checkbox" id="dc-rs-pages" checked> 페이지</label>
+      <label class="chk-row" style="margin:0;"><input type="checkbox" id="dc-rs-deco" checked> 꾸미기</label>
+    </div>
+    <div class="f-note">페이지·HTML·꾸미기가 통째로 담겨요. <b>다른 홈의 백업을 복원하면 사진·배너·큰 HTML 파일을 이 홈 저장소로 전부 옮겨 담아요</b>(옛 홈이 지워져도 안 깨짐). 복원 직전엔 지금 상태가 자동으로 백업 저장돼요.</div>
   </div>
 
   <div class="f-row">
@@ -1706,6 +1711,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=128"></script>
+<script type="module" src="app.js?v=130"></script>
 </body>
 </html>
