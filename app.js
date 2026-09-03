@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v130 로드');
+console.log('[LUVINFO] app.js v132 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -181,8 +181,18 @@ async function route() {
     $('#btn-start').onclick = login;
     return;
   }
+  if (d.data().movedTo) {
+    // 🚚 주소 변경 표지판: 새 주소로 안내 후 이동 (해시·페이지 파라미터 보존)
+    const to = String(d.data().movedTo);
+    $('#landing').classList.add('show');
+    $('#landing .desc').textContent = '@' + h + ' → @' + to + ' 로 이사했어요. 잠시 후 새 주소로 이동해요.';
+    $('#btn-start').onclick = login;
+    setTimeout(() => { location.href = homeUrl(to) + (location.search || '') + (location.hash || ''); }, 900);
+    return;
+  }
   st.site = migrate(d.data());
   st.mine = !!(st.user && st.site.ownerUid === st.user.uid);
+  if (st.mine && (st.site.prevHandles || []).length) finishRenameIfNeeded();
   if (st.site.priv && !st.mine) {
     // 비공개 홈 — 방문자에게는 없는 페이지처럼
     $('#landing').classList.add('show');
@@ -336,7 +346,7 @@ async function checkHandleLive() {
   try {
     const ex = await getDoc(doc(db, 'tsites', h));
     if (seq !== _hChkSeq) return;
-    if (ex.exists()) { el.textContent = '✗ 이미 사용 중인 핸들이에요'; el.style.color = '#d66'; }
+    if (ex.exists() && !stubExpired(ex.data())) { el.textContent = '✗ 이미 사용 중인 핸들이에요'; el.style.color = '#d66'; }
     else { el.textContent = '✓ 사용할 수 있어요 — luvinfo.me/' + h; el.style.color = 'var(--pri)'; }
   } catch (e) { if (seq === _hChkSeq) el.textContent = ''; }
 }
@@ -440,8 +450,9 @@ function openClaim(user) {
       }
     } catch (e) { console.log('[LUVINFO] reserved check err', e); }
     const ex = await getDoc(doc(db, 'tsites', h));
-    if (ex.exists()) { toast('이미 사용 중인 핸들이에요'); return; }
+    if (ex.exists() && !stubExpired(ex.data())) { toast('이미 사용 중인 핸들이에요'); return; }
     try {
+      if (ex.exists()) await deleteDoc(doc(db, 'tsites', h)); // 만료된 표지판은 비우고 사용 (규칙: 7일 지난 표지판은 누구나 삭제 가능)
       await setDoc(doc(db, 'tsites', h), defaultSite(user.uid, h));
       await setDoc(doc(db, 'tusers', user.uid), {
         handle: h,
@@ -1422,15 +1433,17 @@ const bannerCache = {};
 async function bannerInfo(h) {
   if (bannerCache[h] !== undefined) return bannerCache[h];
   try {
-    const d = await getDoc(doc(db, 'tsites', h));
+    let d = await getDoc(doc(db, 'tsites', h));
+    if (d.exists() && d.data().movedTo) d = await getDoc(doc(db, 'tsites', String(d.data().movedTo))); // 🚚 이사한 홈은 새 주소로
     if (!d.exists()) return (bannerCache[h] = null);
     const s = d.data();
     if (s.priv) return (bannerCache[h] = null);
     let mut = false;
+    const mine = new Set([st.handle].concat((st.site && st.site.prevHandles) || []));   // 내 옛 주소로 걸린 배너도 맞배너
     (s.chapters || []).forEach((c) => {
       // 현행: 블록 스택(v17~) / 하위 호환: 옛 el.bn 구조
       (c.blocks || []).forEach((b) => {
-        if (b.kind === 'bn') ((b.data?.items) || []).forEach((it) => { if (it.h === st.handle) mut = true; });
+        if (b.kind === 'bn') ((b.data?.items) || []).forEach((it) => { if (mine.has(it.h)) mut = true; });
       });
       ((c.el?.bn?.items) || []).forEach((it) => { if (it.h === st.handle) mut = true; });
     });
@@ -2052,6 +2065,10 @@ function bindShell() {
   $('#ob-add').onclick = () => openChapterEdit(null, 'cell');
   $('#ob-addhtml').onclick = () => openChapterEdit(null, 'html');
   $('#ob-deco').onclick = openDeco;
+  if (gid('ob-pages')) gid('ob-pages').onclick = openPages;
+  if (gid('pg-close')) gid('pg-close').onclick = closePages;
+  if (gid('pg-ok')) gid('pg-ok').onclick = closePages;
+  if (gid('pg-bg')) gid('pg-bg').onclick = closePages;
   $('#ob-save').onclick = saveSite;
 
   // 페이지 도구
@@ -2088,6 +2105,96 @@ function bindShell() {
     const on = document.body.classList.toggle('mv');
     fv.textContent = on ? '💻' : '📱';
   };
+}
+
+// ── ☰ 페이지 목록 시트: 전체 페이지(숨김 포함) 순서 바꾸기·이동 ──
+function openPages() {
+  gid('pg-bg').classList.add('on');
+  gid('pg-sheet').classList.add('on');
+  renderPageList();
+}
+function closePages() {
+  gid('pg-bg').classList.remove('on');
+  gid('pg-sheet').classList.remove('on');
+}
+function renderPageList() {
+  const box = gid('pg-list');
+  if (!box) return;
+  const chs = st.site.chapters || [];
+  const cur = viewChs()[st.cur];
+  box.innerHTML = chs.map((c, i) =>
+    '<div class="pgrow' + (c === cur ? ' cur' : '') + '" draggable="true" data-pi="' + i + '">' +
+    '<span class="drag" title="끌어서 순서 바꾸기">⠿</span>' +
+    '<span class="pgnum">' + String(i + 1).padStart(2, '0') + '</span>' +
+    '<span class="pgname" data-pgo="' + i + '">' + (c.hidden ? '🙈 ' : '') + esc(c.title || '(제목 없음)') + (c.slug ? ' <span class="pgtag">#' + esc(c.slug) + '</span>' : '') + '</span>' +
+    '<span class="pgtag">' + (c.type === 'html' ? 'HTML' : (c.blocks || []).length + '블록') + '</span>' +
+    '<button class="ct" data-pmv="' + i + ',-1" title="앞으로"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+    '<button class="ct" data-pmv="' + i + ',1" title="뒤로"' + (i === chs.length - 1 ? ' disabled' : '') + '>↓</button>' +
+    '</div>'
+  ).join('');
+  const commit = () => { setDirty(); renderChapter(); renderPageList(); };
+  const moveTo = (from, to) => {
+    if (from === to) return;
+    const cur2 = viewChs()[st.cur];
+    const [mv] = chs.splice(from, 1);
+    chs.splice(to, 0, mv);
+    const ni = viewChs().indexOf(cur2);
+    st.cur = ni >= 0 ? ni : 0;
+    commit();
+  };
+  box.querySelectorAll('[data-pmv]').forEach((x) => {
+    x.onclick = () => { const [i, d] = x.dataset.pmv.split(',').map(Number); moveTo(i, i + d); };
+  });
+  box.querySelectorAll('[data-pgo]').forEach((x) => {
+    x.onclick = () => {
+      const ch = chs[parseInt(x.dataset.pgo)];
+      const i = viewChs().indexOf(ch);
+      if (i < 0) { toast('숨긴 페이지는 편집 모드에서만 열려요'); return; }
+      go(i); closePages();
+    };
+  });
+  let dragFrom = null;
+  box.querySelectorAll('.pgrow').forEach((row) => {
+    row.ondragstart = (e) => { dragFrom = parseInt(row.dataset.pi); row.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(dragFrom)); } catch (err) { /* */ } };
+    row.ondragend = () => { row.classList.remove('dragging'); box.querySelectorAll('.pgrow').forEach((r) => r.classList.remove('over')); };
+    row.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; row.classList.add('over'); };
+    row.ondragleave = () => row.classList.remove('over');
+    row.ondrop = (e) => {
+      e.preventDefault(); row.classList.remove('over');
+      let from = dragFrom;
+      if (from === null) { const t = parseInt(e.dataTransfer.getData('text/plain')); if (Number.isFinite(t)) from = t; }
+      dragFrom = null;
+      const to = parseInt(row.dataset.pi);
+      if (Number.isFinite(from)) moveTo(from, to);
+    };
+    const grip = row.querySelector('.drag');
+    if (grip) grip.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const start = parseInt(row.dataset.pi);
+      row.classList.add('dragging');
+      let last = null;
+      const move = (ev) => {
+        const tt = ev.touches[0]; if (!tt) return;
+        const el = document.elementFromPoint(tt.clientX, tt.clientY);
+        const over = el && el.closest ? el.closest('.pgrow') : null;
+        if (last && last !== over) last.classList.remove('over');
+        if (over && over !== row) { over.classList.add('over'); last = over; }
+        ev.preventDefault();
+      };
+      const end = () => {
+        row.classList.remove('dragging');
+        if (last) last.classList.remove('over');
+        document.removeEventListener('touchmove', move, { passive: false });
+        document.removeEventListener('touchend', end);
+        document.removeEventListener('touchcancel', end);
+        const to = last ? parseInt(last.dataset.pi) : NaN;
+        if (Number.isFinite(to)) moveTo(start, to);
+      };
+      document.addEventListener('touchmove', move, { passive: false });
+      document.addEventListener('touchend', end);
+      document.addEventListener('touchcancel', end);
+    }, { passive: false });
+  });
 }
 
 function moveChapter(d) {
@@ -3020,6 +3127,12 @@ function bindDeco() {
   $('#dc-cardc-del').onclick = () => { t().cardC = ''; setDirty(); applyTheme(); $('#dc-cardc').value = CARDC[t().preset || 'white'] || '#FFFFFF'; toast('카드 색을 프리셋 기본으로'); };
   $('#dc-mybn-up').onclick = () => uploadOne((url) => { st.site.myBanner = url; setDirty(); toast('내 배너 설정 — 저장을 눌러 주세요'); });
   $('#dc-mybn-del').onclick = () => { st.site.myBanner = ''; setDirty(); toast('내 배너 제거'); };
+  if (gid('dc-hr-go')) gid('dc-hr-go').onclick = () => renameHandle(gid('dc-hr-new').value);
+  if (gid('dc-hr-new')) gid('dc-hr-new').oninput = () => {
+    const v = gid('dc-hr-new').value.trim().toLowerCase().replace(/^@/, '');
+    const n = gid('dc-hr-note');
+    n.textContent = !v ? '' : (/^[a-z0-9-]{2,20}$/.test(v) ? (v === st.handle ? '지금 주소와 같아요' : '') : '영문 소문자·숫자·하이픈 2~20자');
+  };
   $('#dc-backup').onclick = async () => {
     const copy = await buildBackup();
     dlJson('luvinfo-' + st.handle + '-' + new Date().toISOString().slice(0, 10) + '.json', copy);
@@ -3295,6 +3408,85 @@ function uploadMulti(cb) {
 }
 
 // ═══════════ 저장 ═══════════
+// ── 🚚 홈 주소(핸들) 변경 (러브로그 phase406~410 사양) ──
+// 새 주소에 홈 문서·방명록·방문자 수 복사 → 계정 핸들 갱신 → 옛 주소는 비우고 7일 표지판. 사진은 주소가 그대로라 복사 불필요.
+const STUB_DAYS = 7;
+const stubExpired = (d) => !!(d && d.movedTo && (+d.movedAt || 0) < Date.now() - STUB_DAYS * 86400000);
+async function copySub(oldH, newH, name) {
+  let n = 0, fail = 0;
+  const qs = await getDocs(collection(db, 'tsites', oldH, name));
+  for (const d2 of qs.docs) {
+    try { await setDoc(doc(db, 'tsites', newH, name, d2.id), d2.data()); n++; }
+    catch (e) { fail++; console.log('[LUVINFO] rename copy err', name, d2.id, e.code); }
+  }
+  return { n, fail };
+}
+async function wipeOldHome(oldH, newH) {
+  let fail = 0;
+  for (const name of ['tguest', 'tstats']) {
+    const qs = await getDocs(collection(db, 'tsites', oldH, name));
+    for (const d2 of qs.docs) { try { await deleteDoc(d2.ref); } catch (e) { fail++; } }
+    toast('옛 주소 비우는 중… ' + name, 3000);
+  }
+  await setDoc(doc(db, 'tsites', oldH), { ownerUid: st.user.uid, handle: oldH, movedTo: newH, movedAt: Date.now() });
+  return fail;
+}
+async function finishRenameIfNeeded() {
+  if (!st.mine || !st.user) return;
+  for (const h of (st.site.prevHandles || [])) {
+    if (h === st.handle) continue;
+    try {
+      const s2 = await getDoc(doc(db, 'tsites', h));
+      if (s2.exists() && s2.data().ownerUid === st.user.uid && !s2.data().movedTo) {
+        toast('지난 주소 변경을 마무리하는 중…', 4000);
+        await wipeOldHome(h, st.handle);
+        toast('옛 주소 정리 완료 — 이제 안내판만 남았어요', 4000);
+      }
+    } catch (e) { console.log('[LUVINFO] rename-finish err', h, e); }
+  }
+}
+async function renameHandle(newH) {
+  if (!st.mine || !st.user) return;
+  newH = (newH || '').trim().toLowerCase().replace(/^@/, '');
+  if (!/^[a-z0-9-]{2,20}$/.test(newH)) { toast('영문 소문자·숫자·하이픈 2~20자예요'); return; }
+  if (newH === st.handle) { toast('지금 주소와 같아요'); return; }
+  const rs = await reservedSets();
+  if (!rs.allow.includes(newH) && (SYS_RESERVED.includes(newH) || rs.deny.includes(newH))) { toast('사용할 수 없는 핸들이에요'); return; }
+  const ex = await getDoc(doc(db, 'tsites', newH));
+  const resume = ex.exists() && ex.data().ownerUid === st.user.uid && !ex.data().movedTo;  // 중단된 내 이사 → 이어가기
+  if (ex.exists() && !resume && !stubExpired(ex.data())) { toast('이미 사용 중인 핸들이에요'); return; }
+  const last = +st.site.renamedAt || 0, D30 = 30 * 86400000;
+  if (last && Date.now() - last < D30) { toast('주소 변경은 30일에 한 번이에요 — ' + Math.ceil((last + D30 - Date.now()) / 86400000) + '일 뒤에 가능', 5000); return; }
+  if (st.dirty && !confirm('저장하지 않은 변경이 있어요. 지금 상태 그대로 옮기려면 먼저 ✓ 저장하세요.\n저장 없이 계속할까요?')) return;
+  if (!confirm('홈 주소를 @' + st.handle + ' → @' + newH + ' 로 바꿀까요?\n\n· 옛 주소는 7일간 "이사했어요" 안내판으로 남아 링크·배너·초대 정보가 자동으로 넘어가고, 그 뒤엔 해제돼 다른 분이 쓸 수 있어요 (본인도 다시 못 써요)\n· 방명록·방문자 수는 함께 옮겨지고, 사진·HTML 파일은 그대로 써요\n· 30일에 한 번만 바꿀 수 있어요\n\n진행 전에 현재 홈이 자동 백업돼요.')) return;
+  try { dlJson('luvinfo-' + st.handle + '-before-rename-' + new Date().toISOString().slice(0, 10) + '.json', await buildBackup()); } catch (e) { /* */ }
+  const oldH = st.handle;
+  let n = 0, fail = 0;
+  try {
+    toast('이사 시작 — 홈 문서', 60000);
+    if (ex.exists() && !resume) await deleteDoc(doc(db, 'tsites', newH));   // 만료된 표지판 비우기
+    const pg = JSON.parse(JSON.stringify((await getDoc(doc(db, 'tsites', oldH))).data()));
+    delete pg.movedTo; delete pg.movedAt;
+    pg.handle = newH;
+    pg.prevHandles = [...new Set([...(pg.prevHandles || []), oldH])];
+    pg.renamedAt = Date.now();
+    await setDoc(doc(db, 'tsites', newH), pg); n++;
+    for (const name of ['tguest', 'tstats']) {
+      toast('이사 중… ' + (name === 'tguest' ? '방명록' : '방문자 수'), 60000);
+      const r = await copySub(oldH, newH, name); n += r.n; fail += r.fail;
+    }
+    await setDoc(doc(db, 'tusers', st.user.uid), { handle: newH }, { merge: true });
+    fail += await wipeOldHome(oldH, newH);
+    st.myHandle = newH;
+    alert('주소 변경 완료! (' + n + '건 복사' + (fail ? ', ' + fail + '건 실패 — 새 홈에 들어가면 자동으로 마무리돼요' : '') + ')\n새 주소로 이동합니다.');
+    location.href = homeUrl(newH);
+  } catch (e) {
+    console.log('[LUVINFO] rename err', e);
+    toast('이사 실패 — ' + (e.code || e.message), 6000);
+    alert('이사 중 오류가 났어요: ' + (e.code || e.message) + '\n이 화면에서 같은 새 주소로 [주소 변경]을 다시 누르면 이어서 진행돼요.\n(새 주소로 이미 넘어갔다면 그 홈에 들어갈 때 자동으로 마무리돼요)');
+  }
+}
+
 // ── 백업 파일 만들기: 큰 HTML 본문까지 담아 자급자족 ──
 async function buildBackup() {
   const copy = JSON.parse(JSON.stringify(st.site));

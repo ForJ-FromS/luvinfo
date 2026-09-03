@@ -836,6 +836,15 @@
   .blrow .drag { touch-action: none; cursor: grab; color: var(--mute); font-size: 12px; letter-spacing: -1px; user-select: none; padding: 0 2px; }
   .blrow.dragging { opacity: .45; }
   .blrow.over { border-color: var(--pri); box-shadow: inset 0 0 0 1px var(--pri); }
+  .pgrow { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; background: var(--bg); font-size: 12.5px; }
+  .pgrow.cur { border-color: var(--pri); }
+  .pgrow .drag { cursor: grab; color: var(--mute); font-size: 12px; letter-spacing: -1px; user-select: none; touch-action: none; padding: 0 2px; }
+  .pgrow .pgnum { color: var(--mute); font-size: 11px; font-family: 'JetBrains Mono', monospace; min-width: 18px; }
+  .pgrow .pgname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; color: var(--tx); }
+  .pgrow .pgname:hover { color: var(--pri); }
+  .pgrow .pgtag { font-size: 10px; color: var(--mute); }
+  .pgrow.dragging { opacity: .45; }
+  .pgrow.over { border-color: var(--pri); box-shadow: inset 0 0 0 1px var(--pri); }
   .blrow .kind {
     font-size: 10px; letter-spacing: .1em;
     color: var(--pri);
@@ -984,6 +993,7 @@
 <div class="owner-bar">
   <button class="ob" id="ob-add">＋ 새 페이지</button>
   <button class="ob" id="ob-addhtml">＋ HTML 페이지</button>
+  <button class="ob" id="ob-pages">☰ 페이지</button>
   <button class="ob" id="ob-deco">🎨 꾸미기</button>
   <button class="ob save" id="ob-save">✓ 저장</button>
 </div>
@@ -1037,6 +1047,14 @@
 
 <!-- 업데이트 공지 팝업 -->
 <div class="sheet-bg" id="notice-bg"></div>
+<div class="sheet-bg" id="pg-bg"></div>
+<div class="sheet" id="pg-sheet" style="width:min(480px,94vw);">
+  <h3><span>페이지 순서 · 목록</span><button id="pg-close">✕</button></h3>
+  <div class="f-note" style="margin:0 0 10px;">⠿ 손잡이를 끌거나 ↑↓로 순서를 바꿔요. 이름을 누르면 그 페이지로 이동. 🙈는 숨긴 페이지예요. 바꾼 순서는 <b>✓ 저장</b>을 눌러야 반영돼요.</div>
+  <div id="pg-list"></div>
+  <div class="f-actions"><button class="btn solid" id="pg-ok" style="min-width:120px;">닫기</button></div>
+</div>
+
 <div class="sheet" id="notice-pop" style="width:min(440px,92vw);">
   <h3><span>📢 업데이트 안내</span><button id="notice-close">✕</button></h3>
   <div id="notice-body" style="font-size:13px;line-height:1.85;white-space:pre-wrap;word-break:break-word;"></div>
@@ -1482,6 +1500,16 @@
       <div class="f-note">러브로그 홈 링크는 아래 "내 러브로그 홈 연결"에 핸들을 넣으면 떠요</div>
     </div>
     <div class="f-row">
+      <label>홈 주소 변경</label>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span style="font-size:12px;color:var(--dim);">luvinfo.me/</span>
+        <input type="text" id="dc-hr-new" placeholder="새 핸들 (영문 소문자·숫자·하이픈)" maxlength="20" autocomplete="off" style="flex:1;min-width:140px;margin:0;">
+        <button class="mini-btn" id="dc-hr-go">주소 변경</button>
+      </div>
+      <div class="f-note" id="dc-hr-note" style="min-height:14px;margin-top:4px;"></div>
+      <div class="f-note">옛 주소는 <b>7일간</b> "이사했어요" 안내판으로 남아 링크·배너·초대 정보가 자동으로 넘어가고, 그 뒤엔 해제돼 다른 분이 쓸 수 있어요(본인도 다시 못 써요). 방명록·방문자 수는 함께 옮겨지고 사진은 그대로 써요. <b>30일에 한 번</b>만 바꿀 수 있어요.</div>
+    </div>
+    <div class="f-row">
       <label>홈 비공개</label>
       <select id="dc-priv">
         <option value="">공개 — 주소를 아는 누구나 볼 수 있어요</option>
@@ -1711,6 +1739,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=130"></script>
+<script type="module" src="app.js?v=132"></script>
 </body>
 </html>
