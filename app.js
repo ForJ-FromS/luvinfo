@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v133 로드');
+console.log('[LUVINFO] app.js v135 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1423,18 +1423,40 @@ function buildBanner(bn) {
   d.querySelectorAll('[data-bh]').forEach(async (a) => {
     const info = await bannerInfo(a.dataset.bh);
     if (!info) { const tb = a.querySelector('.tb'); if (tb) tb.textContent = '@' + a.dataset.bh + ' (없음)'; return; }
+    if (info.h && info.h !== a.dataset.bh) {
+      a.href = homeUrl(info.h);                       // 링크는 즉시 새 주소로
+      fixMovedBanner(a.dataset.bh, info.h);           // 내 홈이면 데이터도 갱신해 표지판 사라진 뒤에도 안 깨지게
+    }
     if (info.img) a.innerHTML = '<img src="' + esc(info.img) + '" alt="">' + (info.mut ? '<span class="mut">♥</span>' : '');
     else a.innerHTML = '<span class="tb">' + esc(info.title) + '</span>' + (info.mut ? '<span class="mut">♥</span>' : '');
   });
   return d;
 }
 
+// 🚚 상대가 주소를 바꿨을 때: 내 홈의 배너 핸들을 새 주소로 갱신 (편집 중이 아니면 조용히 저장)
+const _fixedBn = new Set();
+async function fixMovedBanner(oldH, newH) {
+  if (!st.mine || !st.site || _fixedBn.has(oldH)) return;
+  _fixedBn.add(oldH);
+  let n = 0;
+  (st.site.chapters || []).forEach((c) => {
+    (c.blocks || []).forEach((b) => {
+      if (b.kind === 'bn') ((b.data?.items) || []).forEach((it) => { if (it.h === oldH) { it.h = newH; n++; } });
+    });
+    ((c.el?.bn?.items) || []).forEach((it) => { if (it.h === oldH) { it.h = newH; n++; } });
+  });
+  if (!n) return;
+  if (st.dirty) { toast('@' + oldH + ' 배너가 @' + newH + '(으)로 이사했어요 — 저장하면 새 주소로 바뀌어요', 5000); return; }
+  try { await saveSite(); toast('@' + oldH + ' 배너를 새 주소 @' + newH + '(으)로 자동 갱신했어요', 5000); }
+  catch (e) { setDirty(); }
+}
 const bannerCache = {};
 async function bannerInfo(h) {
   if (bannerCache[h] !== undefined) return bannerCache[h];
   try {
     let d = await getDoc(doc(db, 'tsites', h));
-    if (d.exists() && d.data().movedTo) d = await getDoc(doc(db, 'tsites', String(d.data().movedTo))); // 🚚 이사한 홈은 새 주소로
+    let real = h;
+    if (d.exists() && d.data().movedTo) { real = String(d.data().movedTo); d = await getDoc(doc(db, 'tsites', real)); } // 🚚 이사한 홈은 새 주소로
     if (!d.exists()) return (bannerCache[h] = null);
     const s = d.data();
     if (s.priv) return (bannerCache[h] = null);
@@ -1447,7 +1469,7 @@ async function bannerInfo(h) {
       });
       ((c.el?.bn?.items) || []).forEach((it) => { if (it.h === st.handle) mut = true; });
     });
-    return (bannerCache[h] = { img: s.myBanner || '', title: s.head?.title || h, mut });
+    return (bannerCache[h] = { img: s.myBanner || '', title: s.head?.title || real, mut, h: real });
   } catch (e) {
     console.log('[LUVINFO] bannerInfo err', e);
     return null;
