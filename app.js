@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v132 로드');
+console.log('[LUVINFO] app.js v133 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -3423,11 +3423,11 @@ async function copySub(oldH, newH, name) {
 }
 async function wipeOldHome(oldH, newH) {
   let fail = 0;
-  for (const name of ['tguest', 'tstats']) {
-    const qs = await getDocs(collection(db, 'tsites', oldH, name));
-    for (const d2 of qs.docs) { try { await deleteDoc(d2.ref); } catch (e) { fail++; } }
-    toast('옛 주소 비우는 중… ' + name, 3000);
-  }
+  toast('옛 주소 비우는 중… 방명록', 3000);
+  const qs = await getDocs(collection(db, 'tsites', oldH, 'tguest'));
+  for (const d2 of qs.docs) { try { await deleteDoc(d2.ref); } catch (e) { fail++; } }
+  // 방문자 수는 규칙상 삭제가 없어(키 화이트리스트 write) → 0으로 덮어씀
+  try { await setDoc(doc(db, 'tsites', oldH, 'tstats', 'counter'), { total: 0, day: '', today: 0 }); } catch (e) { /* */ }
   await setDoc(doc(db, 'tsites', oldH), { ownerUid: st.user.uid, handle: oldH, movedTo: newH, movedAt: Date.now() });
   return fail;
 }
@@ -3466,6 +3466,7 @@ async function renameHandle(newH) {
     toast('이사 시작 — 홈 문서', 60000);
     if (ex.exists() && !resume) await deleteDoc(doc(db, 'tsites', newH));   // 만료된 표지판 비우기
     const pg = JSON.parse(JSON.stringify((await getDoc(doc(db, 'tsites', oldH))).data()));
+    if (pg.movedTo) throw new Error('이미 이사한 주소예요 — 새 홈(@' + pg.movedTo + ')에서 진행해 주세요');
     delete pg.movedTo; delete pg.movedAt;
     pg.handle = newH;
     pg.prevHandles = [...new Set([...(pg.prevHandles || []), oldH])];
@@ -3478,6 +3479,7 @@ async function renameHandle(newH) {
     await setDoc(doc(db, 'tusers', st.user.uid), { handle: newH }, { merge: true });
     fail += await wipeOldHome(oldH, newH);
     st.myHandle = newH;
+    try { const seen = localStorage.getItem('li_gb_seen_' + oldH); if (seen) localStorage.setItem('li_gb_seen_' + newH, seen); } catch (e) { /* */ }
     alert('주소 변경 완료! (' + n + '건 복사' + (fail ? ', ' + fail + '건 실패 — 새 홈에 들어가면 자동으로 마무리돼요' : '') + ')\n새 주소로 이동합니다.');
     location.href = homeUrl(newH);
   } catch (e) {
