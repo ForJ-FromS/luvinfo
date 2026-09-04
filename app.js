@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v137 로드');
+console.log('[LUVINFO] app.js v138 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -592,6 +592,31 @@ function viewChs() {
   const chs = (st.site && st.site.chapters) || [];
   return st.edit ? chs : chs.filter((c) => !c.hidden);
 }
+// ── 페이지 잠금 화면 — 디자인 5종 + 안내 문구(빈 문자열이면 숨김) ──
+const LOCK_DEFAULT_MSG = '이 페이지는 비밀번호가 있어요';
+function buildLock(ch) {
+  const msg = ch.lkmsg === undefined ? LOCK_DEFAULT_MSG : String(ch.lkmsg);
+  const pEl = msg ? '<p>' + esc(msg) + '</p>' : '';
+  let style = ch.lkstyle || '';
+  if (style === 'pad' && !/^\d{1,8}$/.test(ch.pw || '')) style = '';   // 숫자 비번 아니면 키패드는 기본으로
+  const inp = '<input type="password" id="chpw-in" autocomplete="off" placeholder="PASSWORD">';
+  if (style === 'min') return '<div class="ch-lock lk-min">' + (msg ? '<p>' + esc(msg) + '</p>' : '<p>PASSWORD</p>') + inp + '<div class="lk-hint">엔터로 입장</div></div>';
+  if (style === 'card') return '<div class="ch-lock lk-card"><div class="box"><div class="lk">🔒</div>' + pEl + inp + '<button class="mini-btn" id="chpw-ok">입장</button></div></div>';
+  if (style === 'pad') {
+    const dots = Array.from({ length: (ch.pw || '').length }, () => '<i></i>').join('');
+    const keys = ['1','2','3','4','5','6','7','8','9'].map((k) => '<b data-pk="' + k + '">' + k + '</b>').join('')
+      + '<b class="f" data-pk="del">지움</b><b data-pk="0">0</b><b class="f" data-pk="ok">입장</b>';
+    return '<div class="ch-lock lk-pad">' + (msg ? '<p>' + esc(msg) + '</p>' : '<p>ENTER PASSCODE</p>') + '<div class="dots" id="chpw-dots">' + dots + '</div><div class="keys">' + keys + '</div></div>';
+  }
+  if (style === 'seal') return '<div class="ch-lock lk-seal"><div class="lk">CONFIDENTIAL</div><div class="stamp">SEALED</div>' + pEl + inp + '<button class="mini-btn" id="chpw-ok">개봉</button></div>';
+  if (style === 'term') return '<div class="ch-lock lk-term"><div class="ln">$ open page --restricted</div><div class="ln"><b>access denied.</b> authentication required</div>' + (msg ? '<p># ' + esc(msg) + '</p>' : '') + '<div class="ln" style="margin-top:14px">$ passwd: ' + inp + '<span class="cur"></span></div></div>';
+  return '<div class="ch-lock"><div class="lk">🔒</div>' + pEl + inp + '<button class="mini-btn" id="chpw-ok">입장</button></div>';
+}
+function renderPadDots(v) {
+  const d = gid('chpw-dots');
+  if (!d) return;
+  [...d.children].forEach((i, k) => i.classList.toggle('on', k < v.length));
+}
 function renderChapter() {
   const chs = viewChs();
   if (st.cur >= chs.length) st.cur = Math.max(0, chs.length - 1);
@@ -613,16 +638,28 @@ function renderChapter() {
   $('#ch-timg-top').innerHTML = (tImg && (ch.timgPos || 'top') === 'top') ? tImg : '';
   $('#ch-timg-bot').innerHTML = (tImg && ch.timgPos === 'bot') ? tImg : '';
   if (ch.pw && !st.mine && sessionStorage.getItem('li_chpw_' + st.handle + '_' + ch.id) !== '1') {
-    bodyEl.innerHTML = '<div class="ch-lock"><div class="lk">🔒</div><p>이 페이지는 비밀번호가 있어요</p>' +
-      '<input type="password" id="chpw-in" autocomplete="off" placeholder="PASSWORD"><button class="mini-btn" id="chpw-ok">입장</button></div>';
-    const tryPw = () => {
-      if ($('#chpw-in').value === ch.pw) {
+    bodyEl.innerHTML = buildLock(ch);
+    const tryPw = (v) => {
+      const val = v !== undefined ? v : $('#chpw-in').value;
+      if (val === ch.pw) {
         sessionStorage.setItem('li_chpw_' + st.handle + '_' + ch.id, '1');
         renderChapter();
-      } else { toast('비밀번호가 달라요'); }
+      } else { toast('비밀번호가 달라요'); if (gid('chpw-in')) gid('chpw-in').value = ''; renderPadDots(''); }
     };
-    $('#chpw-ok').onclick = tryPw;
-    $('#chpw-in').onkeydown = (e) => { if (e.key === 'Enter') tryPw(); };
+    if ($('#chpw-ok')) $('#chpw-ok').onclick = () => tryPw();
+    if ($('#chpw-in')) $('#chpw-in').onkeydown = (e) => { if (e.key === 'Enter') tryPw(); };
+    // 키패드: 눌러서 채우고, 길이가 맞으면 자동 확인
+    let padVal = '';
+    bodyEl.querySelectorAll('[data-pk]').forEach((b) => {
+      b.onclick = () => {
+        const k = b.dataset.pk;
+        if (k === 'del') padVal = padVal.slice(0, -1);
+        else if (k === 'ok') { tryPw(padVal); return; }
+        else if (padVal.length < ch.pw.length) padVal += k;
+        renderPadDots(padVal);
+        if (padVal.length === ch.pw.length) setTimeout(() => tryPw(padVal), 120);
+      };
+    });
     renderPager();
     return;
   }
@@ -2299,6 +2336,8 @@ function openChapterEdit(ch, type) {
   $('#es-pw').value = work.pw || '';
   if (gid('es-hidden')) gid('es-hidden').checked = !!work.hidden;
   if (gid('es-slug')) gid('es-slug').value = work.slug || '';
+  if (gid('es-lkstyle')) gid('es-lkstyle').value = work.lkstyle || '';
+  if (gid('es-lkmsg')) gid('es-lkmsg').value = work.lkmsg === undefined ? LOCK_DEFAULT_MSG : work.lkmsg;
   if (gid('es-timgpos')) gid('es-timgpos').value = work.timgPos || 'top';
   if (gid('es-timg-chip')) gid('es-timg-chip').textContent = work.timg ? '이미지 있음 ✓' : '없음';
   const isHtml = type === 'html';
@@ -2991,6 +3030,8 @@ function confirmChapterEdit() {
   work.title = $('#es-name').value.trim();
   work.pw = $('#es-pw').value.trim();
   if (gid('es-hidden')) work.hidden = gid('es-hidden').checked;
+  if (gid('es-lkstyle')) work.lkstyle = gid('es-lkstyle').value;
+  if (gid('es-lkmsg')) work.lkmsg = gid('es-lkmsg').value.trim();
   if (gid('es-slug')) {
     const sl = gid('es-slug').value.trim().toLowerCase().replace(/^#/, '').replace(/[^a-z0-9-]/g, '');
     const dup = (st.site.chapters || []).some((c) => c !== work && c.slug && c.slug === sl);

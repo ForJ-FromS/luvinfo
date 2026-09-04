@@ -537,6 +537,46 @@
   }
   .ch-lock input:focus { outline: none; border-color: var(--pri); }
   .ch-lock button { margin-left: 8px; }
+  .ch-lock .lk-hint { font-size: 10px; color: var(--mute); margin-top: 12px; letter-spacing: .1em; }
+  /* 미니멀 라인 */
+  .ch-lock.lk-min .lk { display: none; }
+  .ch-lock.lk-min p { font-size: 11px; letter-spacing: .28em; color: var(--mute); }
+  .ch-lock.lk-min input { background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; width: 180px; padding: 8px 4px; letter-spacing: .4em; }
+  .ch-lock.lk-min input:focus { border-bottom-color: var(--pri); }
+  .ch-lock.lk-min button { display: none; }
+  /* 카드 */
+  .ch-lock.lk-card { padding: 20px 0; }
+  .ch-lock.lk-card .box { display: inline-block; border: 1px solid var(--line); border-radius: 14px; padding: 26px 30px; background: rgba(var(--cardbase), var(--cardop)); }
+  .ch-lock.lk-card .lk { font-size: 26px; margin-bottom: 10px; }
+  .ch-lock.lk-card p { margin: 0 0 16px; font-size: 12px; }
+  .ch-lock.lk-card input { display: block; width: 210px; margin: 0 auto 10px; }
+  .ch-lock.lk-card button { display: block; margin: 0 auto; width: 210px; background: var(--pri); color: var(--bg); border-color: var(--pri); font-weight: 600; padding: 10px; border-radius: 999px; }
+  /* 키패드 */
+  .ch-lock.lk-pad .lk { display: none; }
+  .ch-lock.lk-pad p { letter-spacing: .24em; font-size: 11px; color: var(--mute); }
+  .ch-lock.lk-pad .dots { display: flex; justify-content: center; gap: 12px; margin: 8px 0 22px; }
+  .ch-lock.lk-pad .dots i { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--pri); display: block; }
+  .ch-lock.lk-pad .dots i.on { background: var(--pri); }
+  .ch-lock.lk-pad .keys { display: grid; grid-template-columns: repeat(3, 58px); gap: 8px; justify-content: center; }
+  .ch-lock.lk-pad .keys b { width: 58px; height: 48px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 12px; font-weight: 400; font-size: 16px; color: var(--tx); cursor: pointer; user-select: none; }
+  .ch-lock.lk-pad .keys b:active { border-color: var(--pri); }
+  .ch-lock.lk-pad .keys b.f { border-color: transparent; color: var(--mute); font-size: 12px; }
+  .ch-lock.lk-pad input, .ch-lock.lk-pad button { display: none; }
+  /* 봉인 */
+  .ch-lock.lk-seal .lk { font-size: 14px; letter-spacing: .5em; color: var(--pri); margin-bottom: 22px; font-family: 'JetBrains Mono', monospace; }
+  .ch-lock.lk-seal .stamp { display: inline-block; border: 2px solid var(--pri); border-radius: 8px; padding: 8px 22px; letter-spacing: .32em; font-size: 11px; color: var(--pri); transform: rotate(-4deg); margin-bottom: 26px; opacity: .85; }
+  .ch-lock.lk-seal p { font-size: 11px; }
+  .ch-lock.lk-seal input { border-radius: 6px; border-color: var(--pri); background: transparent; letter-spacing: .35em; }
+  .ch-lock.lk-seal button { border-radius: 6px; border-color: var(--pri); color: var(--pri); }
+  /* 터미널 */
+  .ch-lock.lk-term { text-align: left; padding: 28px 22px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; }
+  .ch-lock.lk-term .lk { display: none; }
+  .ch-lock.lk-term .ln { color: var(--mute); margin-bottom: 4px; }
+  .ch-lock.lk-term .ln b { color: var(--pri); font-weight: 400; }
+  .ch-lock.lk-term .cur { display: inline-block; width: 8px; height: 14px; background: var(--pri); vertical-align: -2px; margin-left: 2px; }
+  .ch-lock.lk-term input { background: none; border: none; border-radius: 0; width: auto; padding: 0; text-align: left; letter-spacing: .3em; color: var(--tx); }
+  .ch-lock.lk-term p { text-align: left; margin: 0 0 4px; font-size: 12px; color: var(--mute); }
+  .ch-lock.lk-term button { display: none; }
 
   .ch-tools {
     display: none;
@@ -1085,6 +1125,21 @@
     <div class="f-row">
       <label>이 페이지 비밀번호 (비우면 공개)</label>
       <input type="text" id="es-pw" placeholder="이 페이지만 잠그기" autocomplete="off">
+    </div>
+  </div>
+  <div class="f-2col" id="es-lockrow">
+    <div class="f-row"><label>잠금 화면 디자인</label>
+      <select id="es-lkstyle">
+        <option value="">기본 — 자물쇠 + 알약 입력</option>
+        <option value="min">미니멀 라인</option>
+        <option value="card">카드</option>
+        <option value="pad">키패드 (숫자 비밀번호만)</option>
+        <option value="seal">봉인</option>
+        <option value="term">터미널</option>
+      </select>
+    </div>
+    <div class="f-row"><label>잠금 안내 문구 (비우면 안 보여요)</label>
+      <input type="text" id="es-lkmsg" maxlength="60" placeholder="이 페이지는 비밀번호가 있어요">
     </div>
   </div>
   <label class="chk-row" style="margin-top:2px;margin-bottom:10px;"><input type="checkbox" id="es-hidden"> 🙈 이 페이지 숨기기 — 방문자에겐 안 보이고, 편집 모드에서만 보여요</label>
@@ -1739,6 +1794,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=137"></script>
+<script type="module" src="app.js?v=138"></script>
 </body>
 </html>
