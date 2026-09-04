@@ -42,7 +42,7 @@ const st = { user: null, myHandle: null, handle: null, site: null, mine: false, 
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v135 로드');
+console.log('[LUVINFO] app.js v136 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -313,8 +313,8 @@ async function login() {
 
 // ── 가입 핸들 실시간 확인 (예약·중복 미리 알림 — 최종 판정은 가입 버튼에서 한 번 더) ──
 let _resvCache = null;
-async function reservedSets() {
-  if (_resvCache) return _resvCache;
+async function reservedSets(fresh) {
+  if (_resvCache && !fresh) return _resvCache;
   try {
     const [r1, r2, r3] = await Promise.all([
       getDoc(doc(db, 'config', 'reserved')),
@@ -3472,8 +3472,8 @@ async function renameHandle(newH) {
   newH = (newH || '').trim().toLowerCase().replace(/^@/, '');
   if (!/^[a-z0-9-]{2,20}$/.test(newH)) { toast('영문 소문자·숫자·하이픈 2~20자예요'); return; }
   if (newH === st.handle) { toast('지금 주소와 같아요'); return; }
-  const rs = await reservedSets();
-  if (!rs.allow.includes(newH) && (SYS_RESERVED.includes(newH) || rs.deny.includes(newH))) { toast('사용할 수 없는 핸들이에요'); return; }
+  const rs = await reservedSets(true);   // 주소 변경은 캐시 말고 지금 목록으로 (예약 핸들이 이사에 먹히는 사고 방지)
+  if (!rs.allow.includes(newH) && (SYS_RESERVED.includes(newH) || rs.deny.includes(newH))) { toast('사용할 수 없는 핸들이에요 (예약된 이름)'); return; }
   const ex = await getDoc(doc(db, 'tsites', newH));
   const resume = ex.exists() && ex.data().ownerUid === st.user.uid && !ex.data().movedTo;  // 중단된 내 이사 → 이어가기
   if (ex.exists() && !resume && !stubExpired(ex.data())) { toast('이미 사용 중인 핸들이에요'); return; }
