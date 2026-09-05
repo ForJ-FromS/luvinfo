@@ -43,7 +43,7 @@ const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{0,18}[a-z0-9])?$/; // 1~20자, 하이�
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v142 로드');
+console.log('[LUVINFO] app.js v144 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -251,6 +251,8 @@ function showGate(g, preview) {
     mark(false);
   } else if (pvbar) { pvbar.style.display = 'none'; }
   el.dataset.style = g.style === 'full' ? 'full' : 'card';
+  if (g.skin) el.dataset.skin = g.skin; else delete el.dataset.skin;
+  if (g.style === 'full') el.dataset.gpos = g.gpos || 'b'; else delete el.dataset.gpos;
   el.dataset.grad = g.grad === false ? 'off' : 'on';
   if (g.btnc) el.style.setProperty('--gbc', g.btnc); else el.style.removeProperty('--gbc');
   if (g.btnt) el.style.setProperty('--gbt', g.btnt); else el.style.removeProperty('--gbt');
@@ -272,6 +274,7 @@ function showGate(g, preview) {
   $('#gate-enter').textContent = preview ? '✕ 미리보기 닫기' : (g.btn || '입장');
   $('#gate-msg').textContent = g.msg || 'WELCOME';
   $('#gate-pw').style.display = g.pw && !preview ? 'block' : 'none';
+  if (gid('gate-pw-wrap')) gid('gate-pw-wrap').style.display = g.pw && !preview ? '' : 'none';
   const enter = async () => {
     if (preview) { closeGatePv(el, gid('gate-pvbar')); return; }
     if (g.pw) {
@@ -3121,6 +3124,9 @@ function openDeco() {
   $('#dc-gate-pw').value = isHash(g.pw) ? '' : (g.pw || '');
   $('#dc-gate-pw').placeholder = isHash(g.pw) ? '비밀번호 설정됨 — 바꾸려면 입력, 없애려면 한 글자 쓰고 지우기' : '비밀번호 (비우면 버튼만)';
   $('#dc-gate-style').value = g.style === 'full' ? 'full' : 'card';
+  if (gid('dc-gate-skin')) gid('dc-gate-skin').value = g.skin || '';
+  if (gid('dc-gate-gpos')) { gid('dc-gate-gpos').value = g.gpos || ''; gid('dc-gate-gpos').style.display = g.style === 'full' ? '' : 'none'; }
+  if (gid('dc-gate-tpos')) { const tp = gid('dc-gate-tpos'); tp.style.display = tp.previousElementSibling.style.display = g.style === 'full' ? 'none' : ''; }
   $('#dc-gate-over').value = g.over || '';
   $('#dc-gate-btn').value = g.btn || '';
   $('#dc-gate-btnc').value = g.btnc || '#C9A96E';
@@ -3403,7 +3409,14 @@ function bindDeco() {
   const gset = (k, v) => { st.site.gate = st.site.gate || {}; st.site.gate[k] = v; setDirty(); };
   $('#dc-gate-msg').oninput = (e) => gset('msg', e.target.value);
   $('#dc-gate-pw').oninput = (e) => gset('pw', e.target.value);
-  $('#dc-gate-style').onchange = (e) => gset('style', e.target.value);
+  $('#dc-gate-style').onchange = (e) => {
+    gset('style', e.target.value);
+    const full = e.target.value === 'full';
+    if (gid('dc-gate-gpos')) gid('dc-gate-gpos').style.display = full ? '' : 'none';
+    if (gid('dc-gate-tpos')) { const tp = gid('dc-gate-tpos'); tp.style.display = tp.previousElementSibling.style.display = full ? 'none' : ''; }
+  };
+  if (gid('dc-gate-skin')) gid('dc-gate-skin').onchange = (e) => gset('skin', e.target.value);
+  if (gid('dc-gate-gpos')) gid('dc-gate-gpos').onchange = (e) => gset('gpos', e.target.value);
   $('#dc-gate-over').oninput = (e) => gset('over', e.target.value);
   $('#dc-gate-btn').oninput = (e) => gset('btn', e.target.value.trim());
   // 모바일 일부 브라우저는 색 확정 시 change만 발화 — 양쪽 다 바인딩 (v71)
