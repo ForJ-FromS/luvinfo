@@ -39,10 +39,11 @@ function gid(i) { return document.getElementById(i); }
 // 코드제로 바꾸려면: mode를 'code'로, code에 원하는 초대 코드를 넣고 재배포
 const SIGNUP = { mode: 'invite', code: '' }; // invite = invites 컬렉션의 러브인포 코드(횟수제) / open = 자유 가입 / code = 고정 코드
 const st = { user: null, myHandle: null, handle: null, site: null, mine: false, edit: false, dirty: false, cur: 0 };
+const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{0,18}[a-z0-9])?$/; // 1~20자, 하이픈은 가운데만 (서브도메인 규격)
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v139 로드');
+console.log('[LUVINFO] app.js v141 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -336,7 +337,7 @@ async function checkHandleLive() {
   const seq = ++_hChkSeq;
   const h = gid('claim-h').value.trim().toLowerCase();
   if (!h) { el.textContent = ''; return; }
-  if (!/^[a-z0-9]{2,20}$/.test(h)) { el.textContent = '영문 소문자·숫자 2~20자'; el.style.color = 'var(--mute)'; return; }
+  if (!HANDLE_RE.test(h)) { el.textContent = '영문 소문자·숫자·하이픈 1~20자'; el.style.color = 'var(--mute)'; return; }
   el.textContent = '확인 중…'; el.style.color = 'var(--mute)';
   const rs = await reservedSets();
   if (seq !== _hChkSeq) return;
@@ -419,7 +420,7 @@ function openClaim(user) {
         if (!refRaw) { toast('초대해 준 분의 러브인포 핸들을 @핸들 형태로 적어 주세요'); return; }
         if (refRaw.charAt(0) !== '@') { toast('앞에 @를 붙여 주세요 (예: @jeste)'); return; }
         claimRef = refRaw.slice(1).toLowerCase();
-        if (!/^[a-z0-9]{2,20}$/.test(claimRef)) { toast('핸들 형식이 아니에요 — @핸들 형태로 적어 주세요 (예: @jeste)'); return; }
+        if (!HANDLE_RE.test(claimRef)) { toast('핸들 형식이 아니에요 — @핸들 형태로 적어 주세요 (예: @jeste)'); return; }
         try {
           const rs = await getDoc(doc(db, 'tsites', claimRef));
           if (!rs.exists()) { toast('@' + claimRef + ' 홈을 찾을 수 없어요 — 초대해 준 분의 러브인포 핸들이 맞는지 확인해 주세요'); return; }
@@ -431,7 +432,7 @@ function openClaim(user) {
       }
     }
     const h = $('#claim-h').value.trim().toLowerCase();
-    if (!/^[a-z0-9]{2,20}$/.test(h)) { toast('영문 소문자·숫자 2~20자로 입력해 주세요'); return; }
+    if (!HANDLE_RE.test(h)) { toast('영문 소문자·숫자·하이픈 1~20자로 입력해 주세요'); return; }
     // 시스템 예약어 + 예약 핸들 목록(러브로그 config/reserved 공유 + 러브인포 전용 config/treserved)
     try {
       const [r1, r2, r3] = await Promise.all([
@@ -1778,7 +1779,7 @@ async function opsMake() {
   let ref1 = (gid('ops-ref1') ? gid('ops-ref1').value : '').trim().replace(/^@/, '');
   if (ref1) {
     let known = false;
-    if (/^[a-z0-9]{2,20}$/.test(ref1.toLowerCase())) {
+    if (HANDLE_RE.test(ref1.toLowerCase())) {
       try {
         const rs = await getDoc(doc(db, 'tsites', ref1.toLowerCase()));
         if (rs.exists()) { known = true; ref1 = ref1.toLowerCase(); }
@@ -3004,7 +3005,7 @@ function bindEditor() {
     if (!editingBlk) return;
     const inp = $('#eb-hin');
     const h = (inp.value || '').trim().toLowerCase().replace(/^@/, '');
-    if (!/^[a-z0-9]{2,20}$/.test(h)) { toast('핸들 형식이 아니에요 (영문 소문자·숫자)'); return; }
+    if (!HANDLE_RE.test(h)) { toast('핸들 형식이 아니에요 (영문 소문자·숫자·하이픈)'); return; }
     if (h === st.handle) { toast('내 핸들은 추가할 수 없어요'); return; }
     const ex = await getDoc(doc(db, 'tsites', h));
     if (!ex.exists()) { toast('@' + h + ' — 존재하지 않는 러브인포예요'); return; }
@@ -3180,7 +3181,7 @@ function bindDeco() {
     setDirty(); renderFoot();
   };
   if (gid('dc-luvlog')) gid('dc-luvlog').oninput = (e) => {
-    st.site.luvlog = e.target.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    st.site.luvlog = e.target.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
     setDirty(); renderFoot();
   };
   $('#dc-corner').onchange = (e) => { t().corner = e.target.value; setDirty(); applyTheme(); };
@@ -3194,7 +3195,7 @@ function bindDeco() {
   if (gid('dc-hr-new')) gid('dc-hr-new').oninput = () => {
     const v = gid('dc-hr-new').value.trim().toLowerCase().replace(/^@/, '');
     const n = gid('dc-hr-note');
-    n.textContent = !v ? '' : (/^[a-z0-9-]{2,20}$/.test(v) ? (v === st.handle ? '지금 주소와 같아요' : '') : '영문 소문자·숫자·하이픈 2~20자');
+    n.textContent = !v ? '' : (HANDLE_RE.test(v) ? (v === st.handle ? '지금 주소와 같아요' : '') : '영문 소문자·숫자·하이픈 1~20자');
   };
   $('#dc-backup').onclick = async () => {
     const copy = await buildBackup();
@@ -3511,7 +3512,7 @@ async function finishRenameIfNeeded() {
 async function renameHandle(newH) {
   if (!st.mine || !st.user) return;
   newH = (newH || '').trim().toLowerCase().replace(/^@/, '');
-  if (!/^[a-z0-9-]{2,20}$/.test(newH)) { toast('영문 소문자·숫자·하이픈 2~20자예요'); return; }
+  if (!HANDLE_RE.test(newH)) { toast('영문 소문자·숫자·하이픈 1~20자예요'); return; }
   if (newH === st.handle) { toast('지금 주소와 같아요'); return; }
   const rs = await reservedSets(true);   // 주소 변경은 캐시 말고 지금 목록으로 (예약 핸들이 이사에 먹히는 사고 방지)
   if (!rs.allow.includes(newH) && (SYS_RESERVED.includes(newH) || rs.deny.includes(newH))) { toast('사용할 수 없는 핸들이에요'); return; }
