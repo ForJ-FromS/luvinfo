@@ -43,7 +43,7 @@ const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{0,18}[a-z0-9])?$/; // 1~20자, 하이�
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v141 로드');
+console.log('[LUVINFO] app.js v142 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -3192,11 +3192,7 @@ function bindDeco() {
   $('#dc-mybn-up').onclick = () => uploadOne((url) => { st.site.myBanner = url; setDirty(); toast('내 배너 설정 — 저장을 눌러 주세요'); });
   $('#dc-mybn-del').onclick = () => { st.site.myBanner = ''; setDirty(); toast('내 배너 제거'); };
   if (gid('dc-hr-go')) gid('dc-hr-go').onclick = () => renameHandle(gid('dc-hr-new').value);
-  if (gid('dc-hr-new')) gid('dc-hr-new').oninput = () => {
-    const v = gid('dc-hr-new').value.trim().toLowerCase().replace(/^@/, '');
-    const n = gid('dc-hr-note');
-    n.textContent = !v ? '' : (HANDLE_RE.test(v) ? (v === st.handle ? '지금 주소와 같아요' : '') : '영문 소문자·숫자·하이픈 1~20자');
-  };
+  if (gid('dc-hr-new')) { let tm; gid('dc-hr-new').oninput = () => { clearTimeout(tm); tm = setTimeout(checkRenameLive, 450); }; }
   $('#dc-backup').onclick = async () => {
     const copy = await buildBackup();
     dlJson('luvinfo-' + st.handle + '-' + new Date().toISOString().slice(0, 10) + '.json', copy);
@@ -3508,6 +3504,29 @@ async function finishRenameIfNeeded() {
       }
     } catch (e) { console.log('[LUVINFO] rename-finish err', h, e); }
   }
+}
+// 주소 변경 입력칸 실시간 확인 — 가입 때와 같은 기준 (쓸 수 있다/없다만, 이유는 안 밝힘)
+let _rnSeq = 0;
+async function checkRenameLive() {
+  const el = gid('dc-hr-note');
+  if (!el) return;
+  const seq = ++_rnSeq;
+  const v = gid('dc-hr-new').value.trim().toLowerCase().replace(/^@/, '');
+  el.style.color = 'var(--mute)';
+  if (!v) { el.textContent = ''; return; }
+  if (!HANDLE_RE.test(v)) { el.textContent = '영문 소문자·숫자·하이픈 1~20자'; return; }
+  if (v === st.handle) { el.textContent = '지금 주소와 같아요'; return; }
+  el.textContent = '확인 중…';
+  const rs = await reservedSets(true);
+  if (seq !== _rnSeq) return;
+  if (!rs.allow.includes(v) && (SYS_RESERVED.includes(v) || rs.deny.includes(v))) { el.textContent = '✗ 사용할 수 없는 주소예요'; el.style.color = '#d66'; return; }
+  try {
+    const ex = await getDoc(doc(db, 'tsites', v));
+    if (seq !== _rnSeq) return;
+    const mineResume = ex.exists() && ex.data().ownerUid === st.user?.uid && !ex.data().movedTo;
+    if (ex.exists() && !mineResume && !stubExpired(ex.data())) { el.textContent = '✗ 사용할 수 없는 주소예요'; el.style.color = '#d66'; }
+    else { el.textContent = '✓ 사용할 수 있어요 — luvinfo.me/' + v; el.style.color = 'var(--pri)'; }
+  } catch (e) { if (seq === _rnSeq) el.textContent = ''; }
 }
 async function renameHandle(newH) {
   if (!st.mine || !st.user) return;
