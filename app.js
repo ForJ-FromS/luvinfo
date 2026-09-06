@@ -43,7 +43,7 @@ const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{0,18}[a-z0-9])?$/; // 1~20자, 하이�
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v144 로드');
+console.log('[LUVINFO] app.js v145 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -598,16 +598,18 @@ function viewChs() {
 }
 // ── 페이지 잠금 화면 — 디자인 5종 + 안내 문구(빈 문자열이면 숨김) ──
 const LOCK_DEFAULT_MSG = '이 페이지는 비밀번호가 있어요';
+const pwLen = (ch) => isHash(ch.pw) ? (+ch.pwLen || 0) : (ch.pw || '').length;
+const pwIsNum = (ch) => isHash(ch.pw) ? !!ch.pwNum : /^\d{1,8}$/.test(ch.pw || '');
 function buildLock(ch) {
   const msg = ch.lkmsg === undefined ? LOCK_DEFAULT_MSG : String(ch.lkmsg);
   const pEl = msg ? '<p>' + esc(msg) + '</p>' : '';
   let style = ch.lkstyle || '';
-  if (style === 'pad' && !/^\d{1,8}$/.test(ch.pw || '')) style = '';   // 숫자 비번 아니면 키패드는 기본으로
+  if (style === 'pad' && !pwIsNum(ch)) style = '';   // 숫자 비번 아니면 키패드는 기본으로
   const inp = '<input type="password" id="chpw-in" autocomplete="off" placeholder="PASSWORD">';
   if (style === 'min') return '<div class="ch-lock lk-min">' + (msg ? '<p>' + esc(msg) + '</p>' : '<p>PASSWORD</p>') + inp + '<div class="lk-hint">엔터로 입장</div></div>';
   if (style === 'card') return '<div class="ch-lock lk-card"><div class="box"><div class="lk">🔒</div>' + pEl + inp + '<button class="mini-btn" id="chpw-ok">입장</button></div></div>';
   if (style === 'pad') {
-    const dots = Array.from({ length: (ch.pw || '').length }, () => '<i></i>').join('');
+    const dots = Array.from({ length: pwLen(ch) }, () => '<i></i>').join('');
     const keys = ['1','2','3','4','5','6','7','8','9'].map((k) => '<b data-pk="' + k + '">' + k + '</b>').join('')
       + '<b class="f" data-pk="del">지움</b><b data-pk="0">0</b><b class="f" data-pk="ok">입장</b>';
     return '<div class="ch-lock lk-pad">' + (msg ? '<p>' + esc(msg) + '</p>' : '<p>ENTER PASSCODE</p>') + '<div class="dots" id="chpw-dots">' + dots + '</div><div class="keys">' + keys + '</div></div>';
@@ -643,9 +645,10 @@ function renderChapter() {
   $('#ch-timg-bot').innerHTML = (tImg && ch.timgPos === 'bot') ? tImg : '';
   if (ch.pw && !st.mine && sessionStorage.getItem('li_chpw_' + st.handle + '_' + ch.id) !== '1') {
     bodyEl.innerHTML = buildLock(ch);
-    const tryPw = (v) => {
+    const tryPw = async (v) => {
       const val = v !== undefined ? v : $('#chpw-in').value;
-      if (val === ch.pw) {
+      const ok = isHash(ch.pw) ? (await sha256(val)) === ch.pw.toLowerCase() : val === ch.pw;
+      if (ok) {
         sessionStorage.setItem('li_chpw_' + st.handle + '_' + ch.id, '1');
         renderChapter();
       } else { toast('비밀번호가 달라요'); if (gid('chpw-in')) gid('chpw-in').value = ''; renderPadDots(''); }
@@ -659,9 +662,9 @@ function renderChapter() {
         const k = b.dataset.pk;
         if (k === 'del') padVal = padVal.slice(0, -1);
         else if (k === 'ok') { tryPw(padVal); return; }
-        else if (padVal.length < ch.pw.length) padVal += k;
+        else if (padVal.length < pwLen(ch)) padVal += k;
         renderPadDots(padVal);
-        if (padVal.length === ch.pw.length) setTimeout(() => tryPw(padVal), 120);
+        if (padVal.length === pwLen(ch)) setTimeout(() => tryPw(padVal), 120);
       };
     });
     renderPager();
@@ -931,6 +934,17 @@ function buildProfile(p) {
   return d;
 }
 
+// 방명록 조회 — 규칙이 비공개 글을 주인·작성자에게만 열어주므로 조회도 그 범위로 나눠 요청
+async function fetchGuest(h) {
+  const col = collection(db, 'tsites', h, 'tguest');
+  const owner = !!(st.user && st.site && st.site.ownerUid === st.user.uid);
+  const out = new Map();
+  const take = (qs) => qs.forEach((d) => out.set(d.id, { id: d.id, ...d.data() }));
+  if (owner) { take(await getDocs(col)); return [...out.values()]; }
+  take(await getDocs(query(col, where('secret', '==', false))));
+  if (st.user) { try { take(await getDocs(query(col, where('uid', '==', st.user.uid)))); } catch (e) { /* */ } }
+  return [...out.values()];
+}
 function buildGbBlock() {
   const w = document.createElement('div');
   w.className = 'gbblk';
@@ -1024,8 +1038,7 @@ function buildGbBlock() {
   (async () => {
     list.innerHTML = '<p class="gb-empty">불러오는 중…</p>';
     try {
-      const qs = await getDocs(collection(db, 'tsites', st.handle, 'tguest'));
-      qs.forEach((s) => rows.push({ id: s.id, ...s.data() }));
+      (await fetchGuest(st.handle)).forEach((r) => rows.push(r));
       rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
     } catch (e) { /* 목록 실패해도 폼은 시도 */ }
     render();
@@ -2337,7 +2350,10 @@ function openChapterEdit(ch, type) {
   if (type === 'cell') { migrateBlocks(work); work.bstyle = work.bstyle || {}; work.wrap = work.wrap || { on: false }; }
   $('#es-title').textContent = ch ? '페이지 수정' : (type === 'html' ? '새 HTML 페이지' : '새 페이지');
   $('#es-name').value = work.title || '';
-  $('#es-pw').value = work.pw || '';
+  $('#es-pw').value = isHash(work.pw) ? '' : (work.pw || '');
+  $('#es-pw').placeholder = isHash(work.pw) ? '비밀번호 설정됨 — 바꾸려면 입력, 없애려면 한 글자 쓰고 지우기' : '이 페이지만 잠그기';
+  $('#es-pw').dataset.touched = '';
+  $('#es-pw').oninput = () => { $('#es-pw').dataset.touched = '1'; };
   if (gid('es-hidden')) gid('es-hidden').checked = !!work.hidden;
   if (gid('es-slug')) gid('es-slug').value = work.slug || '';
   if (gid('es-lkstyle')) gid('es-lkstyle').value = work.lkstyle || '';
@@ -3032,7 +3048,12 @@ function bindEditor() {
 function confirmChapterEdit() {
   if (editingBlk) saveBlockFields();
   work.title = $('#es-name').value.trim();
-  work.pw = $('#es-pw').value.trim();
+  {
+    const v = $('#es-pw').value.trim();
+    if (v) { work.pw = v; work.pwLen = v.length; work.pwNum = /^\d{1,8}$/.test(v); }
+    else if ($('#es-pw').dataset.touched === '1' || !isHash(work.pw)) { work.pw = ''; delete work.pwLen; delete work.pwNum; }
+    // (해시 상태에서 손대지 않았으면 기존 해시 유지)
+  }
   if (gid('es-hidden')) work.hidden = gid('es-hidden').checked;
   if (gid('es-lkstyle')) work.lkstyle = gid('es-lkstyle').value;
   if (gid('es-lkmsg')) work.lkmsg = gid('es-lkmsg').value.trim();
@@ -3663,6 +3684,9 @@ async function saveSite() {
   delete st.site._migrated;
   st.site.updated = Date.now();
   if (st.site.gate && st.site.gate.pw && !isHash(st.site.gate.pw)) st.site.gate.pw = await sha256(st.site.gate.pw);
+  for (const ch of st.site.chapters || []) {
+    if (ch.pw && !isHash(ch.pw)) { ch.pwLen = ch.pw.length; ch.pwNum = /^\d{1,8}$/.test(ch.pw); ch.pw = await sha256(ch.pw); }
+  }
   try { await offloadBigHtml(); }
   catch (e) {
     console.log('[LUVINFO] offload err', e);
