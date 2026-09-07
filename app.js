@@ -43,7 +43,7 @@ const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{0,18}[a-z0-9])?$/; // 1~20자, 하이�
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v147 로드');
+console.log('[LUVINFO] app.js v148 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -537,10 +537,19 @@ function fxTick(ts) {
   if (FX.cur && FX.curKind) {
     const g = FX.cur.getContext('2d');
     g.clearRect(0, 0, W, H);
-    FX.sparks = FX.sparks.filter((s) => (s.life -= .02) > 0);
+    FX.sparks = FX.sparks.filter((s) => (s.life -= (FX.curKind === 'drop' ? .014 : .02)) > 0);
     FX.sparks.forEach((s) => {
       s.x += s.vx; s.y += s.vy; s.vy += .04;
       if (FX.curKind === 'ring') { g.beginPath(); g.arc(s.x, s.y, s.r * (1.2 - s.life), 0, 6.28); g.strokeStyle = fxColor(s.life * .8); g.lineWidth = 1.2; g.stroke(); return; }
+      if (FX.curKind === 'drop') {
+        const rr = s.r * (1.35 - s.life * .35), a = s.life * .75;
+        g.beginPath(); g.ellipse(s.x, s.y, rr * .8, rr, 0, 0, 6.28);
+        g.fillStyle = 'rgba(150, 200, 255, ' + (a * .35).toFixed(2) + ')'; g.fill();
+        g.strokeStyle = 'rgba(190, 225, 255, ' + (a * .8).toFixed(2) + ')'; g.lineWidth = 1; g.stroke();
+        g.beginPath(); g.ellipse(s.x - rr * .3, s.y - rr * .38, rr * .22, rr * .3, -.5, 0, 6.28);
+        g.fillStyle = 'rgba(255, 255, 255, ' + (a * .9).toFixed(2) + ')'; g.fill();
+        return;
+      }
       g.beginPath(); g.arc(s.x, s.y, s.r * s.life, 0, 6.28); g.fillStyle = FX.curKind === 'trail' ? fxColor(s.life) : 'rgba(255,255,255,' + s.life.toFixed(2) + ')'; g.fill();
       if (FX.curKind === 'spark' && s.life > .5) { g.strokeStyle = 'rgba(255,255,255,' + (s.life - .5).toFixed(2) + ')'; g.lineWidth = .8; const l = s.r * 2.2 * s.life; g.beginPath(); g.moveTo(s.x - l, s.y); g.lineTo(s.x + l, s.y); g.moveTo(s.x, s.y - l); g.lineTo(s.x, s.y + l); g.stroke(); }
     });
@@ -553,6 +562,7 @@ function fxOnMove(e) {
   const k = FX.curKind, n = k === 'ring' ? 1 : (k === 'spark' ? 2 : 1);
   if (FX.sparks.length > 90) return;
   for (let i = 0; i < n; i++) {
+    if (k === 'drop') { if (Math.random() < .55) return; FX.sparks.push({ x: pt.clientX + (Math.random() - .5) * 10, y: pt.clientY + 4, vx: (Math.random() - .5) * .3, vy: .5, r: 3 + Math.random() * 3.5, life: 1 }); continue; }
     FX.sparks.push({ x: pt.clientX + (Math.random() - .5) * (k === 'spark' ? 14 : 4), y: pt.clientY + (Math.random() - .5) * (k === 'spark' ? 14 : 4),
       vx: (Math.random() - .5) * (k === 'trail' ? .4 : 1.2), vy: k === 'trail' ? .3 : (Math.random() - .5) * 1.2, r: k === 'ring' ? 9 : 1.6 + Math.random() * 1.8, life: 1 });
   }
