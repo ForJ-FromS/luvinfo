@@ -43,7 +43,7 @@ const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{0,18}[a-z0-9])?$/; // 1~20자, 하이�
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v148 로드');
+console.log('[LUVINFO] app.js v149 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -1768,7 +1768,7 @@ function go(i) {
   renderChapter();
   window.scrollTo({ top: 0 });
   const tr = (st.site.theme && st.site.theme.trans) || '';
-  const body = gid('ch-body');
+  const body = gid('ch-page') || gid('ch-body');
   if (tr && body) {
     const cls = tr === 'slide' ? (st.cur < prev ? 'tr-slide-back' : 'tr-slide') : 'tr-' + tr;
     body.classList.remove('tr-fade', 'tr-slide', 'tr-slide-back', 'tr-rise');
