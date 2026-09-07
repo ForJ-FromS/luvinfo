@@ -43,7 +43,7 @@ const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{0,18}[a-z0-9])?$/; // 1~20자, 하이�
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v145 로드');
+console.log('[LUVINFO] app.js v146 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -481,6 +481,106 @@ function openClaim(user) {
 }
 
 // ═══════════ 렌더 ═══════════
+// ═══ 배경 · 커서 효과 (v146) — 캔버스 하나씩, 테마 색 사용, 감속 모드면 정지 ═══
+const FX = { bg: null, cur: null, raf: 0, parts: [], sparks: [], kind: '', cur: '', last: 0 };
+function fxColor(alpha) {
+  const c = getComputedStyle(document.body).getPropertyValue('--pri').trim() || '#d9b25a';
+  const m = c.match(/^#([0-9a-f]{6})$/i);
+  if (!m) return 'rgba(255,255,255,' + alpha + ')';
+  const n = parseInt(m[1], 16);
+  return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alpha + ')';
+}
+function fxResize() {
+  for (const c of [FX.bg, FX.cur]) {
+    if (!c) continue;
+    const r = Math.min(2, window.devicePixelRatio || 1);
+    c.width = Math.floor(innerWidth * r); c.height = Math.floor(innerHeight * r);
+    c.getContext('2d').setTransform(r, 0, 0, r, 0, 0);
+  }
+}
+function fxSeed(kind) {
+  const n = kind === 'star' ? 70 : (innerWidth < 640 ? 45 : 80);
+  FX.parts = Array.from({ length: n }, () => fxNew(kind, true));
+}
+function fxNew(kind, anywhere) {
+  const W = innerWidth, H = innerHeight;
+  if (kind === 'snow') return { x: Math.random() * W, y: anywhere ? Math.random() * H : -8, r: 1 + Math.random() * 2.2, vy: .4 + Math.random() * .9, vx: (Math.random() - .5) * .3, a: .35 + Math.random() * .45 };
+  if (kind === 'petal') return { x: Math.random() * W, y: anywhere ? Math.random() * H : -12, r: 3 + Math.random() * 4, vy: .5 + Math.random() * .8, vx: .2 + Math.random() * .5, rot: Math.random() * 6.28, vr: (Math.random() - .5) * .04, a: .5 + Math.random() * .35 };
+  return { x: Math.random() * W, y: Math.random() * H, r: .6 + Math.random() * 1.4, ph: Math.random() * 6.28, sp: .6 + Math.random() * 1.2 };
+}
+function fxTick(ts) {
+  FX.raf = requestAnimationFrame(fxTick);
+  if (ts - FX.last < 16) return;
+  FX.last = ts;
+  const W = innerWidth, H = innerHeight;
+  if (FX.bg && FX.kind && FX.kind !== 'noise' && FX.kind !== 'vig') {
+    const g = FX.bg.getContext('2d');
+    g.clearRect(0, 0, W, H);
+    const kind = FX.kind;
+    FX.parts.forEach((p, i) => {
+      if (kind === 'snow') {
+        p.y += p.vy; p.x += p.vx + Math.sin((ts / 900) + i) * .25;
+        if (p.y > H + 8) FX.parts[i] = fxNew(kind, false);
+        g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.28); g.fillStyle = 'rgba(255,255,255,' + p.a + ')'; g.fill();
+      } else if (kind === 'petal') {
+        p.y += p.vy; p.x += p.vx + Math.sin((ts / 700) + i) * .6; p.rot += p.vr;
+        if (p.y > H + 12 || p.x > W + 12) FX.parts[i] = fxNew(kind, false);
+        g.save(); g.translate(p.x, p.y); g.rotate(p.rot);
+        g.beginPath(); g.ellipse(0, 0, p.r, p.r * .55, 0, 0, 6.28); g.fillStyle = fxColor(p.a); g.fill(); g.restore();
+      } else {
+        const a = .25 + .75 * (0.5 + 0.5 * Math.sin(ts / 1000 * p.sp + p.ph));
+        g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.28); g.fillStyle = 'rgba(255,255,255,' + (a * .85).toFixed(2) + ')'; g.fill();
+        if (p.r > 1.6 && a > .8) { g.strokeStyle = 'rgba(255,255,255,' + ((a - .8) * 2).toFixed(2) + ')'; g.lineWidth = .6; g.beginPath(); g.moveTo(p.x - p.r * 3, p.y); g.lineTo(p.x + p.r * 3, p.y); g.moveTo(p.x, p.y - p.r * 3); g.lineTo(p.x, p.y + p.r * 3); g.stroke(); }
+      }
+    });
+  }
+  if (FX.cur && FX.curKind) {
+    const g = FX.cur.getContext('2d');
+    g.clearRect(0, 0, W, H);
+    FX.sparks = FX.sparks.filter((s) => (s.life -= .02) > 0);
+    FX.sparks.forEach((s) => {
+      s.x += s.vx; s.y += s.vy; s.vy += .04;
+      if (FX.curKind === 'ring') { g.beginPath(); g.arc(s.x, s.y, s.r * (1.2 - s.life), 0, 6.28); g.strokeStyle = fxColor(s.life * .8); g.lineWidth = 1.2; g.stroke(); return; }
+      g.beginPath(); g.arc(s.x, s.y, s.r * s.life, 0, 6.28); g.fillStyle = FX.curKind === 'trail' ? fxColor(s.life) : 'rgba(255,255,255,' + s.life.toFixed(2) + ')'; g.fill();
+      if (FX.curKind === 'spark' && s.life > .5) { g.strokeStyle = 'rgba(255,255,255,' + (s.life - .5).toFixed(2) + ')'; g.lineWidth = .8; const l = s.r * 2.2 * s.life; g.beginPath(); g.moveTo(s.x - l, s.y); g.lineTo(s.x + l, s.y); g.moveTo(s.x, s.y - l); g.lineTo(s.x, s.y + l); g.stroke(); }
+    });
+  }
+}
+function fxOnMove(e) {
+  if (!FX.curKind) return;
+  const pt = e.touches ? e.touches[0] : e;
+  if (!pt) return;
+  const k = FX.curKind, n = k === 'ring' ? 1 : (k === 'spark' ? 2 : 1);
+  if (FX.sparks.length > 90) return;
+  for (let i = 0; i < n; i++) {
+    FX.sparks.push({ x: pt.clientX + (Math.random() - .5) * (k === 'spark' ? 14 : 4), y: pt.clientY + (Math.random() - .5) * (k === 'spark' ? 14 : 4),
+      vx: (Math.random() - .5) * (k === 'trail' ? .4 : 1.2), vy: k === 'trail' ? .3 : (Math.random() - .5) * 1.2, r: k === 'ring' ? 9 : 1.6 + Math.random() * 1.8, life: 1 });
+  }
+}
+function applyFx(kind, cur) {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  FX.kind = reduce ? '' : (kind || '');
+  FX.curKind = reduce ? '' : (cur || '');
+  const bg = gid('fx-bg'), vig = gid('fx-vig'), cv = gid('fx-cur');
+  if (!bg || !cv) return;
+  FX.bg = bg; FX.cur = cv;
+  document.body.dataset.fx = FX.kind || '';
+  if (vig) vig.classList.toggle('on', FX.kind === 'vig');
+  bg.classList.toggle('on', !!FX.kind && FX.kind !== 'vig');
+  cv.classList.toggle('on', !!FX.curKind);
+  if (FX.kind && FX.kind !== 'noise' && FX.kind !== 'vig') { fxResize(); fxSeed(FX.kind); } else { bg.getContext('2d').clearRect(0, 0, bg.width, bg.height); }
+  if (FX.curKind) fxResize();
+  const need = (FX.kind && FX.kind !== 'noise' && FX.kind !== 'vig') || FX.curKind;
+  if (need && !FX.raf) FX.raf = requestAnimationFrame(fxTick);
+  if (!need && FX.raf) { cancelAnimationFrame(FX.raf); FX.raf = 0; }
+  if (!FX._bound) {
+    FX._bound = true;
+    window.addEventListener('resize', () => { fxResize(); if (FX.kind && FX.kind !== 'noise' && FX.kind !== 'vig') fxSeed(FX.kind); });
+    window.addEventListener('mousemove', fxOnMove, { passive: true });
+    window.addEventListener('touchstart', fxOnMove, { passive: true });
+    window.addEventListener('touchmove', fxOnMove, { passive: true });
+  }
+}
 function applyTheme() {
   const t = st.site.theme || {};
   document.body.dataset.preset = t.preset || 'white';
@@ -489,6 +589,11 @@ function applyTheme() {
   if (t.tx) b.setProperty('--tx', t.tx); else b.removeProperty('--tx');
   if (t.pri) b.setProperty('--pri', t.pri); else b.removeProperty('--pri');
   b.setProperty('--font', t.font || "'Pretendard'");
+  if (t.tfont) b.setProperty('--tfont', t.tfont); else b.removeProperty('--tfont');
+  if (t.fs) b.setProperty('--fs', t.fs + 'px'); else b.removeProperty('--fs');
+  if (t.lh) b.setProperty('--lh', String(t.lh)); else b.removeProperty('--lh');
+  if (t.border) document.body.dataset.border = t.border; else delete document.body.dataset.border;
+  applyFx(t.fx || '', t.cur || '');
   const nocss = new URLSearchParams(location.search).get('nocss') === '1' || SAFE_MODE;
   $('#usercss').textContent = nocss ? '' : tameCSS(t.css || '');
   if (t.corner) document.body.dataset.corner = t.corner; else delete document.body.dataset.corner;
@@ -864,6 +969,7 @@ function renderBlocks(ch, bodyEl) {
     else if (blk.kind === 'chat' && ((d.lines || []).length || d.body)) div.appendChild(buildChat(blk));
     else if (blk.kind === 'qa' && d.body) div.appendChild(buildQa(d));
     else if (blk.kind === 'tl' && ((d.items || []).length || d.body)) div.appendChild(buildTimeline(blk));
+    else if (blk.kind === 'hr') div.appendChild(buildHr(d));
     else if (blk.kind === 'htm' && d.body) div.appendChild(buildHtmBlock(blk));
     else if (blk.kind === 'gb') div.appendChild(buildGbBlock());
     else return;
@@ -1345,6 +1451,16 @@ const chatIO = ('IntersectionObserver' in window)
   : null;
 function chatObserve(el) { if (chatIO) chatIO.observe(el); else chatPlay(el); }
 // ── 문답(인터뷰) 블록: Q./A. + 「이름: 답」으로 페어 인터뷰 (한 질문에 여러 명 대답) ──
+function buildHr(d) {
+  const el = document.createElement('div');
+  const st2 = d.style || 'line';
+  el.className = 'hrblk hr-' + st2;
+  el.style.setProperty('--hrgap', (d.gap || 18) + 'px');
+  const mid = st2 === 'dots' ? '· · ·' : st2 === 'star' ? '✦' : st2 === 'text' ? (d.tx || '✿') : '';
+  el.innerHTML = '<i></i>' + (mid ? '<span>' + esc(mid) + '</span><i></i>' : '');
+  if (st2 === 'dots' || st2 === 'space') el.innerHTML = mid ? '<span>' + esc(mid) + '</span>' : '';
+  return el;
+}
 function buildQa(d) {
   const el = document.createElement('div');
   el.className = 'qablk';
@@ -1590,7 +1706,10 @@ function renderPager() {
   if (nav === 'none' && !st.edit) { const pg = $('#pager'); if (pg) pg.innerHTML = ''; return; }
   const pg = $('#pager');
   pg.innerHTML = '';
+  const navsk = st.site.theme?.navsk || '';
+  if (navsk) pg.dataset.navsk = navsk; else delete pg.dataset.navsk;
   if (chs.length <= 1) return;
+  const ROMAN = ['Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ','Ⅵ','Ⅶ','Ⅷ','Ⅸ','Ⅹ','Ⅺ','Ⅻ'];
   const arrow = (dir, label) => {
     const b = document.createElement('button');
     b.className = 'pg-arrow';
@@ -1620,6 +1739,8 @@ function renderPager() {
     chs.forEach((_, i) => {
       const d = document.createElement('div');
       d.className = 'pg-dot' + (i === st.cur ? ' on' : '');
+      if (navsk === 'roman') d.textContent = ROMAN[i] || String(i + 1);
+      else if (navsk === 'star') d.textContent = '✦';
       if (st.edit && chs[i].hidden) d.style.opacity = '.35';
       d.onclick = () => go(i);
       dots.appendChild(d);
@@ -1632,9 +1753,19 @@ function renderPager() {
 function go(i) {
   const chs = viewChs();
   if (!chs.length) return;
+  const prev = st.cur;
   st.cur = ((i % chs.length) + chs.length) % chs.length;
   renderChapter();
   window.scrollTo({ top: 0 });
+  const tr = (st.site.theme && st.site.theme.trans) || '';
+  const body = gid('ch-body');
+  if (tr && body) {
+    const cls = tr === 'slide' ? (st.cur < prev ? 'tr-slide-back' : 'tr-slide') : 'tr-' + tr;
+    body.classList.remove('tr-fade', 'tr-slide', 'tr-slide-back', 'tr-rise');
+    void body.offsetWidth;   // 애니 재시작
+    body.classList.add(cls);
+    body.addEventListener('animationend', () => body.classList.remove(cls), { once: true });
+  }
 }
 
 // ── 라이트박스 상태 (←/→ 넘기기용) ──
@@ -2306,7 +2437,7 @@ let work = null;
 let isNewCh = false;
 let editingBlk = null;
 
-const KIND_LABEL = { txt: '글', pf: '프로필', gal: '갤러리', mu: '음악', stk: '스티커', bn: '배너', lnk: '링크', quo: '인용구', dd: '디데이', chat: '채팅로그', qa: '문답', tl: '타임라인', htm: 'HTML', gb: '방명록' };
+const KIND_LABEL = { txt: '글', pf: '프로필', gal: '갤러리', mu: '음악', stk: '스티커', bn: '배너', lnk: '링크', quo: '인용구', dd: '디데이', chat: '채팅로그', qa: '문답', tl: '타임라인', hr: '구분선', htm: 'HTML', gb: '방명록' };
 
 function newBlockData(kind) {
   if (kind === 'txt') return { body: '', imgs: [] };
@@ -2323,6 +2454,7 @@ function newBlockData(kind) {
   if (kind === 'chat') return { lines: [] };
   if (kind === 'qa') return { body: '' };
   if (kind === 'tl') return { items: [] };
+  if (kind === 'hr') return { style: 'line', tx: '', gap: 18 };
   return {};
 }
 
@@ -2340,6 +2472,7 @@ function blkSummary(blk) {
   if (blk.kind === 'chat') return ((d.lines || chatLegacy(d.body)).length) + '마디';
   if (blk.kind === 'qa') return ((d.body || '').match(/^[QqＱ][.:．：]/gm) || []).length + '문';
   if (blk.kind === 'tl') return ((d.items || tlLegacy(d.body)).length) + '항목';
+  if (blk.kind === 'hr') return ({ line: '가는 선', dash: '점선', dots: '점 세 개', star: '별', wave: '물결', text: '글자 ' + (d.tx || ''), space: '빈 여백' })[d.style || 'line'] || '';
   return '';
 }
 
@@ -2502,7 +2635,7 @@ function openBlockEdit(blk) {
   if (gid('ble-label')) gid('ble-label').value = blk.label || '';
   $('#es-cellrow').style.display = 'none';
   $('#bl-edit').style.display = 'block';
-  ['txt', 'pf', 'gal', 'mu', 'stk', 'bn', 'lnk', 'quo', 'dd', 'chat', 'qa', 'tl', 'htm', 'gb'].forEach((k) => {
+  ['txt', 'pf', 'gal', 'mu', 'stk', 'bn', 'lnk', 'quo', 'dd', 'chat', 'qa', 'tl', 'hr', 'htm', 'gb'].forEach((k) => {
     $('#ble-' + k).style.display = blk.kind === k ? 'block' : 'none';
   });
   const d = blk.data;
@@ -2563,6 +2696,10 @@ function openBlockEdit(blk) {
     renderChatEd();
   } else if (blk.kind === 'qa') {
     $('#eqa-body').value = d.body || '';
+  } else if (blk.kind === 'hr') {
+    $('#ehr-st').value = d.style || 'line';
+    $('#ehr-tx').value = d.tx || '';
+    $('#ehr-gap').value = d.gap || 18; gid('ehr-gapv').textContent = (d.gap || 18) + 'px';
   } else if (blk.kind === 'tl') {
     tlMigrate(d);
     $('#etl-title').value = d.title || '';
@@ -2608,6 +2745,8 @@ function saveBlockFields() {
     d.label = $('#ed-label').value.trim();
     d.date = $('#ed-date').value.trim();
     d.one = gid('ed-one') && gid('ed-one').checked ? 1 : 0;
+  } else if (editingBlk.kind === 'hr') {
+    d.style = $('#ehr-st').value; d.tx = $('#ehr-tx').value.trim(); d.gap = parseInt($('#ehr-gap').value) || 18;
   } else if (editingBlk.kind === 'qa') {
     d.body = $('#eqa-body').value;
   } else if (editingBlk.kind === 'htm') {
@@ -2976,6 +3115,7 @@ function bindEditor() {
     (editingBlk.data.items = editingBlk.data.items || []).push({ t: '', u: '' });
     renderLnkChips();
   };
+  if (gid('ehr-gap')) gid('ehr-gap').oninput = (e) => { gid('ehr-gapv').textContent = e.target.value + 'px'; };
   if (gid('ech-add')) gid('ech-add').onclick = () => {
     if (!editingBlk || editingBlk.kind !== 'chat') return;
     const ls = (editingBlk.data.lines = editingBlk.data.lines || []);
@@ -3108,6 +3248,14 @@ function openDeco() {
   $('#dc-pri').value = t.pri || p.pri;
   $('#dc-font').value = t.font || "'Pretendard'";
   $('#dc-nav').value = t.nav || 'dot';
+  if (gid('dc-navsk')) gid('dc-navsk').value = t.navsk || '';
+  if (gid('dc-trans')) gid('dc-trans').value = t.trans || '';
+  if (gid('dc-tfont')) gid('dc-tfont').value = t.tfont || '';
+  if (gid('dc-fs')) { gid('dc-fs').value = t.fs || 14; gid('dc-fsv').textContent = (t.fs || 14) + 'px'; }
+  if (gid('dc-lh')) { gid('dc-lh').value = t.lh || 2.1; gid('dc-lhv').textContent = (t.lh || 2.1); }
+  if (gid('dc-border')) gid('dc-border').value = t.border || '';
+  if (gid('dc-fx')) gid('dc-fx').value = t.fx || '';
+  if (gid('dc-cur')) gid('dc-cur').value = t.cur || '';
   $('#dc-num').value = t.num || 'on';
   if (gid('dc-chtitle')) gid('dc-chtitle').value = t.chtitle || '';
   if (gid('dc-luvlog')) gid('dc-luvlog').value = st.site.luvlog || '';
@@ -3189,6 +3337,14 @@ function bindDeco() {
   $('#dc-pri').oninput = (e) => { t().pri = e.target.value; setDirty(); applyTheme(); };
   $('#dc-font').onchange = (e) => { t().font = e.target.value; setDirty(); applyTheme(); };
   $('#dc-nav').onchange = (e) => { t().nav = e.target.value; setDirty(); renderPager(); };
+  if (gid('dc-navsk')) gid('dc-navsk').onchange = (e) => { t().navsk = e.target.value; setDirty(); renderPager(); };
+  if (gid('dc-trans')) gid('dc-trans').onchange = (e) => { t().trans = e.target.value; setDirty(); };
+  if (gid('dc-tfont')) gid('dc-tfont').onchange = (e) => { t().tfont = e.target.value; setDirty(); applyTheme(); };
+  if (gid('dc-fs')) gid('dc-fs').oninput = (e) => { t().fs = parseFloat(e.target.value); gid('dc-fsv').textContent = e.target.value + 'px'; setDirty(); applyTheme(); };
+  if (gid('dc-lh')) gid('dc-lh').oninput = (e) => { t().lh = parseFloat(e.target.value); gid('dc-lhv').textContent = e.target.value; setDirty(); applyTheme(); };
+  if (gid('dc-border')) gid('dc-border').onchange = (e) => { t().border = e.target.value; setDirty(); applyTheme(); };
+  if (gid('dc-fx')) gid('dc-fx').onchange = (e) => { t().fx = e.target.value; setDirty(); applyTheme(); };
+  if (gid('dc-cur')) gid('dc-cur').onchange = (e) => { t().cur = e.target.value; setDirty(); applyTheme(); };
   $('#dc-num').onchange = (e) => { t().num = e.target.value; setDirty(); renderChapter(); };
   if (gid('dc-chtitle')) gid('dc-chtitle').onchange = (e) => { t().chtitle = e.target.value; setDirty(); applyTheme(); };
   [['df-heart', 'heart'], ['df-copy', 'copy'], ['df-guide', 'guide'], ['df-inq', 'inq'], ['df-date', 'date'], ['df-cnt', 'cnt']].forEach(([id, key]) => {
