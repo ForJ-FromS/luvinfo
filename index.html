@@ -1071,6 +1071,12 @@
   #toast.tap::after { content: ' ›'; color: var(--pri); font-weight: 700; }
   /* HTML 페이지(머리글 숨김) 여백 — 시트 맨 끝: 세로 가운데(valign) 규칙보다 뒤라서 항상 우선 */
   body[data-chhead="off"] .wrap { padding-top: 72px; padding-bottom: 40px; }
+  /* 페이지 폭 (v150) — 페이지별 지정 */
+  body[data-pw="wide"] .wrap { max-width: 960px; }
+  body[data-pw="full"] .wrap { max-width: none; padding-left: 0; padding-right: 0; }
+  body[data-pw="full"] .wrap .blk, body[data-pw="full"] .wrap .ch-title, body[data-pw="full"] .wrap .pager, body[data-pw="full"] .wrap .foot { margin-left: 24px; margin-right: 24px; }
+  body[data-pw="full"] .wrap .head { margin-left: 24px; margin-right: 24px; }
+  body[data-pw="full"] .wrap .head-img { margin-left: 0; margin-right: 0; }
   body[data-chhead="off"] .ch-title { margin-bottom: 16px; }
   body[data-chhead="off"] .pager { margin-top: 26px; }
 </style>
@@ -1266,6 +1272,16 @@
       <label>이 페이지 비밀번호 (비우면 공개)</label>
       <input type="text" id="es-pw" placeholder="이 페이지만 잠그기" autocomplete="off">
     </div>
+  </div>
+  <div class="f-row">
+    <label>페이지 폭</label>
+    <select id="es-wide">
+      <option value="">기본 — 본문 폭 (620px)</option>
+      <option value="wide">넓게 (960px)</option>
+      <option value="full">화면 꽉 채움 (여백 없음 · HTML 페이지용)</option>
+    </select>
+    <div class="f-note">가로로 넓은 HTML 디자인이면 「넓게」나 「화면 꽉 채움」. 폰에서는 어차피 화면 폭에 맞춰져요.</div>
+    <label class="chk-row" style="margin-top:8px;"><input type="checkbox" id="es-fit"> 📱 폰에서는 축소해서 전체 보이기 — 고정 폭 HTML이 잘리지 않게 통째로 비율 축소 (글자도 같이 작아져요)</label>
   </div>
   <div class="f-2col" id="es-lockrow">
     <div class="f-row"><label>잠금 화면 디자인</label>
@@ -2040,6 +2056,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=149"></script>
+<script type="module" src="app.js?v=151"></script>
 </body>
 </html>

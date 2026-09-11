@@ -43,7 +43,7 @@ const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{0,18}[a-z0-9])?$/; // 1~20자, 하이�
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v149 로드');
+console.log('[LUVINFO] app.js v151 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -738,6 +738,24 @@ function renderPadDots(v) {
   if (!d) return;
   [...d.children].forEach((i, k) => i.classList.toggle('on', k < v.length));
 }
+// 📱 폰 축소 맞춤(v151): 고정 폭 HTML 페이지를 화면 폭에 맞게 통째로 비율 축소
+function fitHtmlPage() {
+  const body = gid('ch-body');
+  if (!body) return;
+  body.style.transform = ''; body.style.transformOrigin = ''; body.style.width = ''; body.style.height = '';
+  const ch = viewChs()[st.cur];
+  const inner = body.firstElementChild;
+  if (!ch || ch.type !== 'html' || !ch.fit || !inner) return;
+  const avail = body.parentElement ? body.parentElement.clientWidth : innerWidth;
+  const w = Math.max(inner.scrollWidth, inner.getBoundingClientRect().width);
+  if (!avail || w <= avail + 2) return;
+  const sc = avail / w;
+  body.style.transformOrigin = '0 0';
+  body.style.width = w + 'px';
+  body.style.transform = 'scale(' + sc.toFixed(4) + ')';
+  body.style.height = Math.ceil(inner.scrollHeight * sc) + 'px';
+}
+window.addEventListener('resize', () => { if (st.site) fitHtmlPage(); });
 function renderChapter() {
   const chs = viewChs();
   if (st.cur >= chs.length) st.cur = Math.max(0, chs.length - 1);
@@ -786,6 +804,7 @@ function renderChapter() {
     return;
   }
   document.body.dataset.chhead = (ch.type === 'html' && !ch.showHead) ? 'off' : 'on';
+  if (ch.wide) document.body.dataset.pw = ch.wide; else delete document.body.dataset.pw;
   if (ch.type === 'html' && SAFE_MODE) {
     bodyEl.innerHTML = '<div style="border:1px dashed var(--line);border-radius:12px;padding:40px 20px;text-align:center;color:var(--mute);font-size:12.5px;line-height:1.9;">🛟 안전 모드 — 이 페이지의 HTML은 표시하지 않아요.<br>✎ 편집에서 코드를 고치거나 페이지를 삭제한 뒤,<br>주소의 <code>?safe=1</code>을 지우고 다시 접속하세요.</div>';
     renderPager();
@@ -819,9 +838,12 @@ function renderChapter() {
     const holder = bodyEl.querySelector('.htmlblk');
     holder.innerHTML = scopeHtml(body, '.' + scope);
     runScripts(holder);
+    fitHtmlPage();                        // 이전 축소 즉시 해제 + 1차 판단
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(fitHtmlPage);   // 레이아웃 잡힌 뒤 재판단
   } else {
     migrateBlocks(ch);
     renderBlocks(ch, bodyEl);
+    fitHtmlPage();   // 이전 페이지의 축소 상태 해제
   }
   renderPager();
 }
@@ -2499,6 +2521,8 @@ function openChapterEdit(ch, type) {
   $('#es-pw').oninput = () => { $('#es-pw').dataset.touched = '1'; };
   if (gid('es-hidden')) gid('es-hidden').checked = !!work.hidden;
   if (gid('es-slug')) gid('es-slug').value = work.slug || '';
+  if (gid('es-wide')) gid('es-wide').value = work.wide || '';
+  if (gid('es-fit')) gid('es-fit').checked = !!work.fit;
   if (gid('es-lkstyle')) gid('es-lkstyle').value = work.lkstyle || '';
   if (gid('es-lkmsg')) gid('es-lkmsg').value = work.lkmsg === undefined ? LOCK_DEFAULT_MSG : work.lkmsg;
   if (gid('es-timgpos')) gid('es-timgpos').value = work.timgPos || 'top';
@@ -3205,6 +3229,8 @@ function confirmChapterEdit() {
     // (해시 상태에서 손대지 않았으면 기존 해시 유지)
   }
   if (gid('es-hidden')) work.hidden = gid('es-hidden').checked;
+  if (gid('es-wide')) work.wide = gid('es-wide').value;
+  if (gid('es-fit')) work.fit = gid('es-fit').checked;
   if (gid('es-lkstyle')) work.lkstyle = gid('es-lkstyle').value;
   if (gid('es-lkmsg')) work.lkmsg = gid('es-lkmsg').value.trim();
   if (gid('es-slug')) {
