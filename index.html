@@ -944,6 +944,21 @@
   .music.playing .m-disc { animation-play-state: running; }
   .m-disc::after { content: ''; position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; border-radius: 50%; background: var(--pri); transform: translate(-50%, -50%); }
   @keyframes spin { to { transform: rotate(360deg); } }
+  /* 음악 블록 모양 (v152) */
+  .music.mu-bar { padding: 9px 12px; gap: 10px; border-radius: 999px; }
+  .music.mu-bar .m-disc { width: 26px; height: 26px; }
+  .music.mu-bar .m-disc::after { width: 6px; height: 6px; }
+  .music.mu-bar .m-info { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+  .music.mu-bar .m-title { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .music.mu-bar .m-artist { font-size: 11px; white-space: nowrap; }
+  .music.mu-bar .m-bar { display: none; }
+  .music.mu-bar .m-btn { width: 30px; height: 30px; font-size: 10px; }
+  .music.mu-wave .m-disc { display: none; }
+  .music.mu-wave .m-eq { display: flex; align-items: flex-end; gap: 3px; height: 30px; width: 34px; flex-shrink: 0; }
+  .music.mu-wave .m-eq i { flex: 1; background: var(--pri); border-radius: 2px 2px 0 0; height: 30%; opacity: .45; transition: height .2s; }
+  .music.mu-wave.playing .m-eq i { opacity: 1; animation: liEq .9s ease-in-out infinite alternate; }
+  .music.mu-wave.playing .m-eq i:nth-child(2) { animation-delay: -.3s; } .music.mu-wave.playing .m-eq i:nth-child(3) { animation-delay: -.6s; } .music.mu-wave.playing .m-eq i:nth-child(4) { animation-delay: -.15s; } .music.mu-wave.playing .m-eq i:nth-child(5) { animation-delay: -.45s; }
+  @keyframes liEq { from { height: 20%; } to { height: 100%; } }
   .m-info { flex: 1; min-width: 0; }
   .m-title { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .m-artist { font-size: 11px; color: var(--dim); margin-top: 3px; }
@@ -1036,7 +1051,14 @@
     background: rgba(var(--cardbase), var(--cardop));
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: 16px;
+    padding: var(--cpad, 22px 24px);
+  }
+  body[data-cpad="tight"] { --cpad: 12px 14px; }
+  body[data-cpad="wide"] { --cpad: 30px 34px; }
+  @media (max-width: 640px) {
+    .blk[data-card="on"] { padding: var(--cpad-m, 18px 18px); }
+    body[data-cpad="tight"] { --cpad-m: 12px 12px; }
+    body[data-cpad="wide"] { --cpad-m: 24px 22px; }
   }
   .blk > .pf, .blk > .music, .blk > .gal, .blk > .stk, .blk > .banners { margin: 0; }
   .chwrap[data-on="1"] {
@@ -1408,6 +1430,13 @@
         <div class="f-row"><label>아티스트</label><input type="text" id="em-artist"></div>
       </div>
       <div class="f-row"><label>오디오 URL (mp3 또는 유튜브 링크 — 비우면 장식용)</label><input type="text" id="em-url"></div>
+      <div class="f-row"><label>플레이어 모양</label>
+        <select id="em-style">
+          <option value="">디스크 (기본)</option>
+          <option value="bar">미니 바 (한 줄)</option>
+          <option value="wave">이퀄라이저</option>
+        </select>
+      </div>
     </div>
 
     <div id="ble-stk" style="display:none;">
@@ -1736,6 +1765,14 @@
       </select>
     </div>
     <div class="f-row">
+      <label>카드 안 여백</label>
+      <select id="dc-cpad">
+        <option value="">기본 (넉넉하게)</option>
+        <option value="tight">촘촘하게</option>
+        <option value="wide">더 넓게</option>
+      </select>
+    </div>
+    <div class="f-row">
       <label>카드 투명도</label>
       <select id="dc-cardop"><option value="">프리셋 기본</option><option value="solid">불투명</option><option value="half">반투명</option><option value="clear">투명</option></select>
     </div>
@@ -2056,6 +2093,6 @@
   .sheet.on, .sheet-bg.on, .pop.on, .adj-bg.on { visibility: visible !important; pointer-events: auto !important; }
 </style>
 
-<script type="module" src="app.js?v=151"></script>
+<script type="module" src="app.js?v=153"></script>
 </body>
 </html>

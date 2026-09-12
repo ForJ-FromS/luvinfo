@@ -43,7 +43,7 @@ const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{0,18}[a-z0-9])?$/; // 1~20자, 하이�
 const SYS_RESERVED = ['admin', 'api', 'www', 'index', 'login', 'signup', 'app', 'assets', 'static', 'luvinfo', 'luvlog', 'info', 'help', 'about', 'guide'];
 const SAFE_MODE = new URLSearchParams(location.search).get('safe') === '1'; // HTML 페이지·커스텀CSS 미렌더 탈출구
 
-console.log('[LUVINFO] app.js v151 로드');
+console.log('[LUVINFO] app.js v153 로드');
 
 function setDirty() {
   st.dirty = true;
@@ -603,6 +603,7 @@ function applyTheme() {
   if (t.fs) b.setProperty('--fs', t.fs + 'px'); else b.removeProperty('--fs');
   if (t.lh) b.setProperty('--lh', String(t.lh)); else b.removeProperty('--lh');
   if (t.border) document.body.dataset.border = t.border; else delete document.body.dataset.border;
+  if (t.cpad) document.body.dataset.cpad = t.cpad; else delete document.body.dataset.cpad;
   applyFx(t.fx || '', t.cur || '');
   const nocss = new URLSearchParams(location.search).get('nocss') === '1' || SAFE_MODE;
   $('#usercss').textContent = nocss ? '' : tameCSS(t.css || '');
@@ -1241,8 +1242,10 @@ function ytId(u) {
 
 function buildMusic(m) {
   const d = document.createElement('div');
-  d.className = 'music';
-  d.innerHTML = '<div class="m-disc"></div><div class="m-info">' +
+  const ms = (m.style === 'bar' || m.style === 'wave') ? m.style : '';
+  d.className = 'music' + (ms ? ' mu-' + ms : '');
+  const lead = ms === 'wave' ? '<div class="m-eq"><i></i><i></i><i></i><i></i><i></i></div>' : '<div class="m-disc"></div>';
+  d.innerHTML = lead + '<div class="m-info">' +
     '<div class="m-title">' + esc(m.title || '') + '</div>' +
     '<div class="m-artist">' + esc(m.artist || '') + '</div>' +
     '<div class="m-bar"><i></i></div></div><button class="m-btn">▶</button>';
@@ -2693,6 +2696,7 @@ function openBlockEdit(blk) {
     $('#em-title').value = d.title || '';
     $('#em-artist').value = d.artist || '';
     $('#em-url').value = d.url || '';
+    if (gid('em-style')) gid('em-style').value = d.style || '';
   } else if (blk.kind === 'stk') {
     renderStkChips();
   } else if (blk.kind === 'bn') {
@@ -2772,6 +2776,7 @@ function saveBlockFields() {
     d.title = $('#em-title').value.trim();
     d.artist = $('#em-artist').value.trim();
     d.url = $('#em-url').value.trim();
+    if (gid('em-style')) d.style = gid('em-style').value;
   } else if (editingBlk.kind === 'quo') {
     d.text = $('#eq-text').value;
     d.by = $('#eq-by').value.trim();
@@ -3290,6 +3295,7 @@ function openDeco() {
   if (gid('dc-fs')) { gid('dc-fs').value = t.fs || 14; gid('dc-fsv').textContent = (t.fs || 14) + 'px'; }
   if (gid('dc-lh')) { gid('dc-lh').value = t.lh || 2.1; gid('dc-lhv').textContent = (t.lh || 2.1); }
   if (gid('dc-border')) gid('dc-border').value = t.border || '';
+  if (gid('dc-cpad')) gid('dc-cpad').value = t.cpad || '';
   if (gid('dc-fx')) gid('dc-fx').value = t.fx || '';
   if (gid('dc-cur')) gid('dc-cur').value = t.cur || '';
   $('#dc-num').value = t.num || 'on';
@@ -3379,6 +3385,7 @@ function bindDeco() {
   if (gid('dc-fs')) gid('dc-fs').oninput = (e) => { t().fs = parseFloat(e.target.value); gid('dc-fsv').textContent = e.target.value + 'px'; setDirty(); applyTheme(); };
   if (gid('dc-lh')) gid('dc-lh').oninput = (e) => { t().lh = parseFloat(e.target.value); gid('dc-lhv').textContent = e.target.value; setDirty(); applyTheme(); };
   if (gid('dc-border')) gid('dc-border').onchange = (e) => { t().border = e.target.value; setDirty(); applyTheme(); };
+  if (gid('dc-cpad')) gid('dc-cpad').onchange = (e) => { t().cpad = e.target.value; setDirty(); applyTheme(); };
   if (gid('dc-fx')) gid('dc-fx').onchange = (e) => { t().fx = e.target.value; setDirty(); applyTheme(); };
   if (gid('dc-cur')) gid('dc-cur').onchange = (e) => { t().cur = e.target.value; setDirty(); applyTheme(); };
   $('#dc-num').onchange = (e) => { t().num = e.target.value; setDirty(); renderChapter(); };
